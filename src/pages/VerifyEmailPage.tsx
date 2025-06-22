@@ -165,10 +165,10 @@ export default function VerifyEmailPage() {
             <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-          </div>
+        </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-            验证您的邮箱
-          </h1>
+          验证您的邮箱
+        </h1>
           <p className="text-slate-600 dark:text-slate-400">
             为了确保账号安全，请验证您的邮箱地址
           </p>
@@ -357,11 +357,11 @@ export default function VerifyEmailPage() {
                 className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 transition-colors"
               >
                 注销登录
-              </button>
+          </button>
             </div>
           </div>
         </div>
       </motion.div>
     </div>
   );
-} 
+}

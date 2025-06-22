@@ -34,6 +34,7 @@ module.exports = async function handler(req, res) {
           id: user._id,
           username: user.username,
           email: user.email,
+          role: user.role || 'user',
           isEmailVerified: user.isEmailVerified,
           profile: user.profile || { displayName: user.username, avatar: null },
           createdAt: user.createdAt,

@@ -39,8 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const data = await response.json()
         setUser(data.user)
         setIsAuthenticated(true)
+        console.log('用户状态恢复成功:', data.user) // 调试日志
       } else {
         // Token无效，清除本地存储
+        console.log('Token验证失败，状态码:', response.status) // 调试日志
         localStorage.removeItem('token')
         setTokenState(null)
         setIsAuthenticated(false)

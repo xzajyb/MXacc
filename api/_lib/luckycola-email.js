@@ -8,7 +8,7 @@ const sendEmail = async (to, subject, content, isHTML = true) => {
     const requestData = {
       ColaKey: process.env.LUCKYCOLA_API_KEY,
       tomail: to,
-      fromTitle: 梦锡工作室官方,
+      fromTitle: "梦锡工作室官方",
       subject: subject,
       content: content,
       isTextContent: !isHTML, // 默认发送HTML邮件
@@ -138,7 +138,13 @@ const sendVerificationEmail = async (email, code, username = '') => {
     </html>
   `
 
-  return await sendEmail(email, subject, htmlContent, true)
+  const result = await sendEmail(email, subject, htmlContent, true)
+  
+  if (!result.success) {
+    throw new Error(result.error || result.message || '邮件发送失败')
+  }
+  
+  return result
 }
 
 // 发送欢迎邮件
