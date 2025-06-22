@@ -30,7 +30,7 @@ const registerSchema = z.object({
 type RegisterFormData = z.infer<typeof registerSchema>
 
 const RegisterPage = () => {
-  const { register: registerUser, isAuthenticated } = useAuth()
+  const { register: registerUser, isAuthenticated, error } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -55,13 +55,10 @@ const RegisterPage = () => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setIsSubmitting(true)
-      await registerUser({
-        username: data.username,
-        email: data.email,
-        password: data.password,
-      } as RegisterRequest)
+      await registerUser(data.username, data.email, data.password)
     } catch (error) {
       // 错误已在AuthContext中处理
+      console.error('注册失败:', error)
     } finally {
       setIsSubmitting(false)
     }
@@ -140,13 +137,29 @@ const RegisterPage = () => {
             </div>
 
             {/* Error message */}
-            {errors.password && (
+            {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm"
               >
-                {errors.password.message}
+                {error}
+              </motion.div>
+            )}
+
+            {/* Form validation errors */}
+            {(errors.username || errors.email || errors.password || errors.confirmPassword) && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm"
+              >
+                <div className="space-y-1">
+                  {errors.username && <p>• {errors.username.message}</p>}
+                  {errors.email && <p>• {errors.email.message}</p>}
+                  {errors.password && <p>• {errors.password.message}</p>}
+                  {errors.confirmPassword && <p>• {errors.confirmPassword.message}</p>}
+                </div>
               </motion.div>
             )}
 

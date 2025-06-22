@@ -19,7 +19,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 
 const LoginPage = () => {
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, error } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const location = useLocation()
@@ -41,9 +41,9 @@ const LoginPage = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       setIsSubmitting(true)
-      await login(data as LoginRequest)
+      await login(data.emailOrUsername, data.password)
     } catch (error) {
-      // 错误已在AuthContext中处理
+      console.error('登录失败:', error)
     } finally {
       setIsSubmitting(false)
     }
@@ -91,7 +91,7 @@ const LoginPage = () => {
             </div>
 
             {/* Error message */}
-            {/* {error && (
+            {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -99,7 +99,7 @@ const LoginPage = () => {
               >
                 {error}
               </motion.div>
-            )} */}
+            )}
 
             {/* Login form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

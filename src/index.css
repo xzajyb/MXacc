@@ -319,29 +319,24 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Logo 样式 */
+/* Logo 样式 - 移除圆形背景 */
 .mx-logo {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .mx-logo-large {
   width: 64px;
   height: 64px;
-  border-radius: 50%;
-  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
+/* 保留原有的点样式以防其他地方使用 */
 .mx-logo-dot {
   width: 12px;
   height: 12px;
@@ -356,16 +351,8 @@
   border-radius: 50%;
 }
 
-.dark .mx-logo {
-  background: hsl(var(--mx-blue));
-}
-
 .dark .mx-logo-dot {
   background: white;
-}
-
-.dark .mx-logo-large {
-  background: hsl(var(--mx-blue));
 }
 
 .dark .mx-logo-dot-large {
