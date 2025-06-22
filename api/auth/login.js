@@ -20,7 +20,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { emailOrUsername, password } = req.body
+    const { emailOrUsername, password, rememberMe } = req.body
 
     // 验证输入
     if (!emailOrUsername || !password) {
@@ -94,13 +94,14 @@ module.exports = async function handler(req, res) {
     )
 
     // 生成token
-    const token = generateToken(user._id)
+    const token = generateToken(user._id, rememberMe ? '48h' : '24h')
 
     // 返回成功响应（无论邮箱是否验证都允许登录）
     res.status(200).json({
       success: true,
       message: '登录成功',
       token,
+      expiresIn: rememberMe ? '48h' : '24h',
       needsEmailVerification: !user.isEmailVerified, // 提示前端是否需要验证
       user: {
         id: user._id,
@@ -108,6 +109,8 @@ module.exports = async function handler(req, res) {
         email: user.email,
         isEmailVerified: user.isEmailVerified,
         role: user.role || 'user', // 添加用户角色
+        createdAt: user.createdAt,
+        lastLogin: user.lastLoginAt,
         profile: user.profile || { 
           displayName: user.username, 
           nickname: user.username,

@@ -236,13 +236,13 @@ const ProfilePage: React.FC = () => {
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">注册时间</span>
               <span className="text-gray-900 dark:text-white">
-                {user?.createdAt ? formatJoinDate(user.createdAt) : '-'}
+                {user?.createdAt ? formatJoinDate(user.createdAt) : '未知'}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">上次登录</span>
               <span className="text-gray-900 dark:text-white">
-                {user?.lastLogin ? new Date(user.lastLogin).toLocaleString('zh-CN') : '-'}
+                {user?.lastLogin ? new Date(user.lastLogin).toLocaleString('zh-CN') : '当前会话'}
               </span>
             </div>
           </div>

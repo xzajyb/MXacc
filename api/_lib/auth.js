@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs')
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key'
 
-function generateToken(userId) {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' })
+function generateToken(userId, expiresIn = '7d') {
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn })
 }
 
 function verifyToken(token) {

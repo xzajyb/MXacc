@@ -43,18 +43,6 @@ const DashboardPage: React.FC = () => {
     }
   }, [user])
 
-  // 页面切换动画处理
-  const handleViewChange = (newView: ActiveView) => {
-    if (newView === activeView) return
-    
-    setIsTransitioning(true)
-    setTimeout(() => {
-      setActiveView(newView)
-      setSidebarOpen(false) // 移动端关闭侧边栏
-      setIsTransitioning(false)
-    }, 150)
-  }
-
   const navigationItems = [
     {
       id: 'home',
@@ -196,7 +184,7 @@ const DashboardPage: React.FC = () => {
                       className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-md transition-all"
                       onClick={() => handleNavClick(item.id as ActiveView)}
                     >
-                      <div className="flex items-center space-x-3 mb-4">
+                      <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
                           <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
@@ -205,9 +193,6 @@ const DashboardPage: React.FC = () => {
                           <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
                         </div>
                       </div>
-                      <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        进入
-                      </button>
                     </motion.div>
                   )
                 })}
@@ -388,13 +373,7 @@ const DashboardPage: React.FC = () => {
 
         {/* 内容区域 */}
         <main className="flex-1 overflow-auto">
-          <div className="p-6">
-            {/* 只有非管理员页面显示标题 */}
-            {activeView !== 'admin' && (
-              <div className="hidden lg:block mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{getPageTitle()}</h1>
-              </div>
-            )}
+          <div className="p-6 h-full">
             {renderContent()}
           </div>
         </main>

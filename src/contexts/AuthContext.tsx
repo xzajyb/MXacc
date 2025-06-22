@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const login = async (emailOrUsername: string, password: string) => {
+  const login = async (emailOrUsername: string, password: string, rememberMe: boolean = false) => {
     try {
       setLoading(true)
       setError(null)
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ emailOrUsername, password }),
+        body: JSON.stringify({ emailOrUsername, password, rememberMe }),
       })
 
       const data = await response.json()

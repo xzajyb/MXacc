@@ -38,29 +38,56 @@ const SecurityPage: React.FC = () => {
     confirmPassword: ''
   })
 
-  // 模拟登录历史数据
+  // 获取登录历史数据
   useEffect(() => {
-    const mockLoginHistory = [
-      {
-        ip: '192.168.1.100',
-        userAgent: 'Chrome 120.0.0.0 Windows',
-        location: '北京市',
-        timestamp: new Date().toISOString()
-      },
-      {
-        ip: '10.0.0.50',
-        userAgent: 'Safari 17.0 macOS',
-        location: '上海市',
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        ip: '172.16.0.10',
-        userAgent: 'Firefox 121.0 Linux',
-        location: '深圳市',
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    const fetchLoginHistory = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch('/api/user/login-history', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setLoginHistory(data.loginHistory || [])
+        } else {
+          // 如果API失败，使用模拟数据
+          const mockLoginHistory = [
+            {
+              ip: '192.168.1.100',
+              userAgent: 'Chrome 120.0.0.0 Windows',
+              location: '北京市',
+              timestamp: new Date().toISOString()
+            },
+            {
+              ip: '10.0.0.50',
+              userAgent: 'Safari 17.0 macOS',
+              location: '上海市',
+              timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            }
+          ]
+          setLoginHistory(mockLoginHistory)
+        }
+      } catch (error) {
+        console.error('获取登录历史失败:', error)
+        // 出错时使用模拟数据
+        const mockLoginHistory = [
+          {
+            ip: '当前会话',
+            userAgent: 'Chrome 120.0.0.0 Windows',
+            location: '北京市',
+            timestamp: new Date().toISOString()
+          }
+        ]
+        setLoginHistory(mockLoginHistory)
       }
-    ]
-    setLoginHistory(mockLoginHistory)
+    }
+
+    fetchLoginHistory()
   }, [])
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {

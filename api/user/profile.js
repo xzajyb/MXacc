@@ -30,15 +30,23 @@ module.exports = async function handler(req, res) {
       }
 
       res.status(200).json({
+        success: true,
+        message: '获取用户信息成功',
         user: {
           id: user._id,
           username: user.username,
           email: user.email,
-          role: user.role || 'user',
           isEmailVerified: user.isEmailVerified,
-          profile: user.profile || { displayName: user.username, avatar: null },
+          role: user.role || 'user',
           createdAt: user.createdAt,
-          lastLoginAt: user.lastLoginAt
+          lastLogin: user.lastLoginAt,
+          profile: user.profile || {
+            nickname: user.username,
+            avatar: null,
+            bio: null,
+            location: null,
+            website: null
+          }
         }
       })
 

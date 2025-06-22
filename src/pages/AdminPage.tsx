@@ -67,11 +67,11 @@ const AdminPage: React.FC = () => {
   // 检查管理员权限
   if (!user || user.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">访问被拒绝</h1>
-          <p className="text-gray-600">您需要管理员权限才能访问此页面</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">访问被拒绝</h1>
+          <p className="text-gray-600 dark:text-gray-400">您需要管理员权限才能访问此页面</p>
         </div>
       </div>
     )
@@ -277,27 +277,27 @@ const AdminPage: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* 页面标题 */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-              <Shield className="h-8 w-8 text-blue-600 mr-3" />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+              <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
               管理员控制台
             </h1>
-            <p className="text-gray-600 mt-2">系统管理和邮件发送功能</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">系统管理和邮件发送功能</p>
           </div>
 
           {/* 选项卡导航 */}
           <div className="mb-6">
-            <div className="border-b border-gray-200">
+            <div className="border-b border-gray-200 dark:border-gray-700">
               <nav className="-mb-px flex space-x-8">
                 <button
                   onClick={() => setActiveTab('email')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'email'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
                 >
                   <Mail className="h-5 w-5 inline mr-2" />
@@ -307,8 +307,8 @@ const AdminPage: React.FC = () => {
                   onClick={() => setActiveTab('users')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'users'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
                 >
                   <Users className="h-5 w-5 inline mr-2" />
