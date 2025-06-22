@@ -4,7 +4,6 @@ export interface User {
   email: string
   role: 'user' | 'admin'
   isEmailVerified: boolean
-  fullName?: string
   profile: {
     nickname?: string
     displayName?: string
@@ -109,7 +108,6 @@ export interface AuthContextType {
   login: (emailOrUsername: string, password: string) => Promise<void>
   register: (username: string, email: string, password: string) => Promise<void>
   logout: () => void
-  updateProfile?: (updatedUser: User) => void
   sendEmailVerification: () => Promise<{success: boolean, message: string, verificationCode?: string}>
   verifyEmail: (verificationCode: string) => Promise<{success: boolean, message: string}>
 } 

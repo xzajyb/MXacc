@@ -408,8 +408,8 @@ const RegisterPage = () => {
               alt="MX Logo" 
               className="w-full h-full object-contain"
             />
-          </div>
-          
+        </div>
+
           <h2 className="text-4xl font-bold mx-text-gradient mb-6">
             加入 MX 社区
           </h2>

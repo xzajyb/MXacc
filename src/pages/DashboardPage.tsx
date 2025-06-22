@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Home, 
   User, 
@@ -34,7 +35,6 @@ const DashboardPage: React.FC = () => {
   const { theme, setTheme, isDark } = useTheme()
   const [activeView, setActiveView] = useState<ActiveView>('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isTransitioning, setIsTransitioning] = useState(false)
 
   // 根据用户状态自动显示邮箱验证
   useEffect(() => {
@@ -98,279 +98,306 @@ const DashboardPage: React.FC = () => {
     logout()
   }
 
-  const renderContent = () => {
-    switch (activeView) {
-      case 'profile':
-        return <ProfilePage />
-      case 'settings':
-        return <SettingsPage />
-      case 'security':
-        return <SecurityPage />
-      case 'admin':
-        return user?.role === 'admin' ? <AdminPage /> : <div>权限不足</div>
-      case 'verify-email':
-        return <VerifyEmailPage />
-      case 'home':
-      default:
-        return (
-          <div className="max-w-7xl mx-auto">
-            {/* 欢迎区域 */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-sm border border-blue-200/50 dark:border-blue-800/50 p-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    欢迎回来，{user?.username}！
-                  </h1>
-                  <p className="text-gray-600 dark:text-slate-400 mt-1">
-                    今天是 {new Date().toLocaleDateString('zh-CN', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric',
-                      weekday: 'long'
-                    })}
-                  </p>
-                </div>
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {user?.username?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              </div>
-            </div>
+  const handleNavClick = (viewId: ActiveView) => {
+    setActiveView(viewId)
+    setSidebarOpen(false) // 移动端点击后关闭侧边栏
+  }
 
-            {/* 邮箱验证提醒 */}
-            {!user?.isEmailVerified && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
-                <div className="flex items-center">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-3" />
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-400">
-                      邮箱未验证
-                    </h3>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                      为了账户安全，请验证您的邮箱地址
+  const getPageTitle = () => {
+    const item = navigationItems.find(item => item.id === activeView)
+    return item?.label || '首页'
+  }
+
+  const pageVariants = {
+    initial: { opacity: 0, y: 20 },
+    in: { opacity: 1, y: 0 },
+    out: { opacity: 0, y: -20 }
+  }
+
+  const pageTransition = {
+    type: 'tween',
+    ease: 'anticipate',
+    duration: 0.3
+  }
+
+  const renderContent = () => {
+    const content = (() => {
+      switch (activeView) {
+        case 'profile':
+          return <ProfilePage />
+        case 'settings':
+          return <SettingsPage />
+        case 'security':
+          return <SecurityPage />
+        case 'admin':
+          return user?.role === 'admin' ? <AdminPage /> : <div>权限不足</div>
+        case 'verify-email':
+          return <VerifyEmailPage />
+        case 'home':
+        default:
+          return (
+            <div className="max-w-7xl mx-auto">
+              {/* 欢迎区域 */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-sm border border-blue-200/50 dark:border-blue-800/50 p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      欢迎回来，{user?.username}！
+                    </h1>
+                    <p className="text-gray-600 dark:text-slate-400 mt-1">
+                      今天是 {new Date().toLocaleDateString('zh-CN', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'long'
+                      })}
                     </p>
                   </div>
-                  <button
-                    onClick={() => setActiveView('verify-email')}
-                    className="bg-yellow-600 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-700"
-                  >
-                    立即验证
-                  </button>
+                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {user?.username?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* 快速操作卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              {navigationItems.slice(1).map((item) => {
-                const Icon = item.icon
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setActiveView(item.id as ActiveView)}
-                    className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 cursor-pointer hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center">
-                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mr-4">
-                        <Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              {/* 邮箱验证提醒 */}
+              {!user?.isEmailVerified && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                  <div className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        邮箱未验证
+                      </h3>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                        请验证您的邮箱地址以确保账户安全
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveView('verify-email')}
+                      className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+                    >
+                      立即验证
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 功能卡片网格 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {navigationItems.filter(item => item.id !== 'home').map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <motion.div
+                      key={item.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-md transition-all"
+                      onClick={() => handleNavClick(item.id as ActiveView)}
+                    >
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                          <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">{item.label}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {item.label}
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-slate-400">
-                          {item.description}
-                        </p>
-                      </div>
+                      <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        进入
+                      </button>
+                    </motion.div>
+                  )
+                })}
+              </div>
+
+              {/* 快速统计 */}
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                    <div className="ml-4">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">账户状态</p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">正常</p>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-
-            {/* 账户状态 */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                账户状态
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center">
-                  {user?.isEmailVerified ? (
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  ) : (
-                    <Clock className="h-5 w-5 text-yellow-500 mr-2" />
-                  )}
-                  <span className="text-sm text-gray-700 dark:text-slate-300">
-                    邮箱状态: {user?.isEmailVerified ? '已验证' : '待验证'}
-                  </span>
                 </div>
-                <div className="flex items-center">
-                  <Shield className="h-5 w-5 text-blue-500 mr-2" />
-                  <span className="text-sm text-gray-700 dark:text-slate-300">
-                    账户类型: {user?.role === 'admin' ? '管理员' : '普通用户'}
-                  </span>
+                
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center">
+                    <Shield className="w-8 h-8 text-blue-600" />
+                    <div className="ml-4">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">安全等级</p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {user?.isEmailVerified ? '高' : '中'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center">
-                  <User className="h-5 w-5 text-purple-500 mr-2" />
-                  <span className="text-sm text-gray-700 dark:text-slate-300">
-                    注册时间: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('zh-CN') : '未知'}
-                  </span>
+                
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center">
+                    <Clock className="w-8 h-8 text-purple-600" />
+                    <div className="ml-4">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">最后登录</p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '今天'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )
-    }
+          )
+      }
+    })()
+
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeView}
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+          className="w-full"
+        >
+          {content}
+        </motion.div>
+      </AnimatePresence>
+    )
   }
 
   return (
-    <div className="h-screen flex bg-gray-50 dark:bg-slate-900 overflow-hidden">
-      {/* 遮罩层 - 移动端 */}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex">
+      {/* 侧边栏遮罩层 (移动端) */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* 侧边栏 */}
-      <div className={`
-        fixed lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        z-50 lg:z-auto w-64 h-full bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700
-        flex flex-col
-      `}>
-        {/* Logo区域 */}
-        <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-          <div className="flex items-center">
-            <img src="/logo.svg" alt="Logo" className="w-8 h-8 mr-3" />
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full">
+          {/* Logo区域 */}
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700">
+            <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">梦锡账号</h2>
-              <p className="text-sm text-gray-500 dark:text-slate-400">统一管理</p>
+              <h1 className="font-bold text-xl text-gray-900 dark:text-white">梦锡账号</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">统一管理</p>
             </div>
           </div>
-        </div>
 
-        {/* 导航菜单 */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="space-y-2">
+          {/* 导航菜单 */}
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {navigationItems.map((item) => {
               const Icon = item.icon
-              const isActive = activeView === item.id
               return (
-                <li key={item.id}>
-                  <button
-                    onClick={() => handleViewChange(item.id as ActiveView)}
-                    className={`
-                      w-full flex items-center px-4 py-3 rounded-lg text-left transition-all duration-200
-                      ${isActive 
-                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' 
-                        : 'text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700/50'
-                      }
-                    `}
-                  >
-                    <Icon className={`h-5 w-5 mr-3 ${isActive ? 'text-blue-600 dark:text-blue-400' : ''}`} />
-                    <div className="flex-1">
-                      <div className="font-medium">{item.label}</div>
-                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                        {item.description}
-                      </div>
-                    </div>
-                  </button>
-                </li>
+                <button
+                  key={item.id}
+                  onClick={() => handleNavClick(item.id as ActiveView)}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                    activeView === item.id
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon size={20} />
+                  <span className="font-medium">{item.label}</span>
+                </button>
               )
             })}
-          </ul>
-        </nav>
+          </nav>
 
-        {/* 主题切换和用户信息 */}
-        <div className="p-4 border-t border-gray-200 dark:border-slate-700">
-          {/* 主题切换 */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400 mb-2">
-              <span>主题模式</span>
-            </div>
-            <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
-              {[
-                { value: 'light', icon: Sun, label: '浅色' },
-                { value: 'dark', icon: Moon, label: '深色' },
-                { value: 'system', icon: Monitor, label: '自动' }
-              ].map(({ value, icon: Icon, label }) => (
+          {/* 主题切换和用户菜单 */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+            {/* 主题切换 */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600 dark:text-gray-400">主题</span>
+              <div className="flex space-x-1">
                 <button
-                  key={value}
-                  onClick={() => setTheme(value as any)}
-                  className={`
-                    flex-1 flex items-center justify-center py-2 px-3 rounded-md text-xs transition-all
-                    ${theme === value 
-                      ? 'bg-white dark:bg-slate-600 text-gray-900 dark:text-white shadow-sm' 
-                      : 'text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200'
-                    }
-                  `}
+                  onClick={() => setTheme('light')}
+                  className={`p-2 rounded-md ${theme === 'light' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                 >
-                  <Icon className="h-3.5 w-3.5 mr-1" />
-                  {label}
+                  <Sun size={16} />
                 </button>
-              ))}
+                <button
+                  onClick={() => setTheme('dark')}
+                  className={`p-2 rounded-md ${theme === 'dark' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                >
+                  <Moon size={16} />
+                </button>
+                <button
+                  onClick={() => setTheme('auto')}
+                  className={`p-2 rounded-md ${theme === 'auto' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                >
+                  <Monitor size={16} />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* 用户信息 */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
+            {/* 用户信息 */}
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
                   {user?.username?.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {user?.username}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-slate-400">
-                  {user?.role === 'admin' ? '管理员' : '用户'}
-                </div>
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {user?.email}
+                </p>
               </div>
+              <button
+                onClick={handleLogout}
+                className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                title="退出登录"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-gray-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700"
-              title="退出登录"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
           </div>
         </div>
       </div>
 
       {/* 主内容区域 */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* 顶部栏 - 移动端 */}
-        <div className="lg:hidden bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-4">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* 顶部栏 (移动端) */}
+        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             >
-              <Menu className="h-5 w-5" />
+              <Menu size={20} />
             </button>
-            <div className="flex items-center">
-              <img src="/logo.svg" alt="Logo" className="w-6 h-6 mr-2" />
-              <span className="font-semibold text-gray-900 dark:text-white">梦锡账号</span>
-            </div>
-            <div className="w-9" /> {/* 占位元素保持居中 */}
+            <h1 className="font-semibold text-gray-900 dark:text-white">{getPageTitle()}</h1>
+            <div className="w-8" /> {/* 占位符，保持标题居中 */}
           </div>
         </div>
 
         {/* 内容区域 */}
-        <div className="flex-1 overflow-y-auto">
-          <div className={`
-            h-full transition-all duration-300 ease-in-out
-            ${isTransitioning ? 'opacity-0 transform translate-x-4' : 'opacity-100 transform translate-x-0'}
-          `}>
+        <main className="flex-1 overflow-auto">
+          <div className="p-6">
+            {/* 只有非管理员页面显示标题 */}
+            {activeView !== 'admin' && (
+              <div className="hidden lg:block mb-6">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{getPageTitle()}</h1>
+              </div>
+            )}
             {renderContent()}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   )
