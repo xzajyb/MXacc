@@ -1,7 +1,7 @@
-import clientPromise from '../_lib/mongodb.js'
-import { hashPassword, generateToken } from '../_lib/auth.js'
+const clientPromise = require('../_lib/mongodb')
+const { hashPassword, generateToken } = require('../_lib/auth')
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: '方法不允许' })
   }

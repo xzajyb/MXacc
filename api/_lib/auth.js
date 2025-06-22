@@ -1,13 +1,13 @@
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs'
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcryptjs')
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key'
 
-export function generateToken(userId) {
+function generateToken(userId) {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' })
 }
 
-export function verifyToken(token) {
+function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET)
   } catch (error) {
@@ -15,18 +15,26 @@ export function verifyToken(token) {
   }
 }
 
-export async function hashPassword(password) {
+async function hashPassword(password) {
   return await bcrypt.hash(password, 12)
 }
 
-export async function comparePassword(password, hash) {
+async function comparePassword(password, hash) {
   return await bcrypt.compare(password, hash)
 }
 
-export function getTokenFromRequest(req) {
+function getTokenFromRequest(req) {
   const authHeader = req.headers.authorization
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7)
   }
   return null
+}
+
+module.exports = {
+  generateToken,
+  verifyToken,
+  hashPassword,
+  comparePassword,
+  getTokenFromRequest
 } 

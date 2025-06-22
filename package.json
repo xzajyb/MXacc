@@ -2,7 +2,6 @@
   "name": "mxacc",
   "version": "1.0.0",
   "description": "梦锡账号管理系统",
-  "type": "module",
   "dependencies": {
     "mongodb": "^6.3.0",
     "jsonwebtoken": "^9.0.2",

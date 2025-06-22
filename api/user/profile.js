@@ -1,8 +1,8 @@
-import clientPromise from '../_lib/mongodb.js'
-import { verifyToken, getTokenFromRequest } from '../_lib/auth.js'
-import { ObjectId } from 'mongodb'
+const clientPromise = require('../_lib/mongodb')
+const { verifyToken, getTokenFromRequest } = require('../_lib/auth')
+const { ObjectId } = require('mongodb')
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const token = getTokenFromRequest(req)
     if (!token) {
