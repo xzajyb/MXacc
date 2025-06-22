@@ -10,20 +10,28 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 199 89% 48%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 199 89% 48%;
     --radius: 0.5rem;
+    
+    /* MX 专用色彩变量 */
+    --mx-blue: 199 89% 48%;
+    --mx-blue-light: 199 89% 58%;
+    --mx-blue-dark: 199 89% 38%;
+    --mx-gray: 218 11% 65%;
+    --mx-gray-light: 220 13% 91%;
+    --mx-gray-dark: 218 11% 35%;
   }
  
   .dark {
@@ -33,19 +41,27 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 199 89% 58%;
     --primary-foreground: 222.2 84% 4.9%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 199 89% 58%;
+    --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 199 89% 58%;
+    
+    /* 深色模式下的MX专用色彩 */
+    --mx-blue: 199 89% 58%;
+    --mx-blue-light: 199 89% 68%;
+    --mx-blue-dark: 199 89% 48%;
+    --mx-gray: 218 11% 65%;
+    --mx-gray-light: 220 13% 35%;
+    --mx-gray-dark: 218 11% 15%;
   }
 }
 
@@ -108,7 +124,7 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.7;
   }
 }
 
@@ -117,16 +133,18 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-6px);
   }
 }
 
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% 50%;
+@keyframes slide-in {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
   }
-  50% {
-    background-position: 100% 50%;
+  100% {
+    transform: translateX(0);
+    opacity: 1;
   }
 }
 
@@ -142,155 +160,155 @@
 }
 
 .animate-pulse-glow {
-  animation: pulse-glow 2s infinite ease-in-out;
+  animation: pulse-glow 3s infinite ease-in-out;
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
 }
 
-.animate-gradient {
-  background-size: 400% 400%;
-  animation: gradient-shift 3s ease infinite;
+.animate-slide-in {
+  animation: slide-in 0.5s ease-out forwards;
 }
 
-/* 梦锡工作室品牌色彩渐变 */
-.gradient-mx {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+/* MX 专业色彩方案 */
+.mx-primary {
+  background: hsl(var(--mx-blue));
+  color: white;
 }
 
-.gradient-mx-modern {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #6366f1 100%);
+.mx-primary-light {
+  background: hsl(var(--mx-blue-light));
+  color: white;
 }
 
-.gradient-mx-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.mx-primary-soft {
+  background: hsl(var(--mx-blue) / 0.1);
+  color: hsl(var(--mx-blue));
+}
+
+.mx-gradient {
+  background: linear-gradient(135deg, hsl(var(--mx-blue)) 0%, hsl(var(--mx-blue-light)) 100%);
+}
+
+.mx-gradient-soft {
+  background: linear-gradient(135deg, hsl(var(--mx-blue) / 0.05) 0%, hsl(var(--mx-blue) / 0.15) 100%);
+}
+
+.mx-text-gradient {
+  background: linear-gradient(135deg, hsl(var(--mx-blue)) 0%, hsl(var(--mx-blue-light)) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.gradient-mx-text-modern {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #6366f1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* 玻璃态效果 */
+/* 玻璃态效果 - 更清爽的版本 */
 .glass-effect {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .glass-effect {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.glass-card {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
 }
 
-.dark .glass-card {
+.dark .glass-effect {
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-/* 表单输入框聚焦效果 */
+.glass-card {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+}
+
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* 表单输入框专业风格 */
 .input-focus {
   @apply ring-2 ring-blue-500/20 border-blue-500;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.input-glow:focus {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1),
-              0 0 20px rgba(59, 130, 246, 0.2);
+.input-professional {
+  @apply bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500;
+  @apply transition-all duration-200;
 }
 
-/* 卡片悬停效果 */
+/* 按钮专业风格 */
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white font-medium;
+  @apply transition-all duration-200 ease-out;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500/20;
+}
+
+.btn-secondary {
+  @apply bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100;
+  @apply border border-slate-200 dark:border-slate-700;
+  @apply hover:bg-slate-50 dark:hover:bg-slate-700;
+  @apply transition-all duration-200 ease-out;
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500/20;
+}
+
+/* 卡片悬停效果 - 更专业 */
 .card-hover {
   @apply transition-all duration-300 ease-out;
   transform: translateY(0);
 }
 
 .card-hover:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
 .dark .card-hover:hover {
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
 
-/* 按钮点击效果 */
-.button-press {
-  @apply active:scale-95 transition-transform duration-100;
-}
-
-.button-glow {
-  position: relative;
-  overflow: hidden;
-}
-
-.button-glow::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.button-glow:hover::before {
-  left: 100%;
-}
-
-/* 现代化阴影效果 */
+/* 专业阴影效果 */
 .shadow-soft {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04),
-              0 4px 16px rgba(0, 0, 0, 0.08);
+              0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .shadow-medium {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
-              0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06),
+              0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .shadow-strong {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12),
-              0 16px 32px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08),
+              0 16px 32px rgba(0, 0, 0, 0.12);
 }
 
 .dark .shadow-soft {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2),
-              0 4px 16px rgba(0, 0, 0, 0.3);
+              0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .dark .shadow-medium {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
-              0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25),
+              0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .dark .shadow-strong {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4),
-              0 16px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3),
+              0 16px 32px rgba(0, 0, 0, 0.4);
 }
 
 /* Loading spinner */
 .spinner {
   border: 2px solid #f3f3f3;
   border-radius: 50%;
-  border-top: 2px solid #667eea;
+  border-top: 2px solid hsl(var(--mx-blue));
   width: 20px;
   height: 20px;
   animation: spin 1s linear infinite;
@@ -301,10 +319,63 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Logo 样式 */
+.mx-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.mx-logo-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.mx-logo-dot {
+  width: 12px;
+  height: 12px;
+  background: hsl(var(--mx-blue));
+  border-radius: 50%;
+}
+
+.mx-logo-dot-large {
+  width: 20px;
+  height: 20px;
+  background: hsl(var(--mx-blue));
+  border-radius: 50%;
+}
+
+.dark .mx-logo {
+  background: hsl(var(--mx-blue));
+}
+
+.dark .mx-logo-dot {
+  background: white;
+}
+
+.dark .mx-logo-large {
+  background: hsl(var(--mx-blue));
+}
+
+.dark .mx-logo-dot-large {
+  background: white;
+}
+
 /* 高对比度模式支持 */
 @media (prefers-contrast: high) {
-  .gradient-mx,
-  .gradient-mx-modern {
+  .mx-gradient,
+  .mx-primary {
     background: #000;
     color: #fff;
   }
@@ -336,24 +407,24 @@
 /* 响应式设计增强 */
 @media (max-width: 640px) {
   .glass-card {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
 /* 焦点可见性增强 */
 .focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid hsl(var(--mx-blue));
   outline-offset: 2px;
 }
 
 /* 选择文本样式 */
 ::selection {
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: hsl(var(--mx-blue) / 0.2);
   color: inherit;
 }
 
 .dark ::selection {
-  background-color: rgba(59, 130, 246, 0.4);
+  background-color: hsl(var(--mx-blue) / 0.3);
   color: inherit;
 } 
