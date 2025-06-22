@@ -124,7 +124,7 @@ const DashboardPage: React.FC = () => {
         case 'home':
         default:
           return (
-            <div className="max-w-7xl mx-auto">
+            <>
               {/* 欢迎区域 */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-sm border border-blue-200/50 dark:border-blue-800/50 p-6 mb-6">
                 <div className="flex items-center justify-between">
@@ -132,7 +132,7 @@ const DashboardPage: React.FC = () => {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                       欢迎回来，{user?.username}！
                     </h1>
-                    <p className="text-gray-600 dark:text-slate-400 mt-1">
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">
                       今天是 {new Date().toLocaleDateString('zh-CN', { 
                         year: 'numeric', 
                         month: 'long', 
@@ -234,7 +234,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </>
           )
       }
     })()
@@ -257,7 +257,7 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
       {/* 侧边栏遮罩层 (移动端) */}
       {sidebarOpen && (
         <div 
@@ -356,7 +356,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 主内容区域 */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* 顶部栏 (移动端) */}
         <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
@@ -372,8 +372,8 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* 内容区域 */}
-        <main className="flex-1">
-          <div className="p-6">
+        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {renderContent()}
           </div>
         </main>

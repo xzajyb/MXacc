@@ -281,7 +281,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
 
   return (
     <>
-      <div className={embedded ? "space-y-6" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
+      <div className={embedded ? "" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
         <div className={embedded ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
           {/* 页面标题 */}
           <div className="mb-8">
