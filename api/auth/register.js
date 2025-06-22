@@ -1,6 +1,17 @@
 const clientPromise = require('../_lib/mongodb')
 const { hashPassword, generateToken } = require('../_lib/auth')
-const { sendWelcomeEmail } = require('../_lib/luckycola-email')
+// 修复导入问题
+let sendWelcomeEmail
+try {
+  const emailModule = require('../_lib/luckycola-email')
+  sendWelcomeEmail = emailModule.sendWelcomeEmail
+} catch (error) {
+  console.error('无法导入邮件模块:', error)
+  sendWelcomeEmail = async () => {
+    console.log('邮件服务不可用，跳过欢迎邮件发送')
+    return { success: false, error: '邮件服务不可用' }
+  }
+}
 
 module.exports = async function handler(req, res) {
   // 设置CORS头部

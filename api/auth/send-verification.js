@@ -1,6 +1,16 @@
 const clientPromise = require('../_lib/mongodb')
 const { verifyToken } = require('../_lib/auth')
-const { sendVerificationEmail } = require('../_lib/luckycola-email')
+// 修复导入问题
+let sendVerificationEmail
+try {
+  const emailModule = require('../_lib/luckycola-email')
+  sendVerificationEmail = emailModule.sendVerificationEmail
+} catch (error) {
+  console.error('无法导入邮件模块:', error)
+  sendVerificationEmail = async () => {
+    throw new Error('邮件服务配置错误，请检查配置文件')
+  }
+}
 const { ObjectId } = require('mongodb')
 
 module.exports = async function handler(req, res) {
