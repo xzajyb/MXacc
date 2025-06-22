@@ -12,7 +12,7 @@ import {
   SecuritySettings,
   LoginHistory,
   TwoFactorSetup
-} from '@/types'
+} from '../types'
 import { getToken, getRefreshToken, setToken, removeToken, shouldRefreshToken } from './auth'
 
 // 创建axios实例
