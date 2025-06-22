@@ -94,6 +94,7 @@ const LoginPage = () => {
                   {...register('emailOrUsername')}
                   type="text"
                   id="emailOrUsername"
+                  autoComplete="username"
                   className={cn(
                     'w-full pl-10 pr-4 py-3 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground',
                     'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
@@ -120,6 +121,7 @@ const LoginPage = () => {
                   {...register('password')}
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  autoComplete="current-password"
                   className={cn(
                     'w-full pl-10 pr-12 py-3 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground',
                     'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
