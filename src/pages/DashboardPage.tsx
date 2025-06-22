@@ -112,13 +112,13 @@ const DashboardPage: React.FC = () => {
     const content = (() => {
       switch (activeView) {
         case 'profile':
-          return <ProfilePage />
+          return <ProfilePage embedded={true} />
         case 'settings':
-          return <SettingsPage />
+          return <SettingsPage embedded={true} />
         case 'security':
-          return <SecurityPage />
+          return <SecurityPage embedded={true} />
         case 'admin':
-          return user?.role === 'admin' ? <AdminPage /> : <div>权限不足</div>
+          return user?.role === 'admin' ? <AdminPage embedded={true} /> : <div>权限不足</div>
         case 'verify-email':
           return <VerifyEmailPage />
         case 'home':
@@ -356,7 +356,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 主内容区域 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* 顶部栏 (移动端) */}
         <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center justify-between">
@@ -372,8 +372,8 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* 内容区域 */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-6 h-full">
+        <main className="flex-1">
+          <div className="p-6">
             {renderContent()}
           </div>
         </main>
