@@ -1,14 +1,14 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
-import { LoginRequest } from '@/types'
-import { cn } from '@/utils/cn'
-import LoadingSpinner from '@/components/LoadingSpinner'
+import { useAuth } from '../contexts/AuthContext'
+import { LoginRequest } from '../types'
+import { cn } from '../utils/cn'
+import LoadingSpinner from '../components/LoadingSpinner'
 
 const loginSchema = z.object({
   emailOrUsername: z.string().min(1, '请输入邮箱或用户名'),
