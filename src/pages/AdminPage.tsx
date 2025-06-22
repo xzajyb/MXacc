@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader } from 'lucide-react'
+import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X } from 'lucide-react'
 import axios from 'axios'
 
 interface User {
@@ -31,6 +31,7 @@ interface UserStats {
 const AdminPage: React.FC = () => {
   const { user, token } = useAuth()
   const [activeTab, setActiveTab] = useState<'email' | 'users'>('email')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -88,11 +89,15 @@ const AdminPage: React.FC = () => {
         console.error('加载邮件模板失败:', error)
       }
     }
-    loadTemplates()
+    if (token) {
+      loadTemplates()
+    }
   }, [token])
 
   // 加载用户列表
   const loadUsers = async () => {
+    if (!token) return
+    
     setLoading(true)
     try {
       const params = new URLSearchParams({
@@ -117,7 +122,7 @@ const AdminPage: React.FC = () => {
   }
 
   useEffect(() => {
-    if (activeTab === 'users') {
+    if (activeTab === 'users' && token) {
       loadUsers()
     }
   }, [activeTab, currentPage, token])
@@ -194,448 +199,528 @@ const AdminPage: React.FC = () => {
     }
   }
 
+  // 导航菜单项
+  const navigationItems = [
+    {
+      id: 'email',
+      label: '邮件发送',
+      icon: Mail,
+      description: '发送系统邮件'
+    },
+    {
+      id: 'users',
+      label: '用户管理',
+      icon: Users,
+      description: '管理用户账户'
+    }
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 页面标题 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* 移动端遮罩 */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* 左侧导航栏 */}
+      <div className={`
+        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* 头部 */}
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+          <div className="flex items-center">
             <Shield className="h-8 w-8 text-blue-600 mr-3" />
-            管理员控制台
-          </h1>
-          <p className="text-gray-600 mt-2">系统管理和邮件发送功能</p>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">管理控制台</h1>
+            </div>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-1 text-gray-500 hover:text-gray-700"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* 标签页 */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('email')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'email'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Mail className="h-5 w-5 inline mr-2" />
-                邮件发送
-              </button>
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'users'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Users className="h-5 w-5 inline mr-2" />
-                用户管理
-              </button>
-            </nav>
+        {/* 用户信息 */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-semibold">
+                {user?.username?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-900">{user?.username}</p>
+              <p className="text-xs text-gray-500">系统管理员</p>
+            </div>
           </div>
         </div>
 
-        {/* 邮件发送标签页 */}
-        {activeTab === 'email' && (
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">发送邮件</h2>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* 左侧：邮件配置 */}
-              <div className="space-y-6">
-                {/* 选择模板 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    邮件模板
-                  </label>
-                  <select
-                    value={selectedTemplate}
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {/* 导航菜单 */}
+        <nav className="p-4">
+          <ul className="space-y-2">
+            {navigationItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => {
+                      setActiveTab(item.id as 'email' | 'users')
+                      setSidebarOpen(false) // 移动端点击后关闭侧边栏
+                    }}
+                    className={`
+                      w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors
+                      ${activeTab === item.id 
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                        : 'text-gray-700 hover:bg-gray-50'
+                      }
+                    `}
                   >
-                    <option value="">请选择邮件模板</option>
-                    {templates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name} - {template.subject}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <Icon className={`h-5 w-5 mr-3 ${activeTab === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <div>
+                      <div className="font-medium">{item.label}</div>
+                      <div className="text-xs text-gray-500">{item.description}</div>
+                    </div>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
+      </div>
 
-                {/* 自定义主题 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    自定义主题（可选）
-                  </label>
-                  <input
-                    type="text"
-                    value={emailSubject}
-                    onChange={(e) => setEmailSubject(e.target.value)}
-                    placeholder="留空使用默认主题"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+      {/* 右侧主内容区 */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* 顶部栏 */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 text-gray-500 hover:text-gray-700 mr-3"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {activeTab === 'email' ? '邮件发送' : '用户管理'}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {activeTab === 'email' ? '发送系统邮件给用户' : '管理系统用户账户'}
+              </p>
+            </div>
+          </div>
+        </div>
 
-                {/* 选择收件人 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    收件人
-                  </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
+        {/* 主内容 */}
+        <div className="flex-1 p-6 overflow-auto">
+          {/* 邮件发送内容 */}
+          {activeTab === 'email' && (
+            <div className="max-w-6xl mx-auto">
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 左侧：邮件配置 */}
+                  <div className="space-y-6">
+                    {/* 选择模板 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        邮件模板
+                      </label>
+                      <select
+                        value={selectedTemplate}
+                        onChange={(e) => setSelectedTemplate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">请选择邮件模板</option>
+                        {templates.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.name} - {template.subject}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 自定义主题 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        自定义主题（可选）
+                      </label>
                       <input
-                        type="radio"
-                        name="recipients"
-                        value="all"
-                        checked={recipients === 'all'}
-                        onChange={(e) => setRecipients(e.target.value as any)}
-                        className="mr-2"
+                        type="text"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="留空使用默认主题"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      发送给所有已验证用户
-                    </label>
-                    <label className="flex items-center">
+                    </div>
+
+                    {/* 选择收件人 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        收件人
+                      </label>
+                      <div className="space-y-2">
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="recipients"
+                            value="all"
+                            checked={recipients === 'all'}
+                            onChange={(e) => setRecipients(e.target.value as any)}
+                            className="mr-2"
+                          />
+                          发送给所有已验证用户
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="recipients"
+                            value="selected"
+                            checked={recipients === 'selected'}
+                            onChange={(e) => setRecipients(e.target.value as any)}
+                            className="mr-2"
+                          />
+                          发送给选中用户
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="recipients"
+                            value="email"
+                            checked={recipients === 'email'}
+                            onChange={(e) => setRecipients(e.target.value as any)}
+                            className="mr-2"
+                          />
+                          发送给指定邮箱
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* 自定义邮箱输入 */}
+                    {recipients === 'email' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          邮箱地址（每行一个）
+                        </label>
+                        <textarea
+                          value={customEmails}
+                          onChange={(e) => setCustomEmails(e.target.value)}
+                          placeholder="example1@email.com&#10;example2@email.com"
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 右侧：邮件内容 */}
+                  <div className="space-y-6">
+                    {/* 邮件数据 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        邮件标题（用于自定义模板）
+                      </label>
                       <input
-                        type="radio"
-                        name="recipients"
-                        value="selected"
-                        checked={recipients === 'selected'}
-                        onChange={(e) => setRecipients(e.target.value as any)}
-                        className="mr-2"
+                        type="text"
+                        value={emailData.title}
+                        onChange={(e) => setEmailData({...emailData, title: e.target.value})}
+                        placeholder="邮件标题"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      发送给选中用户
-                    </label>
-                    <label className="flex items-center">
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        邮件内容
+                      </label>
+                      <textarea
+                        value={emailData.content}
+                        onChange={(e) => setEmailData({...emailData, content: e.target.value})}
+                        placeholder="邮件正文内容"
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        按钮链接（可选）
+                      </label>
                       <input
-                        type="radio"
-                        name="recipients"
-                        value="email"
-                        checked={recipients === 'email'}
-                        onChange={(e) => setRecipients(e.target.value as any)}
-                        className="mr-2"
+                        type="url"
+                        value={emailData.actionUrl}
+                        onChange={(e) => setEmailData({...emailData, actionUrl: e.target.value})}
+                        placeholder="https://example.com"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      发送给指定邮箱
-                    </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        按钮文字（可选）
+                      </label>
+                      <input
+                        type="text"
+                        value={emailData.actionText}
+                        onChange={(e) => setEmailData({...emailData, actionText: e.target.value})}
+                        placeholder="查看详情"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* 发送按钮 */}
+                    <button
+                      onClick={handleSendEmail}
+                      disabled={sendingEmail}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {sendingEmail ? (
+                        <>
+                          <Loader className="h-5 w-5 animate-spin mr-2" />
+                          发送中...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-5 w-5 mr-2" />
+                          发送邮件
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                {/* 自定义邮箱输入 */}
-                {recipients === 'email' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      邮箱地址（每行一个）
-                    </label>
-                    <textarea
-                      value={customEmails}
-                      onChange={(e) => setCustomEmails(e.target.value)}
-                      placeholder="example1@email.com&#10;example2@email.com"
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                {/* 发送结果 */}
+                {emailResults && (
+                  <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-medium text-gray-900 mb-2">发送结果</h3>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                        成功: {emailResults.success}
+                      </div>
+                      <div className="flex items-center">
+                        <XCircle className="h-4 w-4 text-red-500 mr-1" />
+                        失败: {emailResults.failed}
+                      </div>
+                      <div className="flex items-center">
+                        <Mail className="h-4 w-4 text-blue-500 mr-1" />
+                        总计: {emailResults.total}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* 右侧：邮件内容 */}
-              <div className="space-y-6">
-                {/* 邮件数据 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    邮件标题（用于自定义模板）
-                  </label>
-                  <input
-                    type="text"
-                    value={emailData.title}
-                    onChange={(e) => setEmailData({...emailData, title: e.target.value})}
-                    placeholder="邮件标题"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+          {/* 用户管理内容 */}
+          {activeTab === 'users' && (
+            <div className="max-w-7xl mx-auto">
+              <div className="bg-white rounded-lg shadow-sm border">
+                {/* 用户统计 */}
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">用户统计</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="text-center p-3 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">{userStats.total}</div>
+                      <div className="text-sm text-blue-600">总用户</div>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">{userStats.verified}</div>
+                      <div className="text-sm text-green-600">已验证</div>
+                    </div>
+                    <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                      <div className="text-2xl font-bold text-yellow-600">{userStats.unverified}</div>
+                      <div className="text-sm text-yellow-600">未验证</div>
+                    </div>
+                    <div className="text-center p-3 bg-purple-50 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">{userStats.admins}</div>
+                      <div className="text-sm text-purple-600">管理员</div>
+                    </div>
+                    <div className="text-center p-3 bg-red-50 rounded-lg">
+                      <div className="text-2xl font-bold text-red-600">{userStats.disabled}</div>
+                      <div className="text-sm text-red-600">已禁用</div>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    邮件内容
-                  </label>
-                  <textarea
-                    value={emailData.content}
-                    onChange={(e) => setEmailData({...emailData, content: e.target.value})}
-                    placeholder="邮件正文内容"
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                {/* 搜索和过滤 */}
+                <div className="p-6 border-b border-gray-200">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input
+                      type="text"
+                      placeholder="搜索用户名或邮箱"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <select
+                      value={filterVerified}
+                      onChange={(e) => setFilterVerified(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">所有验证状态</option>
+                      <option value="true">已验证</option>
+                      <option value="false">未验证</option>
+                    </select>
+                    <select
+                      value={filterRole}
+                      onChange={(e) => setFilterRole(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">所有角色</option>
+                      <option value="user">普通用户</option>
+                      <option value="admin">管理员</option>
+                    </select>
+                    <button
+                      onClick={handleSearch}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                    >
+                      搜索
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    按钮链接（可选）
-                  </label>
-                  <input
-                    type="url"
-                    value={emailData.actionUrl}
-                    onChange={(e) => setEmailData({...emailData, actionUrl: e.target.value})}
-                    placeholder="https://example.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    按钮文字（可选）
-                  </label>
-                  <input
-                    type="text"
-                    value={emailData.actionText}
-                    onChange={(e) => setEmailData({...emailData, actionText: e.target.value})}
-                    placeholder="查看详情"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* 发送按钮 */}
-                <button
-                  onClick={handleSendEmail}
-                  disabled={sendingEmail}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {sendingEmail ? (
-                    <>
-                      <Loader className="h-5 w-5 animate-spin mr-2" />
-                      发送中...
-                    </>
+                {/* 用户列表 */}
+                <div className="overflow-x-auto">
+                  {loading ? (
+                    <div className="p-8 text-center">
+                      <Loader className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+                      <p className="mt-2 text-gray-600">加载中...</p>
+                    </div>
                   ) : (
-                    <>
-                      <Send className="h-5 w-5 mr-2" />
-                      发送邮件
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* 发送结果 */}
-            {emailResults && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="font-medium text-gray-900 mb-2">发送结果</h3>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                    成功: {emailResults.success}
-                  </div>
-                  <div className="flex items-center">
-                    <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                    失败: {emailResults.failed}
-                  </div>
-                  <div className="flex items-center">
-                    <Mail className="h-4 w-4 text-blue-500 mr-1" />
-                    总计: {emailResults.total}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 用户管理标签页 */}
-        {activeTab === 'users' && (
-          <div className="bg-white rounded-lg shadow-sm border">
-            {/* 用户统计 */}
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">用户统计</h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{userStats.total}</div>
-                  <div className="text-sm text-blue-600">总用户</div>
-                </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{userStats.verified}</div>
-                  <div className="text-sm text-green-600">已验证</div>
-                </div>
-                <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                  <div className="text-2xl font-bold text-yellow-600">{userStats.unverified}</div>
-                  <div className="text-sm text-yellow-600">未验证</div>
-                </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{userStats.admins}</div>
-                  <div className="text-sm text-purple-600">管理员</div>
-                </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{userStats.disabled}</div>
-                  <div className="text-sm text-red-600">已禁用</div>
-                </div>
-              </div>
-            </div>
-
-            {/* 搜索和过滤 */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input
-                  type="text"
-                  placeholder="搜索用户名或邮箱"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <select
-                  value={filterVerified}
-                  onChange={(e) => setFilterVerified(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">所有验证状态</option>
-                  <option value="true">已验证</option>
-                  <option value="false">未验证</option>
-                </select>
-                <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">所有角色</option>
-                  <option value="user">普通用户</option>
-                  <option value="admin">管理员</option>
-                </select>
-                <button
-                  onClick={handleSearch}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                >
-                  搜索
-                </button>
-              </div>
-            </div>
-
-            {/* 用户列表 */}
-            <div className="overflow-x-auto">
-              {loading ? (
-                <div className="p-8 text-center">
-                  <Loader className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-                  <p className="mt-2 text-gray-600">加载中...</p>
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {recipients === 'selected' && (
-                          <input
-                            type="checkbox"
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedUsers(users.map(u => u._id))
-                              } else {
-                                setSelectedUsers([])
-                              }
-                            }}
-                            className="mr-2"
-                          />
-                        )}
-                        用户信息
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        状态
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        注册时间
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map((user) => (
-                      <tr key={user._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {recipients === 'selected' && (
                               <input
                                 type="checkbox"
-                                checked={selectedUsers.includes(user._id)}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedUsers([...selectedUsers, user._id])
+                                    setSelectedUsers(users.map(u => u._id))
                                   } else {
-                                    setSelectedUsers(selectedUsers.filter(id => id !== user._id))
+                                    setSelectedUsers([])
                                   }
                                 }}
-                                className="mr-3"
+                                className="mr-2"
                               />
                             )}
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {user.username}
+                            用户信息
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            状态
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            注册时间
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            操作
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {users.map((user) => (
+                          <tr key={user._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                {recipients === 'selected' && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedUsers.includes(user._id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedUsers([...selectedUsers, user._id])
+                                      } else {
+                                        setSelectedUsers(selectedUsers.filter(id => id !== user._id))
+                                      }
+                                    }}
+                                    className="mr-3"
+                                  />
+                                )}
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {user.username}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {user.email}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {user.email}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-col space-y-1">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  user.isEmailVerified
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {user.isEmailVerified ? '已验证' : '未验证'}
+                                </span>
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  user.role === 'admin'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {user.role === 'admin' ? '管理员' : '用户'}
+                                </span>
+                                {user.isDisabled && (
+                                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                    已禁用
+                                  </span>
+                                )}
                               </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col space-y-1">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              user.isEmailVerified
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {user.isEmailVerified ? '已验证' : '未验证'}
-                            </span>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              user.role === 'admin'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {user.role === 'admin' ? '管理员' : '用户'}
-                            </span>
-                            {user.isDisabled && (
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                已禁用
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(user.createdAt).toLocaleDateString('zh-CN')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          {!user.isDisabled ? (
-                            <button
-                              onClick={() => handleUserAction(user._id, 'disable')}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              禁用
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleUserAction(user._id, 'enable')}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              启用
-                            </button>
-                          )}
-                          {!user.isEmailVerified && (
-                            <button
-                              onClick={() => handleUserAction(user._id, 'verify_email')}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              验证邮箱
-                            </button>
-                          )}
-                          {user.role !== 'admin' && (
-                            <button
-                              onClick={() => handleUserAction(user._id, 'make_admin')}
-                              className="text-purple-600 hover:text-purple-900"
-                            >
-                              设为管理员
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(user.createdAt).toLocaleDateString('zh-CN')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                              {!user.isDisabled ? (
+                                <button
+                                  onClick={() => handleUserAction(user._id, 'disable')}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  禁用
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleUserAction(user._id, 'enable')}
+                                  className="text-green-600 hover:text-green-900"
+                                >
+                                  启用
+                                </button>
+                              )}
+                              {!user.isEmailVerified && (
+                                <button
+                                  onClick={() => handleUserAction(user._id, 'verify_email')}
+                                  className="text-blue-600 hover:text-blue-900"
+                                >
+                                  验证邮箱
+                                </button>
+                              )}
+                              {user.role !== 'admin' && (
+                                <button
+                                  onClick={() => handleUserAction(user._id, 'make_admin')}
+                                  className="text-purple-600 hover:text-purple-900"
+                                >
+                                  设为管理员
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

@@ -8,14 +8,12 @@ import VerifyEmailPage from './pages/VerifyEmailPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import SecurityPage from './pages/SecurityPage'
+import AdminPage from './pages/AdminPage'
 import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import LoadingSpinner from './components/LoadingSpinner'
 import ProtectedRoute from './components/ProtectedRoute'
-import DashboardLayout from './components/DashboardLayout'
-import AdminUsersManagement from './components/AdminUsersManagement'
-import AdminEmailManagement from './components/AdminEmailManagement'
 
 function App() {
   const { loading } = useAuth()
@@ -56,66 +54,34 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           
-          {/* 受保护的路由 - 使用统一布局 */}
+          {/* 受保护的路由 */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <DashboardPage />
-              </DashboardLayout>
+              <DashboardPage />
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <ProfilePage />
-              </DashboardLayout>
+              <ProfilePage />
             </ProtectedRoute>
           } />
           <Route path="/settings" element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <SettingsPage />
-              </DashboardLayout>
+              <SettingsPage />
             </ProtectedRoute>
           } />
           <Route path="/security" element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <SecurityPage />
-              </DashboardLayout>
+              <SecurityPage />
             </ProtectedRoute>
           } />
           
-          {/* 管理员路由 - 集成到主布局 */}
-          <Route path="/admin/users" element={
+          {/* 管理员路由 */}
+          <Route path="/admin" element={
             <ProtectedRoute>
-              <DashboardLayout>
-                <AdminUsersManagement />
-              </DashboardLayout>
+              <AdminPage />
             </ProtectedRoute>
           } />
-          <Route path="/admin/email" element={
-            <ProtectedRoute>
-              <DashboardLayout>
-                <AdminEmailManagement />
-              </DashboardLayout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/system" element={
-            <ProtectedRoute>
-              <DashboardLayout>
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">系统管理</h2>
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <p className="text-slate-600 dark:text-slate-400">系统管理功能正在开发中...</p>
-                  </div>
-                </div>
-              </DashboardLayout>
-            </ProtectedRoute>
-          } />
-          
-          {/* 管理员重定向 */}
-          <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
           
           {/* 重定向 */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -126,4 +92,4 @@ function App() {
   )
 }
 
-export default App
+export default App 
