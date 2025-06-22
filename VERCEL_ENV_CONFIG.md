@@ -8,16 +8,7 @@
 
 ```bash
 # SMTP服务器配置（Outlook）
-SMTP_HOST=smtp-mail.outlook.com
-SMTP_PORT=587
-SMTP_SECURE=false
 
-# 邮箱认证信息
-SMTP_USER=qrfuci164227@outlook.com
-SMTP_PASS=tdrhcke6603
-
-# 可选配置
-LOGO_URL=https://your-domain.vercel.app/logo.svg
 ```
 
 ## 🔧 配置步骤
