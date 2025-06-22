@@ -127,9 +127,9 @@ const DashboardPage = () => {
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="mx-logo">
                     <img 
-                      src="/logo.png" 
+                      src="/logo.svg" 
                       alt="MX Logo" 
-                      className="w-full h-full object-contain rounded-full"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                   <div>
@@ -272,50 +272,76 @@ const DashboardPage = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Top Navigation */}
-        <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
+        <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-              <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">概览</h1>
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900 dark:text-white">控制台</h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400">管理您的账号和设置</p>
             </div>
-
+            
             <div className="flex items-center space-x-4">
               {/* Search */}
-              <div className="relative hidden sm:block">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   placeholder="搜索..."
                   className="input-professional pl-10 pr-4 py-2 w-64"
                 />
               </div>
-
+              
               {/* Notifications */}
-              <button className="relative p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
-                </svg>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              <button className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                <Bell className="w-5 h-5" />
               </button>
             </div>
           </div>
-        </header>
+        </div>
+
+        {/* Email Verification Banner */}
+        {user && !user.isEmailVerified && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-6 py-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    邮箱尚未验证
+                  </p>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-300">
+                    为了账号安全，建议验证您的邮箱地址：{user.email}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => navigate('/verify-email')}
+                  className="text-sm bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors"
+                >
+                  立即验证
+                </button>
+                <button className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Main Content Area */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Welcome Banner */}
             <motion.div
@@ -335,9 +361,9 @@ const DashboardPage = () => {
                 <div className="hidden sm:block">
                   <div className="mx-logo-large">
                     <img 
-                      src="/logo.png" 
+                      src="/logo.svg" 
                       alt="MX Logo" 
-                      className="w-full h-full object-contain rounded-full"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                 </div>

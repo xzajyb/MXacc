@@ -126,9 +126,9 @@ const RegisterPage = () => {
                 className="mx-logo-large mx-auto mb-4"
               >
                 <img 
-                  src="/logo.png" 
+                  src="/logo.svg" 
                   alt="MX Logo" 
-                  className="w-full h-full object-contain rounded-full"
+                  className="w-full h-full object-contain"
                 />
               </motion.div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
@@ -393,9 +393,9 @@ const RegisterPage = () => {
         >
           <div className="mx-logo-large mx-auto mb-8" style={{ width: '120px', height: '120px' }}>
             <img 
-              src="/logo.png" 
+              src="/logo.svg" 
               alt="MX Logo" 
-              className="w-full h-full object-contain rounded-full"
+              className="w-full h-full object-contain"
             />
           </div>
           

@@ -61,10 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.user)
         setIsAuthenticated(true)
         
-        if (data.needsEmailVerification) {
-          console.log('需要邮箱验证')
-        }
-        
+        // 登录成功直接跳转到Dashboard，不管邮箱是否验证
         navigate('/dashboard')
       } else {
         setError(data.message || '登录失败')
@@ -96,10 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.user)
         setIsAuthenticated(true)
         
-        if (data.needsEmailVerification) {
-          console.log('需要邮箱验证')
-        }
-        
+        // 注册成功直接跳转到Dashboard
         navigate('/dashboard')
       } else {
         setError(data.message || '注册失败')
