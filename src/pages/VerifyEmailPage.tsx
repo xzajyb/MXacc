@@ -358,9 +358,9 @@ export default function VerifyEmailPage() {
               >
                 注销登录
           </button>
-            </div>
-          </div>
         </div>
+      </div>
+    </div>
       </motion.div>
     </div>
   );

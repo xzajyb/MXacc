@@ -1,422 +1,367 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { 
+  Shield, 
+  Key, 
+  Smartphone, 
+  Eye, 
+  EyeOff, 
+  AlertTriangle, 
+  CheckCircle, 
+  Save,
+  Lock,
+  Unlock,
+  Clock,
+  X
+} from 'lucide-react'
 
 interface SecurityData {
-  twoFactorEnabled: boolean
-  lastPasswordChange: string
-  loginSessions: Array<{
-    id: string
-    ip: string
-    userAgent: string
-    location: string
-    lastActive: string
-    current: boolean
-  }>
-  securityLog: Array<{
-    id: string
-    action: string
-    timestamp: string
-    ip: string
-    success: boolean
-  }>
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
 }
 
 const SecurityPage: React.FC = () => {
-  const { user, token } = useAuth()
-  const [securityData, setSecurityData] = useState<SecurityData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [showPasswordForm, setShowPasswordForm] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  
-  const [passwordForm, setPasswordForm] = useState({
+  const { user } = useAuth()
+  const [securityData, setSecurityData] = useState<SecurityData>({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   })
-
-  useEffect(() => {
-    fetchSecurityData()
-  }, [])
-
-  const fetchSecurityData = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/user/security', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setSecurityData(data)
-      } else {
-        // 模拟数据，因为后端API可能还没实现
-        setSecurityData({
-          twoFactorEnabled: false,
-          lastPasswordChange: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          loginSessions: [
-            {
-              id: '1',
-              ip: '192.168.1.100',
-              userAgent: 'Chrome 120.0 Windows',
-              location: '中国 广东 深圳',
-              lastActive: new Date().toISOString(),
-              current: true
-            },
-            {
-              id: '2',
-              ip: '192.168.1.101',
-              userAgent: 'Safari 17.0 macOS',
-              location: '中国 广东 深圳',
-              lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-              current: false
-            }
-          ],
-          securityLog: [
-            {
-              id: '1',
-              action: '登录成功',
-              timestamp: new Date().toISOString(),
-              ip: '192.168.1.100',
-              success: true
-            },
-            {
-              id: '2',
-              action: '密码修改',
-              timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-              ip: '192.168.1.100',
-              success: true
-            },
-            {
-              id: '3',
-              action: '登录失败',
-              timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-              ip: '203.0.113.1',
-              success: false
-            }
-          ]
-        })
-      }
-    } catch (err) {
-      setError('获取安全信息失败')
-    } finally {
-      setLoading(false)
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [loginHistory, setLoginHistory] = useState([
+    {
+      ip: '192.168.1.100',
+      location: '北京, 中国',
+      device: 'Chrome on Windows',
+      time: '2024-01-20 14:30:00',
+      status: 'success'
+    },
+    {
+      ip: '192.168.1.100',
+      location: '北京, 中国', 
+      device: 'Chrome on Windows',
+      time: '2024-01-19 09:15:00',
+      status: 'success'
     }
+  ])
+
+  const handleInputChange = (field: keyof SecurityData, value: string) => {
+    setSecurityData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPassword(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }))
   }
 
   const handlePasswordChange = async () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError('新密码和确认密码不匹配')
+    if (securityData.newPassword !== securityData.confirmPassword) {
+      setMessage({ type: 'error', text: '新密码和确认密码不匹配' })
       return
     }
 
-    if (passwordForm.newPassword.length < 6) {
-      setError('新密码至少需要6位字符')
+    if (securityData.newPassword.length < 6) {
+      setMessage({ type: 'error', text: '新密码长度至少为6位' })
       return
     }
 
+    setIsLoading(true)
+    setMessage(null)
+
     try {
-      const response = await fetch('/api/auth/change-password', {
+      const response = await fetch('/api/user/change-password', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
+          currentPassword: securityData.currentPassword,
+          newPassword: securityData.newPassword
         })
       })
 
-      if (response.ok) {
-        setSuccess('密码修改成功')
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-        setShowPasswordForm(false)
-        setTimeout(() => setSuccess(''), 3000)
-      } else {
-        const data = await response.json()
-        setError(data.message || '密码修改失败')
-      }
-    } catch (err) {
-      setError('网络错误，请重试')
-    }
-  }
+      const data = await response.json()
 
-  const toggleTwoFactor = async () => {
-    try {
-      const response = await fetch('/api/user/two-factor', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          enabled: !securityData?.twoFactorEnabled
+      if (response.ok) {
+        setMessage({ type: 'success', text: '密码修改成功！' })
+        setSecurityData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
         })
-      })
-
-      if (response.ok) {
-        setSecurityData(prev => prev ? {
-          ...prev,
-          twoFactorEnabled: !prev.twoFactorEnabled
-        } : null)
-        setSuccess(securityData?.twoFactorEnabled ? '两步验证已关闭' : '两步验证已开启')
-        setTimeout(() => setSuccess(''), 3000)
       } else {
-        setError('操作失败，请重试')
+        setMessage({ type: 'error', text: data.message || '密码修改失败' })
       }
-    } catch (err) {
-      setError('网络错误，请重试')
+    } catch (error) {
+      setMessage({ type: 'error', text: '网络错误，请稍后重试' })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const terminateSession = async (sessionId: string) => {
-    try {
-      const response = await fetch(`/api/user/sessions/${sessionId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        setSecurityData(prev => prev ? {
-          ...prev,
-          loginSessions: prev.loginSessions.filter(s => s.id !== sessionId)
-        } : null)
-        setSuccess('会话已终止')
-        setTimeout(() => setSuccess(''), 3000)
-      } else {
-        setError('操作失败，请重试')
-      }
-    } catch (err) {
-      setError('网络错误，请重试')
-    }
+  const getPasswordStrength = (password: string) => {
+    let strength = 0
+    if (password.length >= 8) strength++
+    if (/[A-Z]/.test(password)) strength++
+    if (/[a-z]/.test(password)) strength++
+    if (/[0-9]/.test(password)) strength++
+    if (/[^A-Za-z0-9]/.test(password)) strength++
+    return strength
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('zh-CN')
-  }
-
-  const getTimeAgo = (dateString: string) => {
-    const now = new Date().getTime()
-    const time = new Date(dateString).getTime()
-    const diff = now - time
-    
-    const minutes = Math.floor(diff / (1000 * 60))
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    
-    if (minutes < 60) return `${minutes}分钟前`
-    if (hours < 24) return `${hours}小时前`
-    return `${days}天前`
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
+  const passwordStrength = getPasswordStrength(securityData.newPassword)
+  const strengthLabels = ['很弱', '弱', '一般', '强', '很强']
+  const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500']
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            安全设置
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            管理您的账户安全和隐私设置
-          </p>
+    <div className="p-6 max-w-4xl mx-auto">
+      {/* 页面标题 */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          安全设置
+        </h1>
+        <p className="text-gray-600 dark:text-slate-400">
+          管理您的账户安全和隐私设置
+        </p>
+      </div>
+
+      {/* 消息提示 */}
+      {message && (
+        <div className={`mb-6 p-4 rounded-lg border ${
+          message.type === 'success' 
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300'
+            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span>{message.text}</span>
+            <button
+              onClick={() => setMessage(null)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        {/* 账户安全状态 */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+          <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <Shield className="h-5 w-5 mr-2" />
+              安全状态
+            </h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400 mr-3" />
+                <div>
+                  <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                    邮箱验证
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    {user?.isEmailVerified ? '已验证' : '未验证'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <AlertTriangle className="h-8 w-8 text-yellow-600 dark:text-yellow-400 mr-3" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                    双因素认证
+                  </p>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                    未启用
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <Clock className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    最后登录
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    今天 14:30
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
+        {/* 修改密码 */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+          <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <Key className="h-5 w-5 mr-2" />
+              修改密码
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
+              定期更改密码有助于保护您的账户安全
+            </p>
           </div>
-        )}
-
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-            {success}
-          </div>
-        )}
-
-        {/* 密码安全 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">密码安全</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div className="p-6">
+            <div className="space-y-4">
+              {/* 当前密码 */}
               <div>
-                <h3 className="font-medium text-gray-900 dark:text-white">登录密码</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  上次修改：{securityData?.lastPasswordChange ? formatDate(securityData.lastPasswordChange) : '未知'}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowPasswordForm(!showPasswordForm)}
-                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-              >
-                修改密码
-              </button>
-            </div>
-
-            {showPasswordForm && (
-              <div className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    当前密码
-                  </label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                  当前密码
+                </label>
+                <div className="relative">
                   <input
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                    type={showPassword.current ? 'text' : 'password'}
+                    value={securityData.currentPassword}
+                    onChange={(e) => handleInputChange('currentPassword', e.target.value)}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="请输入当前密码"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    新密码
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    确认新密码
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-                <div className="flex justify-end space-x-3">
                   <button
-                    onClick={() => setShowPasswordForm(false)}
-                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    type="button"
+                    onClick={() => togglePasswordVisibility('current')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                   >
-                    取消
-                  </button>
-                  <button
-                    onClick={handlePasswordChange}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    修改密码
+                    {showPassword.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* 两步验证 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">两步验证</h2>
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <div>
-              <h3 className="font-medium text-gray-900 dark:text-white">启用两步验证</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                为您的账户添加额外的安全保护
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className={`text-sm font-medium ${
-                securityData?.twoFactorEnabled 
-                  ? 'text-green-600 dark:text-green-400' 
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}>
-                {securityData?.twoFactorEnabled ? '已启用' : '未启用'}
-              </span>
-              <button
-                onClick={toggleTwoFactor}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  securityData?.twoFactorEnabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    securityData?.twoFactorEnabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 登录会话 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">活跃会话</h2>
-          <div className="space-y-4">
-            {securityData?.loginSessions.map((session) => (
-              <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                <div className="flex items-start space-x-4">
-                  <div className={`w-3 h-3 rounded-full mt-2 ${session.current ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <div>
+              {/* 新密码 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                  新密码
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword.new ? 'text' : 'password'}
+                    value={securityData.newPassword}
+                    onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="请输入新密码"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('new')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                
+                {/* 密码强度指示器 */}
+                {securityData.newPassword && (
+                  <div className="mt-2">
                     <div className="flex items-center space-x-2">
-                      <h3 className="font-medium text-gray-900 dark:text-white">{session.userAgent}</h3>
-                      {session.current && (
-                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
-                          当前设备
-                        </span>
-                      )}
+                      <div className="flex-1 bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all ${strengthColors[passwordStrength - 1] || 'bg-gray-200'}`}
+                          style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-600 dark:text-slate-400">
+                        {strengthLabels[passwordStrength - 1] || '很弱'}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {session.location} • {session.ip}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      最后活跃：{getTimeAgo(session.lastActive)}
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                      建议密码包含大小写字母、数字和特殊字符，长度至少8位
                     </p>
                   </div>
-                </div>
-                {!session.current && (
-                  <button
-                    onClick={() => terminateSession(session.id)}
-                    className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    终止会话
-                  </button>
                 )}
               </div>
-            ))}
+
+              {/* 确认密码 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                  确认新密码
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword.confirm ? 'text' : 'password'}
+                    value={securityData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="请再次输入新密码"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('confirm')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {securityData.confirmPassword && securityData.newPassword !== securityData.confirmPassword && (
+                  <p className="text-xs text-red-500 mt-1">密码不匹配</p>
+                )}
+              </div>
+
+              <button
+                onClick={handlePasswordChange}
+                disabled={isLoading || !securityData.currentPassword || !securityData.newPassword || securityData.newPassword !== securityData.confirmPassword}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              >
+                {isLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {isLoading ? '修改中...' : '修改密码'}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* 安全日志 */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">安全日志</h2>
-          <div className="space-y-3">
-            {securityData?.securityLog.map((log) => (
-              <div key={log.id} className="flex items-center justify-between p-3 border-l-4 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-2 h-2 rounded-full ${log.success ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{log.action}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {log.ip} • {formatDate(log.timestamp)}
-                    </p>
+        {/* 登录历史 */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+          <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <Clock className="h-5 w-5 mr-2" />
+              登录历史
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
+              查看最近的登录记录
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {loginHistory.map((record, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      record.status === 'success' ? 'bg-green-500' : 'bg-red-500'
+                    }`} />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {record.device}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
+                        {record.location} • {record.ip}
+                      </p>
+                    </div>
                   </div>
+                  <span className="text-xs text-gray-500 dark:text-slate-400">
+                    {record.time}
+                  </span>
                 </div>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  log.success 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                }`}>
-                  {log.success ? '成功' : '失败'}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

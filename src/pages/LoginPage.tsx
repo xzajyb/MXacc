@@ -169,7 +169,7 @@ const LoginPage = () => {
                       )}
                     </svg>
                 </button>
-                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">

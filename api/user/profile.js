@@ -1,148 +1,133 @@
-const { connectToDatabase } = require('../_lib/mongodb')
+const clientPromise = require('../_lib/mongodb')
 const jwt = require('jsonwebtoken')
-const { ObjectId } = require('mongodb')
 
-module.exports = async (req, res) => {
-  // CORS处理
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+export default async function handler(req, res) {
+  const client = await clientPromise
+  const db = client.db('mxacc')
   
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
-
-  try {
-    const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        message: '请提供有效的认证token',
-        code: 'MISSING_TOKEN'
-      })
-    }
-
-    const token = authHeader.substring(7)
-    let decoded
-    
+  if (req.method === 'GET') {
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET)
-    } catch (error) {
-      return res.status(401).json({ 
-        message: 'Token无效或已过期',
-        code: 'INVALID_TOKEN'
+      const token = req.headers.authorization?.replace('Bearer ', '')
+      if (!token) {
+        return res.status(401).json({ message: '未提供认证令牌' })
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET)
+      const user = await db.collection('users').findOne({ 
+        _id: decoded.userId 
       })
-    }
-
-    const { db } = await connectToDatabase()
-    const usersCollection = db.collection('users')
-
-    if (req.method === 'GET') {
-      // 获取用户信息
-      const user = await usersCollection.findOne(
-        { _id: new ObjectId(decoded.userId) },
-        { 
-          projection: { 
-            password: 0  // 不返回密码
-          } 
-        }
-      )
 
       if (!user) {
-        return res.status(404).json({ 
-          message: '用户不存在',
-          code: 'USER_NOT_FOUND'
-        })
+        return res.status(404).json({ message: '用户不存在' })
       }
 
-      // 确保返回用户角色
-      res.status(200).json({
+      // 返回用户信息，包含所有需要的字段
+      const userResponse = {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role || 'user',
+        isEmailVerified: user.isEmailVerified || false,
+        fullName: user.fullName || '',
+        profile: {
+          bio: user.profile?.bio || '',
+          location: user.profile?.location || '',
+          website: user.profile?.website || '',
+          avatar: user.profile?.avatar || ''
+        },
+        settings: user.settings || {
+          theme: 'system',
+          language: 'zh-CN',
+          emailNotifications: true,
+          twoFactorEnabled: false
+        },
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt
+      }
+
+      res.status(200).json({ 
         message: '获取用户信息成功',
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          nickname: user.nickname || '',
-          bio: user.bio || '',
-          emailVerified: user.emailVerified || false,
-          role: user.role || 'user',
-          createdAt: user.createdAt,
-          lastLoginAt: user.lastLoginAt || null
-        }
+        user: userResponse
       })
-    } else if (req.method === 'PUT') {
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      res.status(500).json({ message: '获取用户信息失败' })
+    }
+  } 
+  else if (req.method === 'PUT') {
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '')
+      if (!token) {
+        return res.status(401).json({ message: '未提供认证令牌' })
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET)
+      const { fullName, bio, location, website } = req.body
+
+      // 构建更新对象
+      const updateData = {}
+      
+      if (fullName !== undefined) {
+        updateData.fullName = fullName
+      }
+      
+      if (bio !== undefined || location !== undefined || website !== undefined) {
+        updateData['profile.bio'] = bio || ''
+        updateData['profile.location'] = location || ''
+        updateData['profile.website'] = website || ''
+      }
+      
+      updateData.updatedAt = new Date()
+
       // 更新用户信息
-      const { nickname, bio } = req.body
-
-      // 验证输入
-      if (nickname && nickname.length > 50) {
-        return res.status(400).json({
-          message: '昵称长度不能超过50个字符',
-          code: 'NICKNAME_TOO_LONG'
-        })
-      }
-
-      if (bio && bio.length > 500) {
-        return res.status(400).json({
-          message: '个人简介长度不能超过500个字符',
-          code: 'BIO_TOO_LONG'
-        })
-      }
-
-      // 更新用户信息
-      const updateData = {
-        updatedAt: new Date()
-      }
-
-      if (nickname !== undefined) updateData.nickname = nickname
-      if (bio !== undefined) updateData.bio = bio
-
-      const result = await usersCollection.updateOne(
-        { _id: new ObjectId(decoded.userId) },
+      const result = await db.collection('users').updateOne(
+        { _id: decoded.userId },
         { $set: updateData }
       )
 
       if (result.matchedCount === 0) {
-        return res.status(404).json({
-          message: '用户不存在',
-          code: 'USER_NOT_FOUND'
-        })
+        return res.status(404).json({ message: '用户不存在' })
       }
 
       // 获取更新后的用户信息
-      const updatedUser = await usersCollection.findOne(
-        { _id: new ObjectId(decoded.userId) },
-        { 
-          projection: { 
-            password: 0  // 不返回密码
-          } 
-        }
-      )
+      const updatedUser = await db.collection('users').findOne({ 
+        _id: decoded.userId 
+      })
 
-      res.status(200).json({
-        message: '用户信息更新成功',
-        user: {
-          id: updatedUser._id,
-          username: updatedUser.username,
-          email: updatedUser.email,
-          nickname: updatedUser.nickname || '',
-          bio: updatedUser.bio || '',
-          emailVerified: updatedUser.emailVerified || false,
-          role: updatedUser.role || 'user',
-          createdAt: updatedUser.createdAt,
-          lastLoginAt: updatedUser.lastLoginAt || null
-        }
+      const userResponse = {
+        id: updatedUser._id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        role: updatedUser.role || 'user',
+        isEmailVerified: updatedUser.isEmailVerified || false,
+        fullName: updatedUser.fullName || '',
+        profile: {
+          bio: updatedUser.profile?.bio || '',
+          location: updatedUser.profile?.location || '',
+          website: updatedUser.profile?.website || '',
+          avatar: updatedUser.profile?.avatar || ''
+        },
+        settings: updatedUser.settings || {
+          theme: 'system',
+          language: 'zh-CN',
+          emailNotifications: true,
+          twoFactorEnabled: false
+        },
+        lastLogin: updatedUser.lastLogin,
+        createdAt: updatedUser.createdAt
+      }
+
+      res.status(200).json({ 
+        message: '个人资料更新成功',
+        user: userResponse
       })
-    } else {
-      res.status(405).json({ 
-        message: '方法不允许',
-        code: 'METHOD_NOT_ALLOWED'
-      })
+    } catch (error) {
+      console.error('更新个人资料失败:', error)
+      res.status(500).json({ message: '更新个人资料失败' })
     }
-  } catch (error) {
-    console.error('Profile API错误:', error)
-    res.status(500).json({ 
-      message: '服务器内部错误',
-      code: 'INTERNAL_SERVER_ERROR'
-    })
+  }
+  else {
+    res.setHeader('Allow', ['GET', 'PUT'])
+    res.status(405).json({ message: '方法不被允许' })
   }
 } 

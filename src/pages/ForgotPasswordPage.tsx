@@ -142,39 +142,39 @@ const ForgotPasswordPage: React.FC = () => {
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* 标题区域 */}
-          <div className="text-center mb-8">
+        <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
               <Shield className="h-8 w-8 text-red-600" />
-            </div>
+          </div>
             <h1 className="text-2xl font-bold text-gray-900">
               {step === 'email' ? '找回密码' : '重置密码'}
-            </h1>
+          </h1>
             <p className="text-gray-600 mt-2">
               {step === 'email' 
                 ? '输入您的邮箱地址，我们将发送重置验证码' 
                 : '输入验证码和新密码来重置您的账户密码'
               }
-            </p>
-          </div>
+          </p>
+        </div>
 
           {/* 发送验证码表单 */}
           {step === 'email' && (
             <form onSubmit={handleSendResetCode} className="space-y-6">
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  邮箱地址
-                </label>
+                邮箱地址
+              </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="email"
+              <input
+                type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="输入您的邮箱地址"
+                placeholder="输入您的邮箱地址"
                     required
-                  />
-                </div>
+              />
+            </div>
               </div>
 
               {error && (
@@ -190,8 +190,8 @@ const ForgotPasswordPage: React.FC = () => {
                 </div>
               )}
 
-              <button
-                type="submit"
+            <button
+              type="submit"
                 disabled={loading}
                 className="w-full bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
               >
@@ -206,8 +206,8 @@ const ForgotPasswordPage: React.FC = () => {
                     发送重置验证码
                   </>
                 )}
-              </button>
-            </form>
+            </button>
+          </form>
           )}
 
           {/* 重置密码表单 */}

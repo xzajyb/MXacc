@@ -113,7 +113,7 @@ const RegisterPage = () => {
           {/* Glass card container */}
           <div className="glass-card rounded-2xl p-8 shadow-strong">
             {/* Logo and header */}
-            <div className="text-center mb-8">
+        <div className="text-center mb-8">
               <motion.div
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
@@ -128,11 +128,11 @@ const RegisterPage = () => {
               </motion.div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                 创建账号
-              </h1>
+          </h1>
               <p className="text-slate-600 dark:text-slate-300">
                 加入 梦锡社区
-              </p>
-            </div>
+          </p>
+        </div>
 
             {/* Error message */}
             {error && (
@@ -163,67 +163,67 @@ const RegisterPage = () => {
 
             {/* Register form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div>
+            <div>
                 <label htmlFor="username" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  用户名
-                </label>
+                用户名
+              </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <input
+              <input
                     {...register('username')}
-                    type="text"
+                type="text"
                     id="username"
                     autoComplete="username"
                     className={cn(
                       'input-professional w-full pl-10 pr-4 py-3 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400',
                       errors.username && 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
                     )}
-                    placeholder="输入用户名"
+                placeholder="输入用户名"
                     disabled={isSubmitting}
-                  />
+              />
                 </div>
-              </div>
+            </div>
 
-              <div>
+            <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  邮箱地址
-                </label>
+                邮箱地址
+              </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                     </svg>
                   </div>
-                  <input
+              <input
                     {...register('email')}
-                    type="email"
+                type="email"
                     id="email"
                     autoComplete="email"
                     className={cn(
                       'input-professional w-full pl-10 pr-4 py-3 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400',
                       errors.email && 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
                     )}
-                    placeholder="输入邮箱地址"
+                placeholder="输入邮箱地址"
                     disabled={isSubmitting}
-                  />
+              />
                 </div>
-              </div>
+            </div>
 
-              <div>
+            <div>
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  密码
-                </label>
+                密码
+              </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
-                  <input
+              <input
                     {...register('password')}
                     type={showPassword ? 'text' : 'password'}
                     id="password"
@@ -253,8 +253,8 @@ const RegisterPage = () => {
                       )}
                     </svg>
                   </button>
-                </div>
-                
+            </div>
+
                 {/* Password strength indicator */}
                 {password && (
                   <div className="mt-2">
@@ -299,7 +299,7 @@ const RegisterPage = () => {
                     placeholder="再次输入密码"
                     disabled={isSubmitting}
                   />
-                  <button
+            <button
                     type="button"
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -361,7 +361,7 @@ const RegisterPage = () => {
               </div>
 
               <motion.button
-                type="submit"
+              type="submit"
                 disabled={isSubmitting}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
@@ -376,21 +376,21 @@ const RegisterPage = () => {
                   '创建账号'
                 )}
               </motion.button>
-            </form>
+          </form>
 
             {/* Login link */}
             <div className="mt-6 text-center">
               <p className="text-slate-600 dark:text-slate-300">
-                已有账号？{' '}
+              已有账号？{' '}
                 <Link
                   to="/login"
                   className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
                 >
-                  立即登录
+                立即登录
                 </Link>
-              </p>
-            </div>
+            </p>
           </div>
+        </div>
         </motion.div>
       </div>
 
@@ -475,7 +475,7 @@ const RegisterPage = () => {
                 注册完成即可使用，快速开启您的 MX 之旅
               </p>
             </motion.div>
-          </div>
+        </div>
         </motion.div>
       </div>
     </div>

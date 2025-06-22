@@ -217,7 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     register,
     logout,
     refreshToken,
-    updateUser,
+    updateProfile: updateUser,
     sendEmailVerification,
     verifyEmail,
   }
