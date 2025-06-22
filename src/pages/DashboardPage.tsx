@@ -23,11 +23,13 @@ import {
   Calendar,
   BarChart3,
   FileText,
-  HelpCircle
+  HelpCircle,
+  Home
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { cn } from '../utils/cn'
+import { useNavigate } from 'react-router-dom'
 
 const DashboardPage = () => {
   const { user, logout } = useAuth()
@@ -35,6 +37,7 @@ const DashboardPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [currentTheme, setCurrentTheme] = useState(theme)
   const [activeSection, setActiveSection] = useState('overview')
+  const navigate = useNavigate()
 
   const toggleTheme = () => {
     const themes: ('light' | 'dark' | 'auto')[] = ['light', 'dark', 'auto'];
@@ -124,7 +127,7 @@ const DashboardPage = () => {
                 <div className="flex items-center space-x-3 mb-6">
                   <div className="mx-logo">
                     <img 
-                      src="/backend/src/ico/image.png" 
+                      src="/logo.png" 
                       alt="MX Logo" 
                       className="w-full h-full object-contain rounded-full"
                     />
@@ -153,21 +156,81 @@ const DashboardPage = () => {
 
               {/* Navigation Menu */}
               <nav className="p-4 space-y-2">
-                {menuItems.map((item) => (
-                  <button
-                    key={item.id}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                      item.active
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                    </svg>
-                    <span className="font-medium">{item.label}</span>
-                  </button>
-                ))}
+                <a
+                  href="#"
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                    activeSection === 'overview' 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  }`}
+                  onClick={() => setActiveSection('overview')}
+                >
+                  <Home className="w-5 h-5" />
+                  <span>总览</span>
+                </a>
+                <a
+                  href="#"
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                    activeSection === 'profile' 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  }`}
+                  onClick={() => navigate('/profile')}
+                >
+                  <User className="w-5 h-5" />
+                  <span>个人资料</span>
+                </a>
+                <a
+                  href="#"
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                    activeSection === 'security' 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  }`}
+                  onClick={() => navigate('/security')}
+                >
+                  <Shield className="w-5 h-5" />
+                  <span>安全</span>
+                </a>
+                <a
+                  href="#"
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                    activeSection === 'settings' 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  }`}
+                  onClick={() => navigate('/settings')}
+                >
+                  <Settings className="w-5 h-5" />
+                  <span>设置</span>
+                </a>
+
+                {/* 管理员专用菜单 */}
+                {user?.role === 'admin' && (
+                  <>
+                    <div className="my-4 border-t border-slate-200 dark:border-slate-700"></div>
+                    <div className="px-3 py-2">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        管理员功能
+                      </span>
+                    </div>
+                    <a
+                      href="#"
+                      className="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                      onClick={() => navigate('/admin')}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                      <span>用户管理</span>
+                      <span className="ml-auto">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300">
+                          Admin
+                        </span>
+                      </span>
+                    </a>
+                  </>
+                )}
               </nav>
 
               {/* Bottom Section */}
@@ -272,7 +335,7 @@ const DashboardPage = () => {
                 <div className="hidden sm:block">
                   <div className="mx-logo-large">
                     <img 
-                      src="/backend/src/ico/image.png" 
+                      src="/logo.png" 
                       alt="MX Logo" 
                       className="w-full h-full object-contain rounded-full"
                     />
@@ -282,28 +345,80 @@ const DashboardPage = () => {
             </motion.div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {quickActions.map((action, index) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="glass-card p-6 cursor-pointer transition-all duration-200 hover:shadow-lg"
+                onClick={() => navigate('/profile')}
+              >
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mb-4">
+                  <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-2">编辑资料</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">更新个人信息和头像</p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="glass-card p-6 cursor-pointer transition-all duration-200 hover:shadow-lg"
+                onClick={() => navigate('/security')}
+              >
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-xl flex items-center justify-center mb-4">
+                  <Shield className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-2">安全检查</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">检查账号安全状态</p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="glass-card p-6 cursor-pointer transition-all duration-200 hover:shadow-lg"
+                onClick={() => navigate('/settings')}
+              >
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center mb-4">
+                  <Settings className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-2">隐私设置</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">管理隐私和偏好设置</p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="glass-card p-6 cursor-pointer transition-all duration-200 hover:shadow-lg"
+              >
+                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-xl flex items-center justify-center mb-4">
+                  <Bell className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-2">通知管理</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">设置通知偏好</p>
+              </motion.div>
+
+              {/* 管理员专用功能 */}
+              {user?.role === 'admin' && (
                 <motion.div
-                  key={action.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="glass-card p-6 cursor-pointer transition-all duration-200 hover:shadow-lg border-2 border-red-200 dark:border-red-800"
+                  onClick={() => navigate('/admin')}
                 >
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 mx-primary`}>
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={action.icon} />
+                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-xl flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                     </svg>
                   </div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {action.title}
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {action.description}
-                  </p>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">用户管理</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">管理所有用户账号</p>
+                  <div className="mt-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300">
+                      管理员专用
+                    </span>
+                  </div>
                 </motion.div>
-              ))}
+              )}
             </div>
 
             {/* Account Status Panels */}

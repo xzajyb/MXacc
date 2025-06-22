@@ -75,14 +75,6 @@ module.exports = async function handler(req, res) {
       })
     }
 
-    // 检查邮箱是否已验证
-    if (!user.isEmailVerified) {
-      return res.status(403).json({ 
-        error: 'Email Not Verified',
-        message: '请先验证您的邮箱地址' 
-      })
-    }
-
     // 重置登录尝试次数并更新最后登录时间
     await users.updateOne(
       { _id: user._id },
@@ -104,18 +96,21 @@ module.exports = async function handler(req, res) {
     // 生成token
     const token = generateToken(user._id)
 
-    // 返回成功响应
+    // 返回成功响应（无论邮箱是否验证都允许登录）
     res.status(200).json({
       success: true,
       message: '登录成功',
       token,
+      needsEmailVerification: !user.isEmailVerified, // 提示前端是否需要验证
       user: {
         id: user._id,
         username: user.username,
         email: user.email,
         isEmailVerified: user.isEmailVerified,
+        role: user.role || 'user', // 添加用户角色
         profile: user.profile || { 
           displayName: user.username, 
+          nickname: user.username,
           avatar: null,
           bio: null,
           location: null,

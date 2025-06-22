@@ -1,24 +1,23 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuth } from '@/contexts/AuthContext'
-import LoginPage from '@/pages/LoginPage'
-import RegisterPage from '@/pages/RegisterPage'
-import DashboardPage from '@/pages/DashboardPage'
-import VerifyEmailPage from '@/pages/VerifyEmailPage'
-import ResetPasswordPage from '@/pages/ResetPasswordPage'
-import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
-import ProfilePage from '@/pages/ProfilePage'
-import SettingsPage from '@/pages/SettingsPage'
-import SecurityPage from '@/pages/SecurityPage'
-import LoadingSpinner from '@/components/LoadingSpinner'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import { useAuth } from './contexts/AuthContext'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import DashboardPage from './pages/DashboardPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
+import ProfilePage from './pages/ProfilePage'
+import SettingsPage from './pages/SettingsPage'
+import SecurityPage from './pages/SecurityPage'
+import AdminPage from './pages/AdminPage'
+import LoadingSpinner from './components/LoadingSpinner'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
-  const { isLoading } = useAuth()
+  const { loading } = useAuth()
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -28,10 +27,10 @@ function App() {
           <div className="mb-4">
             <LoadingSpinner size="lg" />
           </div>
-          <div className="text-xl font-semibold gradient-mx-text">
+          <div className="text-xl font-semibold text-slate-900 dark:text-white">
             梦锡工作室
           </div>
-          <div className="text-sm text-muted-foreground mt-2">
+          <div className="text-sm text-slate-600 dark:text-slate-400 mt-2">
             MXAcc 账号管理系统
           </div>
         </motion.div>
@@ -40,15 +39,13 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <AnimatePresence mode="wait">
         <Routes>
           {/* 公开路由 */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* 受保护的路由 */}
           <Route path="/dashboard" element={
@@ -69,6 +66,13 @@ function App() {
           <Route path="/security" element={
             <ProtectedRoute>
               <SecurityPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* 管理员路由 */}
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminPage />
             </ProtectedRoute>
           } />
           

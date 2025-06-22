@@ -126,7 +126,7 @@ const RegisterPage = () => {
                 className="mx-logo-large mx-auto mb-4"
               >
                 <img 
-                  src="/backend/src/ico/image.png" 
+                  src="/logo.png" 
                   alt="MX Logo" 
                   className="w-full h-full object-contain rounded-full"
                 />
@@ -393,7 +393,7 @@ const RegisterPage = () => {
         >
           <div className="mx-logo-large mx-auto mb-8" style={{ width: '120px', height: '120px' }}>
             <img 
-              src="/backend/src/ico/image.png" 
+              src="/logo.png" 
               alt="MX Logo" 
               className="w-full h-full object-contain rounded-full"
             />

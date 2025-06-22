@@ -42,17 +42,28 @@ module.exports = async function handler(req, res) {
       })
     }
 
+    // 检查是否是第一个用户（自动设为管理员）
+    const userCount = await users.countDocuments()
+    const isFirstUser = userCount === 0
+
     // 创建新用户
     const hashedPassword = await hashPassword(password)
     const newUser = {
       username,
       email,
       password: hashedPassword,
-      isEmailVerified: false,
+      role: isFirstUser ? 'admin' : 'user', // 第一个用户为管理员
+      isEmailVerified: isFirstUser ? true : false, // 管理员自动验证
+      status: 'active',
+      loginAttempts: 0,
       createdAt: new Date(),
       profile: {
         displayName: username,
-        avatar: null
+        nickname: username,
+        avatar: null,
+        bio: null,
+        location: null,
+        website: null
       }
     }
 
@@ -62,11 +73,13 @@ module.exports = async function handler(req, res) {
     res.status(201).json({
       message: '注册成功',
       token,
+      needsEmailVerification: !newUser.isEmailVerified,
       user: {
         id: result.insertedId,
         username,
         email,
-        isEmailVerified: false,
+        role: newUser.role,
+        isEmailVerified: newUser.isEmailVerified,
         profile: newUser.profile
       }
     })

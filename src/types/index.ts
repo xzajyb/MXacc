@@ -2,21 +2,22 @@ export interface User {
   id: string
   username: string
   email: string
+  role: 'user' | 'admin'
+  isEmailVerified: boolean
   profile: {
     nickname?: string
-    avatar: string
+    displayName?: string
+    avatar?: string
     bio?: string
     location?: string
     website?: string
   }
-  settings: {
+  settings?: {
     theme: 'light' | 'dark' | 'auto'
     language: 'zh-CN' | 'en-US'
     emailNotifications: boolean
     twoFactorEnabled: boolean
   }
-  role: 'user' | 'admin'
-  emailVerified: boolean
   lastLogin?: string
   createdAt: string
 }
@@ -101,10 +102,11 @@ export interface ThemeContextType {
 export interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
-  isLoading: boolean
-  login: (credentials: LoginRequest) => Promise<void>
-  register: (data: RegisterRequest) => Promise<void>
+  loading: boolean
+  error: string | null
+  login: (emailOrUsername: string, password: string) => Promise<void>
+  register: (username: string, email: string, password: string) => Promise<void>
   logout: () => void
-  refreshToken: () => Promise<void>
-  updateUser: (user: User) => void
+  sendEmailVerification: () => Promise<{success: boolean, message: string, verificationCode?: string}>
+  verifyEmail: (verificationCode: string) => Promise<{success: boolean, message: string}>
 } 

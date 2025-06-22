@@ -9,10 +9,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
-
-  const isAuthenticated = !!user
 
   // 初始化时检查用户状态
   useEffect(() => {
@@ -20,93 +20,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const checkAuthStatus = async () => {
-    const token = getToken()
+    const token = localStorage.getItem('token')
     if (!token) {
-      setIsLoading(false)
+      setLoading(false)
       return
     }
 
     try {
-      const response = await authApi.getCurrentUser()
-      const user = response.data?.data?.user || response.data?.user
-      if (user) {
-        setUser(user)
-      } else {
-        removeToken()
+      // 这里可以添加验证token的API调用
+      // 暂时先检查token是否存在
+      if (token) {
+        // 这里需要调用API验证token并获取用户信息
+        setIsAuthenticated(true)
       }
     } catch (error) {
       console.error('检查认证状态失败:', error)
-      removeToken()
+      localStorage.removeItem('token')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (emailOrUsername: string, password: string) => {
     try {
-      setIsLoading(true)
-      const response = await authApi.login(credentials)
-      
-      if (response.data?.user && response.data?.token) {
-        setUser(response.data.user)
-        // 暂时使用同一个token作为访问令牌和刷新令牌
-        setToken(response.data.token, response.data.token)
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emailOrUsername, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token)
+        setUser(data.user)
+        setIsAuthenticated(true)
         
-        toast.success(response.data.message || '登录成功！')
+        if (data.needsEmailVerification) {
+          console.log('需要邮箱验证')
+        }
+        
         navigate('/dashboard')
       } else {
-        throw new Error(response.data?.message || '登录失败')
+        setError(data.message || '登录失败')
       }
-    } catch (error: any) {
-      console.error('登录失败:', error)
-      
-      // 处理不同类型的错误
-      let message = '登录失败，请稍后再试'
-      
-      if (error.response?.data) {
-        const errorData = error.response.data
-        message = errorData.message || errorData.error || message
-      } else if (error.message) {
-        message = error.message
-      }
-      
-      toast.error(message)
-      throw error
+    } catch (error) {
+      setError('网络错误，请稍后重试')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const register = async (data: RegisterRequest) => {
+  const register = async (username: string, email: string, password: string) => {
     try {
-      setIsLoading(true)
-      const response = await authApi.register(data)
-      
-      toast.success(response.data?.message || '注册成功！请检查邮箱验证账号')
-      navigate('/login')
-    } catch (error: any) {
-      console.error('注册失败:', error)
-      
-      let message = '注册失败，请稍后再试'
-      
-      if (error.response?.data) {
-        const errorData = error.response.data
-        message = errorData.message || errorData.error || message
-      } else if (error.message) {
-        message = error.message
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token)
+        setUser(data.user)
+        setIsAuthenticated(true)
+        
+        if (data.needsEmailVerification) {
+          console.log('需要邮箱验证')
+        }
+        
+        navigate('/dashboard')
+      } else {
+        setError(data.message || '注册失败')
       }
-      
-      toast.error(message)
-      throw error
+    } catch (error) {
+      setError('网络错误，请稍后重试')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   const logout = () => {
+    localStorage.removeItem('token')
     setUser(null)
-    removeToken()
-    toast.success('已退出登录')
+    setIsAuthenticated(false)
     navigate('/login')
   }
 
@@ -126,18 +134,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(updatedUser)
   }
 
+  const sendEmailVerification = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      return { success: response.ok, message: data.message, verificationCode: data.verificationCode }
+    } catch (error) {
+      return { success: false, message: '发送验证邮件失败' }
+    }
+  }
+
+  const verifyEmail = async (verificationCode: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ verificationCode }),
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        setUser(data.user)
+        return { success: true, message: data.message }
+      } else {
+        return { success: false, message: data.message }
+      }
+    } catch (error) {
+      return { success: false, message: '验证失败' }
+    }
+  }
+
+  const value = {
+    user,
+    isAuthenticated,
+    loading,
+    error,
+    login,
+    register,
+    logout,
+    refreshToken,
+    updateUser,
+    sendEmailVerification,
+    verifyEmail,
+  }
+
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        isLoading,
-        login,
-        register,
-        logout,
-        refreshToken,
-        updateUser,
-      }}
+      value={value}
     >
       {children}
     </AuthContext.Provider>
