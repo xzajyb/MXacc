@@ -31,7 +31,6 @@ interface UserStats {
 const AdminPage: React.FC = () => {
   const { user, token } = useAuth()
   const [activeTab, setActiveTab] = useState<'email' | 'users'>('email')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -202,17 +201,25 @@ const AdminPage: React.FC = () => {
 
   // 获取模板预览HTML
   const getTemplatePreview = (templateId: string, data: any) => {
+    // 确保数据有默认值
+    const safeData = {
+      title: data.title || '点击左侧输入邮件标题...',
+      content: data.content || '点击左侧输入邮件内容...',
+      actionUrl: data.actionUrl || '',
+      actionText: data.actionText || '点击这里'
+    }
+
     const templateMap: { [key: string]: string } = {
       'system_notification': `
-        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 40px 30px; text-align: center;">
             <div style="color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px;">MXacc</div>
             <div style="color: rgba(255,255,255,0.9); font-size: 16px;">梦锡工作室</div>
           </div>
           <div style="padding: 40px 30px;">
-            <h1 style="color: #1f2937; font-size: 24px; margin-bottom: 20px;">${data.title || '系统通知'}</h1>
-            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0;">${data.content || '这是一条系统通知消息。'}</p>
-            ${data.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${data.actionUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${data.actionText || '查看详情'}</a></div>` : ''}
+            <h1 style="color: #1f2937; font-size: 24px; margin-bottom: 20px; ${!data.title ? 'color: #9ca3af; font-style: italic;' : ''}">${safeData.title}</h1>
+            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0; ${!data.content ? 'color: #9ca3af; font-style: italic;' : ''}">${safeData.content}</p>
+            ${safeData.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${safeData.actionUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${safeData.actionText}</a></div>` : '<div style="text-align: center; margin: 30px 0; color: #9ca3af; font-style: italic;">[按钮链接为空时不显示]</div>'}
           </div>
           <div style="background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 14px; margin: 0;">此邮件由梦锡工作室系统自动发送</p>
@@ -220,44 +227,44 @@ const AdminPage: React.FC = () => {
         </div>
       `,
       'security_alert': `
-        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <div style="background: linear-gradient(135deg, #dc2626, #b91c1c); padding: 40px 30px; text-align: center;">
             <div style="color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px;">🚨 安全提醒</div>
             <div style="color: rgba(255,255,255,0.9); font-size: 16px;">梦锡工作室安全中心</div>
           </div>
           <div style="padding: 40px 30px;">
-            <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 20px;">${data.title || '安全警告'}</h1>
+            <h1 style="color: #dc2626; font-size: 24px; margin-bottom: 20px; ${!data.title ? 'color: #fca5a5; font-style: italic;' : ''}">${safeData.title}</h1>
             <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
               <p style="color: #991b1b; margin: 0; font-weight: 500;">重要提醒</p>
             </div>
-            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0;">${data.content || '检测到您的账户存在安全风险，请及时处理。'}</p>
-            ${data.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${data.actionUrl}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${data.actionText || '立即处理'}</a></div>` : ''}
+            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0; ${!data.content ? 'color: #9ca3af; font-style: italic;' : ''}">${safeData.content}</p>
+            ${safeData.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${safeData.actionUrl}" style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${safeData.actionText}</a></div>` : '<div style="text-align: center; margin: 30px 0; color: #9ca3af; font-style: italic;">[按钮链接为空时不显示]</div>'}
           </div>
         </div>
       `,
       'welcome': `
-        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <div style="background: linear-gradient(135deg, #059669, #047857); padding: 40px 30px; text-align: center;">
             <div style="color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px;">🎉 欢迎加入</div>
             <div style="color: rgba(255,255,255,0.9); font-size: 16px;">梦锡工作室</div>
           </div>
           <div style="padding: 40px 30px;">
-            <h1 style="color: #047857; font-size: 24px; margin-bottom: 20px;">${data.title || '欢迎使用MXacc'}</h1>
-            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0;">${data.content || '感谢您注册梦锡账号！我们为您提供安全、便捷的账户管理服务。'}</p>
-            ${data.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${data.actionUrl}" style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${data.actionText || '开始使用'}</a></div>` : ''}
+            <h1 style="color: #047857; font-size: 24px; margin-bottom: 20px; ${!data.title ? 'color: #a7f3d0; font-style: italic;' : ''}">${safeData.title}</h1>
+            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0; ${!data.content ? 'color: #9ca3af; font-style: italic;' : ''}">${safeData.content}</p>
+            ${safeData.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${safeData.actionUrl}" style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${safeData.actionText}</a></div>` : '<div style="text-align: center; margin: 30px 0; color: #9ca3af; font-style: italic;">[按钮链接为空时不显示]</div>'}
           </div>
         </div>
       `,
       'custom': `
-        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 40px 30px; text-align: center;">
             <div style="color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px;">MXacc</div>
             <div style="color: rgba(255,255,255,0.9); font-size: 16px;">梦锡工作室</div>
           </div>
           <div style="padding: 40px 30px;">
-            <h1 style="color: #1f2937; font-size: 24px; margin-bottom: 20px;">${data.title || '自定义邮件标题'}</h1>
-            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0;">${data.content || '这里是自定义邮件内容，您可以根据需要填写具体信息。'}</p>
-            ${data.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${data.actionUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${data.actionText || '点击这里'}</a></div>` : ''}
+            <h1 style="color: #1f2937; font-size: 24px; margin-bottom: 20px; ${!data.title ? 'color: #9ca3af; font-style: italic;' : ''}">${safeData.title}</h1>
+            <p style="color: #4b5563; line-height: 1.6; margin: 20px 0; ${!data.content ? 'color: #9ca3af; font-style: italic;' : ''}">${safeData.content}</p>
+            ${safeData.actionUrl ? `<div style="text-align: center; margin: 30px 0;"><a href="${safeData.actionUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">${safeData.actionText}</a></div>` : '<div style="text-align: center; margin: 30px 0; color: #9ca3af; font-style: italic;">[按钮链接为空时不显示]</div>'}
           </div>
           <div style="background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 14px; margin: 0;">此邮件由梦锡工作室发送</p>
@@ -268,130 +275,57 @@ const AdminPage: React.FC = () => {
     return templateMap[templateId] || templateMap['custom']
   }
 
-  // 导航菜单项
-  const navigationItems = [
-    {
-      id: 'email',
-      label: '邮件发送',
-      icon: Mail,
-      description: '发送系统邮件'
-    },
-    {
-      id: 'users',
-      label: '用户管理',
-      icon: Users,
-      description: '管理用户账户'
-    }
-  ]
-
   return (
     <>
-      <div className="min-h-screen bg-gray-50 flex">
-        {/* 移动端遮罩 */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* 左侧导航栏 */}
-        <div className={`
-          fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}>
-          {/* 头部 */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <div className="flex items-center">
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* 页面标题 */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center">
               <Shield className="h-8 w-8 text-blue-600 mr-3" />
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">管理控制台</h1>
-              </div>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-5 w-5" />
-            </button>
+              管理员控制台
+            </h1>
+            <p className="text-gray-600 mt-2">系统管理和邮件发送功能</p>
           </div>
 
-          {/* 用户信息 */}
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-semibold">
-                  {user?.username?.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">{user?.username}</p>
-                <p className="text-xs text-gray-500">系统管理员</p>
-              </div>
-            </div>
-          </div>
-
-          {/* 导航菜单 */}
-          <nav className="p-4">
-            <ul className="space-y-2">
-              {navigationItems.map((item) => {
-                const Icon = item.icon
-                return (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => {
-                        setActiveTab(item.id as 'email' | 'users')
-                        setSidebarOpen(false) // 移动端点击后关闭侧边栏
-                      }}
-                      className={`
-                        w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors
-                        ${activeTab === item.id 
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                          : 'text-gray-700 hover:bg-gray-50'
-                        }
-                      `}
-                    >
-                      <Icon className={`h-5 w-5 mr-3 ${activeTab === item.id ? 'text-blue-600' : 'text-gray-400'}`} />
-                      <div>
-                        <div className="font-medium">{item.label}</div>
-                        <div className="text-xs text-gray-500">{item.description}</div>
-                      </div>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </nav>
-        </div>
-
-        {/* 右侧主内容区 */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* 顶部栏 */}
-          <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 text-gray-500 hover:text-gray-700 mr-3"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {activeTab === 'email' ? '邮件发送' : '用户管理'}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {activeTab === 'email' ? '发送系统邮件给用户' : '管理系统用户账户'}
-                </p>
-              </div>
+          {/* 选项卡导航 */}
+          <div className="mb-6">
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('email')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'email'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Mail className="h-5 w-5 inline mr-2" />
+                  邮件发送
+                </button>
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'users'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Users className="h-5 w-5 inline mr-2" />
+                  用户管理
+                </button>
+              </nav>
             </div>
           </div>
 
           {/* 主内容 */}
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="overflow-auto">
             {/* 邮件发送内容 */}
             {activeTab === 'email' && (
               <div className="max-w-6xl mx-auto">
                 <div className="bg-white rounded-lg shadow-sm border p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-6">发送邮件</h2>
+                  
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* 左侧：邮件配置 */}
                     <div className="space-y-6">
@@ -418,12 +352,29 @@ const AdminPage: React.FC = () => {
                               <p className="text-sm text-blue-700">
                                 已选择：{templates.find(t => t.id === selectedTemplate)?.name}
                               </p>
-                              <button 
-                                onClick={() => setShowTemplatePreview(true)}
-                                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                预览模板
-                              </button>
+                              <div className="flex space-x-2">
+                                <button 
+                                  onClick={() => setShowTemplatePreview(true)}
+                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                >
+                                  预览模板
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {/* 实时预览区域 */}
+                            <div className="mt-4 border border-blue-200 rounded-lg overflow-hidden">
+                              <div className="bg-blue-100 px-3 py-2 text-sm font-medium text-blue-800">
+                                实时预览（输入内容会实时更新）
+                              </div>
+                              <div className="p-4 bg-white max-h-96 overflow-y-auto">
+                                <div 
+                                  className="text-sm"
+                                  dangerouslySetInnerHTML={{
+                                    __html: getTemplatePreview(selectedTemplate, emailData)
+                                  }} 
+                                />
+                              </div>
                             </div>
                           </div>
                         )}
@@ -606,6 +557,8 @@ const AdminPage: React.FC = () => {
             {activeTab === 'users' && (
               <div className="max-w-7xl mx-auto">
                 <div className="bg-white rounded-lg shadow-sm border">
+                  <h2 className="text-xl font-semibold text-gray-900 p-6 border-b border-gray-200">用户管理</h2>
+                  
                   {/* 用户统计 */}
                   <div className="p-6 border-b border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">用户统计</h3>
@@ -807,41 +760,41 @@ const AdminPage: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
 
-      {/* 模板预览模态框 */}
-      {showTemplatePreview && selectedTemplate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  邮件模板预览 - {templates.find(t => t.id === selectedTemplate)?.name}
-                </h3>
-                <button
-                  onClick={() => setShowTemplatePreview(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="bg-gray-100 p-4 rounded-lg">
-                <div dangerouslySetInnerHTML={{
-                  __html: getTemplatePreview(selectedTemplate, emailData)
-                }} />
+        {/* 模板预览模态框 */}
+        {showTemplatePreview && selectedTemplate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    邮件模板预览 - {templates.find(t => t.id === selectedTemplate)?.name}
+                  </h3>
+                  <button
+                    onClick={() => setShowTemplatePreview(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
               
-              <div className="mt-4 text-sm text-gray-600">
-                <p><strong>说明：</strong>这是模板的预览效果，实际邮件会根据您填写的内容进行替换。</p>
-                <p className="mt-1">模板变量：标题、内容、按钮链接、按钮文字等会被实际数据替换。</p>
+              <div className="p-6">
+                <div className="bg-gray-100 p-4 rounded-lg">
+                  <div dangerouslySetInnerHTML={{
+                    __html: getTemplatePreview(selectedTemplate, emailData)
+                  }} />
+                </div>
+                
+                <div className="mt-4 text-sm text-gray-600">
+                  <p><strong>说明：</strong>这是模板的预览效果，实际邮件会根据您填写的内容进行替换。</p>
+                  <p className="mt-1">模板变量：标题、内容、按钮链接、按钮文字等会被实际数据替换。</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </>
   )
 }

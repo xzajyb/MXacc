@@ -102,7 +102,7 @@ const DashboardPage: React.FC = () => {
         return (
           <div className="max-w-7xl mx-auto">
             {/* 欢迎区域 */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6 mb-6">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-sm border border-blue-200/50 dark:border-blue-800/50 p-6 mb-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -229,11 +229,16 @@ const DashboardPage: React.FC = () => {
         {/* 头部 */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-sm">MX</span>
+            <div className="mx-logo">
+              <img 
+                src="/logo.svg" 
+                alt="MX Logo" 
+                className="w-8 h-8 object-contain mr-3"
+              />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">MXacc</h1>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">梦锡账号</h1>
+              <p className="text-xs text-gray-500 dark:text-slate-400">统一管理</p>
             </div>
           </div>
           <button
