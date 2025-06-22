@@ -311,7 +311,7 @@ const LoginPage = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400">
               © 2024 梦锡工作室. 保留所有权利.
             </p>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </div>
