@@ -2,23 +2,10 @@ const clientPromise = require('../_lib/mongodb')
 const { getTokenFromRequest, verifyToken } = require('../_lib/auth')
 const { ObjectId } = require('mongodb')
 const multer = require('multer')
-const path = require('path')
-const fs = require('fs')
+const crypto = require('crypto')
 
-// 配置multer进行文件上传
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-    }
-    cb(null, uploadDir)
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname))
-  }
-})
+// 配置multer使用内存存储（Vercel友好）
+const storage = multer.memoryStorage()
 
 const upload = multer({
   storage: storage,
@@ -44,6 +31,12 @@ const upload = multer({
     }
   }
 })
+
+// 将图片转换为base64 data URL
+function bufferToDataURL(buffer, mimetype) {
+  const base64 = buffer.toString('base64')
+  return `data:${mimetype};base64,${base64}`
+}
 
 module.exports = async function handler(req, res) {
   console.log('头像上传API被调用:', req.method, req.url)
@@ -97,7 +90,7 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ success: false, message: '没有选择文件' })
         }
 
-        console.log('文件上传成功:', req.file.filename, req.file.size, req.file.mimetype)
+        console.log('文件上传成功:', req.file.originalname, req.file.size, req.file.mimetype)
 
         try {
           const client = await clientPromise
@@ -110,40 +103,20 @@ module.exports = async function handler(req, res) {
           const user = await users.findOne({ _id: new ObjectId(decoded.userId) })
           if (!user) {
             console.log('用户不存在:', decoded.userId)
-            // 删除已上传的文件
-            try {
-              fs.unlinkSync(req.file.path)
-            } catch (deleteErr) {
-              console.error('删除文件失败:', deleteErr)
-            }
             return res.status(404).json({ success: false, message: '用户不存在' })
           }
 
           console.log('找到用户:', user.username)
 
-          // 删除旧头像文件（如果存在）
-          if (user.profile?.avatar) {
-            const oldAvatarPath = path.join(process.cwd(), 'public', user.profile.avatar)
-            console.log('尝试删除旧头像:', oldAvatarPath)
-            if (fs.existsSync(oldAvatarPath)) {
-              try {
-                fs.unlinkSync(oldAvatarPath)
-                console.log('旧头像删除成功')
-              } catch (deleteErr) {
-                console.error('删除旧头像失败:', deleteErr)
-                // 不阻止继续执行
-              }
-            }
-          }
+          // 将上传的文件转换为base64 data URL
+          const avatarDataURL = bufferToDataURL(req.file.buffer, req.file.mimetype)
+          
+          console.log('转换为base64，长度:', avatarDataURL.length)
 
-          // 构建新的头像URL
-          const avatarUrl = `/uploads/avatars/${req.file.filename}`
-          console.log('新头像URL:', avatarUrl)
-
-          // 更新数据库中的头像信息
+          // 更新数据库中的头像信息（存储base64 data URL）
           const updateResult = await users.updateOne(
             { _id: new ObjectId(decoded.userId) },
-            { $set: { 'profile.avatar': avatarUrl } }
+            { $set: { 'profile.avatar': avatarDataURL } }
           )
 
           console.log('数据库更新结果:', updateResult)
@@ -155,21 +128,13 @@ module.exports = async function handler(req, res) {
           res.status(200).json({
             success: true,
             message: '头像上传成功',
-            avatarUrl: avatarUrl
+            avatarUrl: avatarDataURL
           })
 
           console.log('头像上传完成')
 
         } catch (error) {
           console.error('数据库操作错误:', error)
-          // 删除已上传的文件
-          if (req.file) {
-            try {
-              fs.unlinkSync(req.file.path)
-            } catch (deleteErr) {
-              console.error('删除文件失败:', deleteErr)
-            }
-          }
           return res.status(500).json({ success: false, message: '数据库操作失败: ' + error.message })
         }
       } catch (uploadError) {
