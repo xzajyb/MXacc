@@ -43,6 +43,9 @@ out/
 .temp/
 .tmp/
 
+# 确保dist目录不被提交
+/dist
+
 # 运行时数据
 *.pid
 *.seed
