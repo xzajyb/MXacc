@@ -1,6 +1,6 @@
 const clientPromise = require('../_lib/mongodb')
 const { verifyToken } = require('../_lib/auth')
-const { sendVerificationEmail } = require('../_lib/email-config')
+const { sendVerificationEmail } = require('../_lib/luckycola-email')
 const { ObjectId } = require('mongodb')
 
 module.exports = async function handler(req, res) {

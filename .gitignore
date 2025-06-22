@@ -143,6 +143,7 @@ auth-config.js
 
 # 邮件配置 - 敏感信息，不能开源
 api/_lib/email-config.js
+api/_lib/luckycola-email.js
 backend/src/config/email.js
 email-config.js
 smtp-config.js
