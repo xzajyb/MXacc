@@ -53,6 +53,7 @@ const SecurityPage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json()
+          console.log('登录历史API返回数据:', data) // 调试日志
           setLoginHistory(data.loginHistory || [])
         } else {
           console.error('获取登录历史失败:', response.status)
@@ -133,6 +134,15 @@ const SecurityPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* 页面标题 */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+          <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+          安全中心
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的账户安全和隐私设置</p>
+      </div>
+
       {/* 消息提示 */}
       {message && (
         <div className={`p-4 rounded-lg ${message.includes('成功') || message.includes('开发中') ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'}`}>

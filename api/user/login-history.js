@@ -41,13 +41,21 @@ module.exports = async function handler(req, res) {
     // 返回登录历史
     const loginHistory = user.loginHistory || []
     
-    // 格式化登录历史
-    const formattedHistory = loginHistory.map(record => ({
-      ip: record.ip || '未知IP',
-      userAgent: record.userAgent || '未知设备',
-      location: record.location || '未知位置',
-      timestamp: record.timestamp || new Date().toISOString()
-    })).slice(0, 10) // 只返回最近10条记录
+    console.log('数据库中的登录历史记录数:', loginHistory.length) // 调试日志
+    console.log('原始登录历史:', loginHistory.slice(0, 3)) // 显示前3条记录
+    
+    // 格式化登录历史并按时间倒序排列
+    const formattedHistory = loginHistory
+      .map(record => ({
+        ip: record.ip || '未知IP',
+        userAgent: record.userAgent || '未知设备',
+        location: record.location || '未知位置',
+        timestamp: record.timestamp || new Date().toISOString()
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) // 按时间倒序
+      .slice(0, 10) // 只返回最近10条记录
+
+    console.log('格式化后的登录历史:', formattedHistory.slice(0, 3)) // 调试日志
 
     res.status(200).json({
       success: true,

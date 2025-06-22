@@ -323,21 +323,21 @@ const AdminPage: React.FC = () => {
             {/* 邮件发送内容 */}
             {activeTab === 'email' && (
               <div className="max-w-6xl mx-auto">
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-6">发送邮件</h2>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">发送邮件</h2>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* 左侧：邮件配置 */}
                     <div className="space-y-6">
                       {/* 选择模板 */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           邮件模板
                         </label>
                         <select
                           value={selectedTemplate}
                           onChange={(e) => setSelectedTemplate(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">请选择邮件模板</option>
                           {templates.map((template) => (
@@ -347,15 +347,15 @@ const AdminPage: React.FC = () => {
                           ))}
                         </select>
                         {selectedTemplate && (
-                          <div className="mt-2 p-3 bg-blue-50 rounded-md">
+                          <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
                             <div className="flex items-center justify-between">
-                              <p className="text-sm text-blue-700">
+                              <p className="text-sm text-blue-700 dark:text-blue-300">
                                 已选择：{templates.find(t => t.id === selectedTemplate)?.name}
                               </p>
                               <div className="flex space-x-2">
                                 <button 
                                   onClick={() => setShowTemplatePreview(true)}
-                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                                 >
                                   预览模板
                                 </button>
@@ -363,11 +363,11 @@ const AdminPage: React.FC = () => {
                             </div>
                             
                             {/* 实时预览区域 */}
-                            <div className="mt-4 border border-blue-200 rounded-lg overflow-hidden">
-                              <div className="bg-blue-100 px-3 py-2 text-sm font-medium text-blue-800">
+                            <div className="mt-4 border border-blue-200 dark:border-blue-700 rounded-lg overflow-hidden">
+                              <div className="bg-blue-100 dark:bg-blue-900/40 px-3 py-2 text-sm font-medium text-blue-800 dark:text-blue-200">
                                 实时预览（输入内容会实时更新）
                               </div>
-                              <div className="p-4 bg-white max-h-96 overflow-y-auto">
+                              <div className="p-4 bg-white dark:bg-gray-900 max-h-96 overflow-y-auto">
                                 <div 
                                   className="text-sm"
                                   dangerouslySetInnerHTML={{
@@ -382,7 +382,7 @@ const AdminPage: React.FC = () => {
 
                       {/* 自定义主题 */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           自定义主题（可选）
                         </label>
                         <input
@@ -390,17 +390,17 @@ const AdminPage: React.FC = () => {
                           value={emailSubject}
                           onChange={(e) => setEmailSubject(e.target.value)}
                           placeholder="留空使用默认主题"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
                       {/* 选择收件人 */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           收件人
                         </label>
                         <div className="space-y-2">
-                          <label className="flex items-center">
+                          <label className="flex items-center text-gray-700 dark:text-gray-300">
                             <input
                               type="radio"
                               name="recipients"
@@ -411,7 +411,7 @@ const AdminPage: React.FC = () => {
                             />
                             发送给所有已验证用户
                           </label>
-                          <label className="flex items-center">
+                          <label className="flex items-center text-gray-700 dark:text-gray-300">
                             <input
                               type="radio"
                               name="recipients"
@@ -422,7 +422,7 @@ const AdminPage: React.FC = () => {
                             />
                             发送给选中用户
                           </label>
-                          <label className="flex items-center">
+                          <label className="flex items-center text-gray-700 dark:text-gray-300">
                             <input
                               type="radio"
                               name="recipients"
@@ -439,7 +439,7 @@ const AdminPage: React.FC = () => {
                       {/* 自定义邮箱输入 */}
                       {recipients === 'email' && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             邮箱地址（每行一个）
                           </label>
                           <textarea
@@ -447,7 +447,7 @@ const AdminPage: React.FC = () => {
                             onChange={(e) => setCustomEmails(e.target.value)}
                             placeholder="example1@email.com&#10;example2@email.com"
                             rows={4}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                       )}
@@ -457,7 +457,7 @@ const AdminPage: React.FC = () => {
                     <div className="space-y-6">
                       {/* 邮件数据 */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           邮件标题（用于自定义模板）
                         </label>
                         <input
@@ -465,12 +465,12 @@ const AdminPage: React.FC = () => {
                           value={emailData.title}
                           onChange={(e) => setEmailData({...emailData, title: e.target.value})}
                           placeholder="邮件标题"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           邮件内容
                         </label>
                         <textarea
@@ -478,12 +478,12 @@ const AdminPage: React.FC = () => {
                           onChange={(e) => setEmailData({...emailData, content: e.target.value})}
                           placeholder="邮件正文内容"
                           rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           按钮链接（可选）
                         </label>
                         <input
@@ -491,12 +491,12 @@ const AdminPage: React.FC = () => {
                           value={emailData.actionUrl}
                           onChange={(e) => setEmailData({...emailData, actionUrl: e.target.value})}
                           placeholder="https://example.com"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           按钮文字（可选）
                         </label>
                         <input
@@ -504,7 +504,7 @@ const AdminPage: React.FC = () => {
                           value={emailData.actionText}
                           onChange={(e) => setEmailData({...emailData, actionText: e.target.value})}
                           placeholder="查看详情"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
 
@@ -531,20 +531,20 @@ const AdminPage: React.FC = () => {
 
                   {/* 发送结果 */}
                   {emailResults && (
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <h3 className="font-medium text-gray-900 mb-2">发送结果</h3>
+                    <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <h3 className="font-medium text-gray-900 dark:text-white mb-2">发送结果</h3>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div className="flex items-center">
                           <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                          成功: {emailResults.success}
+                          <span className="text-gray-900 dark:text-white">成功: {emailResults.success}</span>
                         </div>
                         <div className="flex items-center">
                           <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                          失败: {emailResults.failed}
+                          <span className="text-gray-900 dark:text-white">失败: {emailResults.failed}</span>
                         </div>
                         <div className="flex items-center">
                           <Mail className="h-4 w-4 text-blue-500 mr-1" />
-                          总计: {emailResults.total}
+                          <span className="text-gray-900 dark:text-white">总计: {emailResults.total}</span>
                         </div>
                       </div>
                     </div>
@@ -556,50 +556,50 @@ const AdminPage: React.FC = () => {
             {/* 用户管理内容 */}
             {activeTab === 'users' && (
               <div className="max-w-7xl mx-auto">
-                <div className="bg-white rounded-lg shadow-sm border">
-                  <h2 className="text-xl font-semibold text-gray-900 p-6 border-b border-gray-200">用户管理</h2>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white p-6 border-b border-gray-200 dark:border-gray-700">用户管理</h2>
                   
                   {/* 用户统计 */}
-                  <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">用户统计</h3>
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">用户统计</h3>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">{userStats.total}</div>
-                        <div className="text-sm text-blue-600">总用户</div>
+                      <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{userStats.total}</div>
+                        <div className="text-sm text-blue-600 dark:text-blue-400">总用户</div>
                       </div>
-                      <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">{userStats.verified}</div>
-                        <div className="text-sm text-green-600">已验证</div>
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{userStats.verified}</div>
+                        <div className="text-sm text-green-600 dark:text-green-400">已验证</div>
                       </div>
-                      <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                        <div className="text-2xl font-bold text-yellow-600">{userStats.unverified}</div>
-                        <div className="text-sm text-yellow-600">未验证</div>
+                      <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{userStats.unverified}</div>
+                        <div className="text-sm text-yellow-600 dark:text-yellow-400">未验证</div>
                       </div>
-                      <div className="text-center p-3 bg-purple-50 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-600">{userStats.admins}</div>
-                        <div className="text-sm text-purple-600">管理员</div>
+                      <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{userStats.admins}</div>
+                        <div className="text-sm text-purple-600 dark:text-purple-400">管理员</div>
                       </div>
-                      <div className="text-center p-3 bg-red-50 rounded-lg">
-                        <div className="text-2xl font-bold text-red-600">{userStats.disabled}</div>
-                        <div className="text-sm text-red-600">已禁用</div>
+                      <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="text-2xl font-bold text-red-600 dark:text-red-400">{userStats.disabled}</div>
+                        <div className="text-sm text-red-600 dark:text-red-400">已禁用</div>
                       </div>
                     </div>
                   </div>
 
                   {/* 搜索和过滤 */}
-                  <div className="p-6 border-b border-gray-200">
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <input
                         type="text"
                         placeholder="搜索用户名或邮箱"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <select
                         value={filterVerified}
                         onChange={(e) => setFilterVerified(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">所有验证状态</option>
                         <option value="true">已验证</option>
@@ -608,7 +608,7 @@ const AdminPage: React.FC = () => {
                       <select
                         value={filterRole}
                         onChange={(e) => setFilterRole(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">所有角色</option>
                         <option value="user">普通用户</option>

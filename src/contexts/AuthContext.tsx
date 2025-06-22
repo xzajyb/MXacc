@@ -207,7 +207,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const value = {
+  const refreshUser = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+      }
+    } catch (error) {
+      console.error('刷新用户信息失败:', error)
+    }
+  }
+
+  const value: AuthContextType = {
     user,
     isAuthenticated,
     loading,
@@ -216,8 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     register,
     logout,
-    refreshToken,
-    updateUser,
+    refreshUser,
     sendEmailVerification,
     verifyEmail,
   }

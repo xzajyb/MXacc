@@ -1,12 +1,18 @@
 import React, { useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Save, X, Edit3, Camera } from 'lucide-react'
+import { User, Save, X, Edit3, Camera, Upload } from 'lucide-react'
 
 const ProfilePage: React.FC = () => {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // 调试日志
+  console.log('ProfilePage - 用户数据:', user)
+  console.log('ProfilePage - lastLogin:', user?.lastLogin)
   
   const [formData, setFormData] = useState({
     nickname: user?.profile?.nickname || '',
@@ -20,13 +26,88 @@ const ProfilePage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+      setMessage('请选择图片文件')
+      return
+    }
+
+    // 检查文件大小 (最大2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage('图片大小不能超过2MB')
+      return
+    }
+
+    setAvatarLoading(true)
+    setMessage('')
+
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/upload-avatar', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setMessage('头像更新成功')
+        // 刷新用户信息
+        if (refreshUser) {
+          await refreshUser()
+        }
+      } else {
+        const errorData = await response.json()
+        setMessage(errorData.message || '头像上传失败')
+      }
+    } catch (error) {
+      console.error('头像上传失败:', error)
+      setMessage('头像上传失败，请重试')
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
   const handleSave = async () => {
     setLoading(true)
     setMessage('')
     try {
-      // TODO: 实现个人资料更新API调用
-      setMessage('个人资料更新功能正在开发中')
-      setIsEditing(false)
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          profile: formData
+        })
+      })
+
+      if (response.ok) {
+        setMessage('个人资料更新成功')
+        setIsEditing(false)
+        // 刷新用户信息
+        if (refreshUser) {
+          await refreshUser()
+        }
+      } else {
+        const errorData = await response.json()
+        setMessage(errorData.message || '更新失败')
+      }
     } catch (error: any) {
       setMessage('更新失败，请重试')
     } finally {
@@ -54,6 +135,15 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* 页面标题 */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+          <User className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+          个人资料
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的个人信息和账户设置</p>
+      </div>
+
       {/* 消息提示 */}
       {message && (
         <div className={`p-4 rounded-lg ${message.includes('成功') ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'}`}>
@@ -98,7 +188,7 @@ const ProfilePage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 头像区域 */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="relative">
+            <div className="relative group">
               <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
                 {user?.profile?.avatar ? (
                   <img 
@@ -112,11 +202,37 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
               </div>
+              {/* 头像上传按钮 */}
+              <button
+                onClick={handleAvatarClick}
+                disabled={avatarLoading}
+                className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                {avatarLoading ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                ) : (
+                  <Camera size={24} className="text-white" />
+                )}
+              </button>
             </div>
             <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">用户头像</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">头像上传功能开发中</p>
+              <button
+                onClick={handleAvatarClick}
+                disabled={avatarLoading}
+                className="flex items-center space-x-2 px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm"
+              >
+                <Upload size={14} />
+                <span>{avatarLoading ? '上传中...' : '更换头像'}</span>
+              </button>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">支持JPG、PNG格式，最大2MB</p>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
           </div>
 
           {/* 基本信息 */}
