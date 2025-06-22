@@ -37,12 +37,12 @@ module.exports = async (req, res) => {
     const usersCollection = db.collection('users')
 
     if (req.method === 'GET') {
-      // 获取用户信息
+      // 获取用户设置
       const user = await usersCollection.findOne(
         { _id: new ObjectId(decoded.userId) },
         { 
           projection: { 
-            password: 0  // 不返回密码
+            settings: 1
           } 
         }
       )
@@ -54,47 +54,53 @@ module.exports = async (req, res) => {
         })
       }
 
-      // 确保返回用户角色
+      const defaultSettings = {
+        notifications: {
+          emailNotifications: true,
+          pushNotifications: false,
+          securityAlerts: true,
+          marketingEmails: false
+        },
+        privacy: {
+          profileVisibility: 'public',
+          showEmail: false,
+          showLastActive: true,
+          allowDirectMessages: true
+        },
+        language: 'zh-CN',
+        timezone: 'Asia/Shanghai'
+      }
+
       res.status(200).json({
-        message: '获取用户信息成功',
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          nickname: user.nickname || '',
-          bio: user.bio || '',
-          emailVerified: user.emailVerified || false,
-          role: user.role || 'user',
-          createdAt: user.createdAt,
-          lastLoginAt: user.lastLoginAt || null
-        }
+        message: '获取设置成功',
+        ...defaultSettings,
+        ...user.settings
       })
+
     } else if (req.method === 'PUT') {
-      // 更新用户信息
-      const { nickname, bio } = req.body
+      // 更新用户设置
+      const { notifications, privacy, language, timezone } = req.body
 
-      // 验证输入
-      if (nickname && nickname.length > 50) {
-        return res.status(400).json({
-          message: '昵称长度不能超过50个字符',
-          code: 'NICKNAME_TOO_LONG'
-        })
-      }
-
-      if (bio && bio.length > 500) {
-        return res.status(400).json({
-          message: '个人简介长度不能超过500个字符',
-          code: 'BIO_TOO_LONG'
-        })
-      }
-
-      // 更新用户信息
+      // 构建更新数据
       const updateData = {
-        updatedAt: new Date()
+        'settings.updatedAt': new Date()
       }
 
-      if (nickname !== undefined) updateData.nickname = nickname
-      if (bio !== undefined) updateData.bio = bio
+      if (notifications) {
+        updateData['settings.notifications'] = notifications
+      }
+
+      if (privacy) {
+        updateData['settings.privacy'] = privacy
+      }
+
+      if (language) {
+        updateData['settings.language'] = language
+      }
+
+      if (timezone) {
+        updateData['settings.timezone'] = timezone
+      }
 
       const result = await usersCollection.updateOne(
         { _id: new ObjectId(decoded.userId) },
@@ -108,30 +114,11 @@ module.exports = async (req, res) => {
         })
       }
 
-      // 获取更新后的用户信息
-      const updatedUser = await usersCollection.findOne(
-        { _id: new ObjectId(decoded.userId) },
-        { 
-          projection: { 
-            password: 0  // 不返回密码
-          } 
-        }
-      )
-
       res.status(200).json({
-        message: '用户信息更新成功',
-        user: {
-          id: updatedUser._id,
-          username: updatedUser.username,
-          email: updatedUser.email,
-          nickname: updatedUser.nickname || '',
-          bio: updatedUser.bio || '',
-          emailVerified: updatedUser.emailVerified || false,
-          role: updatedUser.role || 'user',
-          createdAt: updatedUser.createdAt,
-          lastLoginAt: updatedUser.lastLoginAt || null
-        }
+        message: '设置保存成功',
+        code: 'SETTINGS_UPDATED'
       })
+
     } else {
       res.status(405).json({ 
         message: '方法不允许',
@@ -139,7 +126,7 @@ module.exports = async (req, res) => {
       })
     }
   } catch (error) {
-    console.error('Profile API错误:', error)
+    console.error('设置API错误:', error)
     res.status(500).json({ 
       message: '服务器内部错误',
       code: 'INTERNAL_SERVER_ERROR'
