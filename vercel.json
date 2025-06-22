@@ -1,12 +1,32 @@
 {
-  "buildCommand": "npm install && npm run build",
+  "buildCommand": "node node_modules/vite/bin/vite.js build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "framework": "vite",
-  "rewrites": [
+  "framework": null,
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"  
+  },
+  "headers": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods", 
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
     }
   ]
 } 

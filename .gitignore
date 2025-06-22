@@ -1,0 +1,139 @@
+# 🔒 敏感文件和环境变量 - 绝对不能提交到Git
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# 数据库配置文件
+database.json
+db-config.js
+mongodb-config.js
+
+# 密钥和证书文件
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+keys/
+certs/
+secrets/
+
+# 临时敏感文件
+config.local.js
+local-config.json
+
+# Node.js 依赖
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# 构建输出
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.temp/
+.tmp/
+
+# 运行时数据
+*.pid
+*.seed
+*.pid.lock
+.DS_Store
+Thumbs.db
+
+# IDE和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+logs/
+*.log
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.parcel-cache
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Vercel
+.vercel
+
+# Local development
+local/
+dev/
+
+# 测试文件中的敏感数据
+test-data/
+fixtures/secrets/
+
+# 备份文件
+*.backup
+*.bak
+*.orig
+
+# 任何包含"secret"、"key"、"password"的文件
+*secret*
+*key*
+*password*
+*token*
+
+# 特定于项目的敏感文件
+api-keys.js
+database-urls.js
+auth-config.js 
