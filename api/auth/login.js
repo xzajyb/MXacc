@@ -75,7 +75,40 @@ module.exports = async function handler(req, res) {
       })
     }
 
-    // 重置登录尝试次数并更新最后登录时间
+    // 解析用户代理字符串获取设备信息
+    const parseUserAgent = (userAgent) => {
+      if (!userAgent) return '未知设备'
+      
+      // 简单的用户代理解析
+      if (userAgent.includes('Chrome')) {
+        if (userAgent.includes('Mobile')) {
+          return userAgent.includes('Android') ? 'Chrome Android' : 'Chrome Mobile'
+        }
+        return `Chrome ${userAgent.includes('Windows') ? 'Windows' : userAgent.includes('Mac') ? 'macOS' : 'Linux'}`
+      } else if (userAgent.includes('Firefox')) {
+        return `Firefox ${userAgent.includes('Windows') ? 'Windows' : userAgent.includes('Mac') ? 'macOS' : 'Linux'}`
+      } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+        return userAgent.includes('Mobile') ? 'Safari iOS' : 'Safari macOS'
+      } else if (userAgent.includes('Edge')) {
+        return 'Microsoft Edge'
+      }
+      
+      return userAgent.substring(0, 50) // 限制长度
+    }
+
+    // 解析IP地址获取大概位置（简单版本）
+    const parseLocation = (ip) => {
+      if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+        return '本地网络'
+      }
+      // 这里可以集成第三方IP地理位置服务
+      return '未知位置'
+    }
+
+    const clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.connection.remoteAddress || req.socket.remoteAddress
+    const userAgent = req.headers['user-agent']
+    
+    // 重置登录尝试次数并更新最后登录时间，记录登录历史
     await users.updateOne(
       { _id: user._id },
       { 
@@ -85,9 +118,13 @@ module.exports = async function handler(req, res) {
         },
         $push: {
           loginHistory: {
-            timestamp: new Date(),
-            ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
-            userAgent: req.headers['user-agent']
+            $each: [{
+              timestamp: new Date(),
+              ip: clientIp,
+              userAgent: parseUserAgent(userAgent),
+              location: parseLocation(clientIp)
+            }],
+            $slice: -20 // 只保留最近20条记录
           }
         }
       }

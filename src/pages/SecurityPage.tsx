@@ -55,35 +55,12 @@ const SecurityPage: React.FC = () => {
           const data = await response.json()
           setLoginHistory(data.loginHistory || [])
         } else {
-          // 如果API失败，使用模拟数据
-          const mockLoginHistory = [
-            {
-              ip: '192.168.1.100',
-              userAgent: 'Chrome 120.0.0.0 Windows',
-              location: '北京市',
-              timestamp: new Date().toISOString()
-            },
-            {
-              ip: '10.0.0.50',
-              userAgent: 'Safari 17.0 macOS',
-              location: '上海市',
-              timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-            }
-          ]
-          setLoginHistory(mockLoginHistory)
+          console.error('获取登录历史失败:', response.status)
+          setLoginHistory([])
         }
       } catch (error) {
         console.error('获取登录历史失败:', error)
-        // 出错时使用模拟数据
-        const mockLoginHistory = [
-          {
-            ip: '当前会话',
-            userAgent: 'Chrome 120.0.0.0 Windows',
-            location: '北京市',
-            timestamp: new Date().toISOString()
-          }
-        ]
-        setLoginHistory(mockLoginHistory)
+        setLoginHistory([])
       }
     }
 
@@ -307,38 +284,50 @@ const SecurityPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {loginHistory.map((record, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                  >
-                    <div className="flex items-center space-x-4">
-                      {getDeviceIcon(record.userAgent)}
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {record.userAgent}
-                          </span>
-                          {index === 0 && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 text-xs rounded-full">
-                              当前会话
+                {loginHistory.length > 0 ? (
+                  loginHistory.map((record, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                    >
+                      <div className="flex items-center space-x-4">
+                        {getDeviceIcon(record.userAgent)}
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {record.userAgent}
                             </span>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center space-x-1">
-                            <MapPin size={14} />
-                            <span>{record.location}</span>
-                          </span>
-                          <span>IP: {record.ip}</span>
+                            {index === 0 && (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 text-xs rounded-full">
+                                当前会话
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center space-x-1">
+                              <MapPin size={14} />
+                              <span>{record.location}</span>
+                            </span>
+                            <span>IP: {record.ip}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {formatTimeAgo(record.timestamp)}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatTimeAgo(record.timestamp)}
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Clock size={48} className="mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      暂无登录历史
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400">
+                      当您登录账户时，系统会记录您的登录信息
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
