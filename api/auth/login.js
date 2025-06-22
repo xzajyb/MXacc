@@ -17,10 +17,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { email, password } = req.body
+    const { emailOrUsername, password } = req.body
 
     // 验证输入
-    if (!email || !password) {
+    if (!emailOrUsername || !password) {
       return res.status(400).json({ message: '请填写邮箱和密码' })
     }
 
@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
 
     // 查找用户
     const user = await users.findOne({
-      $or: [{ email }, { username: email }]
+      $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
     })
 
     if (!user) {

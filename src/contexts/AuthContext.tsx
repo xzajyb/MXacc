@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { AuthContextType, User, LoginRequest, RegisterRequest } from '@/types'
-import { authApi } from '@/utils/api'
-import { getToken, setToken, removeToken } from '@/utils/auth'
+import { AuthContextType, User, LoginRequest, RegisterRequest } from '../types'
+import { authApi } from '../utils/api'
+import { getToken, setToken, removeToken } from '../utils/auth'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -47,9 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true)
       const response = await authApi.login(credentials)
       
-      if (response.data?.user && response.data?.tokens) {
+      if (response.data?.user && response.data?.token) {
         setUser(response.data.user)
-        setToken(response.data.tokens.accessToken, response.data.tokens.refreshToken)
+        // 暂时使用同一个token作为访问令牌和刷新令牌
+        setToken(response.data.token, response.data.token)
         
         toast.success('登录成功！')
         navigate('/dashboard')
