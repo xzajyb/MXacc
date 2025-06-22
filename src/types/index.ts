@@ -104,6 +104,7 @@ export interface AuthContextType {
   isAuthenticated: boolean
   loading: boolean
   error: string | null
+  token: string | null
   login: (emailOrUsername: string, password: string) => Promise<void>
   register: (username: string, email: string, password: string) => Promise<void>
   logout: () => void

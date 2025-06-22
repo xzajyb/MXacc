@@ -95,54 +95,13 @@ module.exports = async function handler(req, res) {
       status.errors.push(`API连通性测试失败: ${connectError.message}`)
     }
 
-    // 尝试实际发送测试邮件（如果配置完整且用户请求）
-    if (req.query.sendTest === 'true' && status.errors.length === 0) {
-      console.log('发送测试邮件...')
-      
-      try {
-                 // 尝试不同的导入方式
-         let sendEmail
-         try {
-           const emailModule = require('../_lib/luckycola-email')
-           sendEmail = emailModule.sendEmail
-         } catch (importError) {
-           throw new Error(`无法导入邮件模块: ${importError.message}`)
-         }
-        
-        const testEmail = req.query.testEmail || process.env.LUCKYCOLA_SMTP_EMAIL
-        
-        if (!testEmail) {
-          throw new Error('未提供测试邮箱地址')
-        }
-
-        const result = await sendEmail(
-          testEmail,
-          'MXacc 邮件服务测试',
-          `
-          <div style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2 style="color: #3b82f6;">✅ MXacc 邮件服务测试成功</h2>
-            <p>如果您收到此邮件，说明LuckyCola邮件API配置正确！</p>
-            <p><strong>测试时间:</strong> ${new Date().toLocaleString('zh-CN')}</p>
-            <p><strong>发送方式:</strong> LuckyCola API</p>
-            <hr>
-            <small>此邮件由MXacc系统自动发送用于测试目的</small>
-          </div>
-          `,
-          true
-        )
-
-        status.testEmail = {
-          sent: result.success,
-          target: testEmail,
-          result: result
-        }
-
-      } catch (emailError) {
-        status.testEmail = {
-          sent: false,
-          error: emailError.message
-        }
-        status.errors.push(`测试邮件发送失败: ${emailError.message}`)
+    // 测试邮件发送功能已关闭
+    // 仅提供配置状态检查，不允许直接发送测试邮件
+    if (req.query.sendTest === 'true') {
+      status.testEmail = {
+        sent: false,
+        error: '测试邮件发送功能已关闭，仅允许通过邮箱验证流程发送邮件',
+        message: '如需测试邮件功能，请通过正常的邮箱验证流程'
       }
     }
 
@@ -216,8 +175,8 @@ function generateRecommendations(status) {
     recommendations.push({
       type: 'general',
       priority: 'low',
-      message: '配置看起来正常，如果仍有问题请查看详细日志',
-      action: '在URL后添加 ?sendTest=true&testEmail=your@email.com 进行邮件发送测试'
+      message: '配置看起来正常，邮件发送将仅通过邮箱验证流程进行',
+      action: '如需测试，请通过注册新用户或重新发送验证邮件的方式'
     })
   }
 

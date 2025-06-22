@@ -1,8 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { Clock, Mail, RefreshCw, CheckCircle } from 'lucide-react';
+
+interface SendInfo {
+  sendCount: number;
+  remainingAttempts: number;
+  canSendAgainAt: string | null;
+}
+
+// 格式化时间显示（秒转换为分:秒）
+const formatTime = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
+// 格式化剩余等待时间
+const formatRemainingTime = (seconds: number): string => {
+  if (seconds <= 0) return '0秒';
+  
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  
+  if (minutes > 0) {
+    return `${minutes}分${remainingSeconds > 0 ? remainingSeconds + '秒' : ''}`;
+  } else {
+    return `${remainingSeconds}秒`;
+  }
+};
 
 export default function VerifyEmailPage() {
   const { user, sendEmailVerification, verifyEmail, logout } = useAuth();
@@ -10,7 +38,41 @@ export default function VerifyEmailPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [codeExpiresAt, setCodeExpiresAt] = useState<Date | null>(null);
+  const [sendInfo, setSendInfo] = useState<SendInfo | null>(null);
+  const [remainingTime, setRemainingTime] = useState(0);
+  const [canSendAgain, setCanSendAgain] = useState(true);
+  const [nextSendTime, setNextSendTime] = useState<Date | null>(null);
   const navigate = useNavigate();
+
+  // 倒计时更新
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (codeExpiresAt) {
+        const now = new Date();
+        const timeLeft = Math.max(0, Math.floor((codeExpiresAt.getTime() - now.getTime()) / 1000));
+        setRemainingTime(timeLeft);
+        
+        if (timeLeft === 0) {
+          setCodeExpiresAt(null);
+        }
+      }
+
+      if (nextSendTime) {
+        const now = new Date();
+        const timeUntilCanSend = Math.max(0, Math.floor((nextSendTime.getTime() - now.getTime()) / 1000));
+        
+        if (timeUntilCanSend === 0) {
+          setCanSendAgain(true);
+          setNextSendTime(null);
+        } else {
+          setCanSendAgain(false);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [codeExpiresAt, nextSendTime]);
 
   const handleSendVerification = async () => {
     setLoading(true);
@@ -21,15 +83,35 @@ export default function VerifyEmailPage() {
       const result = await sendEmailVerification();
       if (result.success) {
         setMessage(result.message);
+        
+        // 设置验证码过期时间
+        if ((result as any).expiresAt) {
+          setCodeExpiresAt(new Date((result as any).expiresAt));
+        }
+        
+        // 设置发送信息
+        if ((result as any).sendInfo) {
+          setSendInfo((result as any).sendInfo);
+          if ((result as any).sendInfo.canSendAgainAt) {
+            setNextSendTime(new Date((result as any).sendInfo.canSendAgainAt));
+            setCanSendAgain(false);
+          }
+        }
+        
         // 如果有验证码（开发模式），显示它
         if (result.verificationCode) {
           setMessage(`${result.message} (验证码: ${result.verificationCode})`);
         }
       } else {
         setError(result.message);
+        // 处理频率限制错误
+        if ((result as any).canSendAgainAt) {
+          setNextSendTime(new Date((result as any).canSendAgainAt));
+          setCanSendAgain(false);
+        }
       }
-    } catch (err) {
-      setError('发送验证邮件失败');
+    } catch (err: any) {
+      setError(err.message || '发送验证邮件失败');
     } finally {
       setLoading(false);
     }
@@ -93,18 +175,73 @@ export default function VerifyEmailPage() {
         </div>
 
         <div className="space-y-6">
+          {/* 邮箱信息 */}
           <div className="text-center">
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-              我们将向 <span className="font-medium text-slate-900 dark:text-white">{user.email}</span> 发送验证邮件
+            <div className="inline-flex items-center space-x-2 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg mb-4">
+              <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm text-blue-800 dark:text-blue-200 font-medium">{user.email}</span>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              我们将向上述邮箱发送验证码
             </p>
+          </div>
+
+          {/* 发送限制信息 */}
+          {sendInfo && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <RefreshCw className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">发送状态</span>
+              </div>
+              <div className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
+                <p>已发送: {sendInfo.sendCount}/3 次</p>
+                <p>剩余机会: {sendInfo.remainingAttempts} 次</p>
+                {!canSendAgain && nextSendTime && (
+                  <p>下次可发送: {formatRemainingTime(Math.max(0, Math.floor((nextSendTime.getTime() - new Date().getTime()) / 1000)))}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 验证码有效时间 */}
+          {codeExpiresAt && remainingTime > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">验证码有效时间</span>
+              </div>
+              <div className="text-xs text-blue-700 dark:text-blue-300">
+                <p>剩余时间: {formatTime(remainingTime)}</p>
+                <div className="mt-2 bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-1000"
+                    style={{ width: `${Math.max(0, (remainingTime / 600) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 发送按钮 */}
+          <div className="text-center">
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: canSendAgain && !loading ? 1.02 : 1 }}
+              whileTap={{ scale: canSendAgain && !loading ? 0.98 : 1 }}
               onClick={handleSendVerification}
-              disabled={loading}
+              disabled={loading || !canSendAgain}
               className="btn-primary w-full py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? <LoadingSpinner size="sm" /> : '发送验证邮件'}
+              {loading ? (
+                <LoadingSpinner size="sm" />
+              ) : !canSendAgain ? (
+                nextSendTime ? (
+                  `请等待 ${formatRemainingTime(Math.max(0, Math.floor((nextSendTime.getTime() - new Date().getTime()) / 1000)))}`
+                ) : '发送受限'
+              ) : codeExpiresAt && remainingTime > 0 ? (
+                '重新发送验证邮件'
+              ) : (
+                '发送验证邮件'
+              )}
             </motion.button>
           </div>
 
@@ -124,35 +261,63 @@ export default function VerifyEmailPage() {
               <label htmlFor="verificationCode" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 验证码
               </label>
-              <input
-                id="verificationCode"
-                type="text"
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value)}
-                placeholder="请输入验证码"
-                className="input-professional w-full py-3 px-4 rounded-xl text-center tracking-widest font-mono text-lg"
-                maxLength={8}
-              />
+              <div className="relative">
+                <input
+                  id="verificationCode"
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                    setVerificationCode(value);
+                  }}
+                  placeholder="请输入6位数字验证码"
+                  className="input-professional w-full py-3 px-4 rounded-xl text-center tracking-widest font-mono text-lg"
+                  maxLength={6}
+                />
+                {codeExpiresAt && remainingTime > 0 && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      {formatTime(remainingTime)}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {remainingTime === 0 && codeExpiresAt && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                  验证码已过期，请重新获取
+                </p>
+              )}
             </div>
 
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              disabled={loading || !verificationCode.trim()}
-              className="btn-primary w-full py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || !verificationCode.trim() || verificationCode.length !== 6 || (remainingTime === 0 && !!codeExpiresAt)}
+              className="btn-primary w-full py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
-              {loading ? <LoadingSpinner size="sm" /> : '验证邮箱'}
+              {loading ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  <span>验证邮箱</span>
+                </>
+              )}
             </motion.button>
           </form>
 
+          {/* 操作结果显示 */}
           {message && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
             >
-              <p className="text-sm text-green-800 dark:text-green-200">{message}</p>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <p className="text-sm text-green-800 dark:text-green-200">{message}</p>
+              </div>
             </motion.div>
           )}
 
@@ -162,22 +327,38 @@ export default function VerifyEmailPage() {
               animate={{ opacity: 1, y: 0 }}
               className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
             >
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              </div>
             </motion.div>
           )}
 
-          <div className="text-center">
-            <button
-              onClick={() => {
-                if (confirm('确定要注销登录吗？您需要验证邮箱后才能使用系统功能。')) {
-                  logout()
-                  navigate('/login')
-                }
-              }}
-              className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 transition-colors"
-            >
-              注销登录
-            </button>
+          {/* 帮助和选项 */}
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                <p>• 验证码有效期为10分钟</p>
+                <p>• 每3分钟最多发送3次验证邮件</p>
+                <p>• 请检查垃圾邮件文件夹</p>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <button
+                onClick={() => {
+                  if (confirm('确定要注销登录吗？您需要验证邮箱后才能使用系统功能。')) {
+                    logout()
+                    navigate('/login')
+                  }
+                }}
+                className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 transition-colors"
+              >
+                注销登录
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>

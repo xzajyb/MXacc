@@ -8,7 +8,7 @@ const sendEmail = async (to, subject, content, isHTML = true) => {
     const requestData = {
       ColaKey: process.env.LUCKYCOLA_API_KEY,
       tomail: to,
-      fromTitle: 'MXacc 统一账号管理系统',
+      fromTitle: 梦锡工作室官方,
       subject: subject,
       content: content,
       isTextContent: !isHTML, // 默认发送HTML邮件
@@ -27,7 +27,7 @@ const sendEmail = async (to, subject, content, isHTML = true) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'MXacc/1.0'
+        'User-Agent': 'MXOS/1.0'
       },
       body: JSON.stringify(requestData)
     })
@@ -57,7 +57,7 @@ const sendEmail = async (to, subject, content, isHTML = true) => {
 
 // 发送验证码邮件
 const sendVerificationEmail = async (email, code, username = '') => {
-  const subject = 'MXacc 邮箱验证码'
+  const subject = '梦锡账号邮箱验证码'
   
   const htmlContent = `
     <!DOCTYPE html>
@@ -90,7 +90,7 @@ const sendVerificationEmail = async (email, code, username = '') => {
       <div class="container">
         <div class="header">
           <div class="logo">MXacc</div>
-          <div class="subtitle">梦锡工作室统一账号管理系统</div>
+          <div class="subtitle">梦锡工作室</div>
         </div>
         
         <div class="content">
@@ -99,7 +99,7 @@ const sendVerificationEmail = async (email, code, username = '') => {
           </div>
           
           <p class="instructions">
-            感谢您使用 MXacc 统一账号管理系统。为了确保您的账户安全，请使用以下验证码完成邮箱验证：
+            感谢您使用梦锡账号系统。为了确保您的账户安全，请使用以下验证码完成邮箱验证：
           </p>
           
           <div class="code-container">
@@ -113,7 +113,7 @@ const sendVerificationEmail = async (email, code, username = '') => {
           
           <div class="warning">
             <p class="warning-text">
-              <strong>安全提醒：</strong>请勿将此验证码告诉任何人，MXacc 工作人员不会主动向您索要验证码。
+              <strong>安全提醒：</strong>请勿将此验证码告诉任何人，梦锡工作人员不会主动向您索要验证码。
             </p>
           </div>
           
@@ -129,8 +129,8 @@ const sendVerificationEmail = async (email, code, username = '') => {
         
         <div class="footer">
           <p class="footer-text">
-            此邮件由 MXacc 系统自动发送，请勿回复<br>
-            © ${new Date().getFullYear()} 梦锡工作室 MXacc. 保留所有权利
+            此邮件由系统自动发送，请勿回复,如有疑问请联系我们QQ:915435295<br>
+            © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
           </p>
         </div>
       </div>
@@ -143,14 +143,14 @@ const sendVerificationEmail = async (email, code, username = '') => {
 
 // 发送欢迎邮件
 const sendWelcomeEmail = async (email, username) => {
-  const subject = '欢迎加入 MXacc！'
+  const subject = '欢迎加入梦锡工作室！'
   
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
-      <title>欢迎加入 MXacc</title>
+      <title>欢迎加入梦锡工作室</title>
       <style>
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
         .container { max-width: 600px; margin: 0 auto; background: white; }
@@ -174,14 +174,14 @@ const sendWelcomeEmail = async (email, username) => {
       <div class="container">
         <div class="header">
           <div class="logo">MXacc</div>
-          <div class="subtitle">梦锡工作室统一账号管理系统</div>
+          <div class="subtitle">梦锡工作室账号系统</div>
         </div>
         
         <div class="content">
-          <h1 class="welcome-title">🎉 欢迎加入 MXacc，${username}！</h1>
+          <h1 class="welcome-title">🎉 欢迎加入 梦锡工作室，${username}！</h1>
           
           <p style="color: #4b5563; line-height: 1.6; text-align: center;">
-            恭喜您成功注册 MXacc 统一账号管理系统！现在您可以享受我们提供的各种便捷服务。
+            恭喜您成功注册梦锡账号！现在您可以享受我们提供的各种便捷服务。
           </p>
           
           <div class="features">
@@ -211,8 +211,8 @@ const sendWelcomeEmail = async (email, username) => {
           </div>
           
           <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL || 'https://mxacc.vercel.app'}/dashboard" class="cta-button">
-              立即体验 MXacc
+            <a href="${process.env.FRONTEND_URL || 'https://mxacc.mxos.top'}/dashboard" class="cta-button">
+              立即体验
             </a>
           </div>
           
@@ -223,8 +223,8 @@ const sendWelcomeEmail = async (email, username) => {
         
         <div class="footer">
           <p class="footer-text">
-            此邮件由 MXacc 系统自动发送，请勿回复<br>
-            © ${new Date().getFullYear()} 梦锡工作室 MXacc. 保留所有权利
+            此邮件由系统自动发送，请勿回复,如有疑问请联系我们QQ:915435295<br>
+            © ${new Date().getFullYear()} 梦锡工作室MXOS. 保留所有权利
           </p>
         </div>
       </div>

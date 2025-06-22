@@ -50,7 +50,7 @@ module.exports = async function handler(req, res) {
     }
 
     // 检查验证码
-    if (!user.verificationCode || user.verificationCode !== verificationCode.toUpperCase()) {
+    if (!user.verificationCode || user.verificationCode !== verificationCode.toString()) {
       return res.status(400).json({ message: '验证码错误' })
     }
 

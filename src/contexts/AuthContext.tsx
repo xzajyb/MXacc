@@ -11,6 +11,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [token, setTokenState] = useState<string | null>(null)
   const navigate = useNavigate()
 
   // 初始化时检查用户状态
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuthStatus = async () => {
     const token = localStorage.getItem('token')
+    setTokenState(token)
     if (!token) {
       setLoading(false)
       return
@@ -40,12 +42,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Token无效，清除本地存储
         localStorage.removeItem('token')
+        setTokenState(null)
         setIsAuthenticated(false)
         setUser(null)
       }
     } catch (error) {
       console.error('检查认证状态失败:', error)
       localStorage.removeItem('token')
+      setTokenState(null)
       setIsAuthenticated(false)
       setUser(null)
     } finally {
@@ -70,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         localStorage.setItem('token', data.token)
+        setTokenState(data.token)
         setUser(data.user)
         setIsAuthenticated(true)
         
@@ -102,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         localStorage.setItem('token', data.token)
+        setTokenState(data.token)
         setUser(data.user)
         setIsAuthenticated(true)
         
@@ -119,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('token')
+    setTokenState(null)
     setUser(null)
     setIsAuthenticated(false)
     navigate('/login')
@@ -151,7 +158,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       const data = await response.json()
-      return { success: response.ok, message: data.message, verificationCode: data.verificationCode }
+      
+      if (response.ok) {
+        return { 
+          success: true, 
+          message: data.message, 
+          verificationCode: data.verificationCode,
+          expiresAt: data.expiresAt,
+          sendInfo: data.sendInfo
+        }
+      } else {
+        return { 
+          success: false, 
+          message: data.message,
+          canSendAgainAt: data.canSendAgainAt,
+          remainingTime: data.remainingTime
+        }
+      }
     } catch (error) {
       return { success: false, message: '发送验证邮件失败' }
     }
@@ -187,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated,
     loading,
     error,
+    token,
     login,
     register,
     logout,

@@ -50,21 +50,8 @@ const register = async (req, res) => {
     
     await user.save();
     
-    // 发送验证邮件
-    try {
-      const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${emailVerificationToken}`;
-      await sendEmail({
-        to: email,
-        subject: '验证您的梦锡账号邮箱',
-        template: 'emailVerification',
-        data: {
-          username,
-          verificationUrl
-        }
-      });
-    } catch (emailError) {
-      console.error('发送验证邮件失败:', emailError);
-    }
+    // 邮件发送功能已关闭，使用前端统一API
+    console.log('注册成功，邮件发送功能已关闭，请通过前端API发送验证邮件');
     
     res.status(201).json({
       status: 'success',
@@ -282,118 +269,24 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-// 重发验证邮件
+// 重发验证邮件 - 已关闭，请使用前端API
 const resendVerification = async (req, res) => {
-  try {
-    const { error } = validateEmail(req.body);
-    if (error) {
-      return res.status(400).json({
-        status: 'error',
-        message: '邮箱格式不正确'
-      });
-    }
-    
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: '用户不存在'
-      });
-    }
-    
-    if (user.security.emailVerified) {
-      return res.status(400).json({
-        status: 'error',
-        message: '邮箱已经验证过了'
-      });
-    }
-    
-    // 生成新的验证令牌
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
-    user.security.emailVerificationToken = emailVerificationToken;
-    user.security.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000;
-    
-    await user.save();
-    
-    // 发送验证邮件
-    const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${emailVerificationToken}`;
-    await sendEmail({
-      to: email,
-      subject: '验证您的梦锡账号邮箱',
-      template: 'emailVerification',
-      data: {
-        username: user.username,
-        verificationUrl
-      }
-    });
-    
-    res.json({
-      status: 'success',
-      message: '验证邮件已重新发送'
-    });
-  } catch (error) {
-    console.error('重发验证邮件错误:', error);
-    res.status(500).json({
-      status: 'error',
-      message: '重发验证邮件失败'
-    });
-  }
+  return res.status(403).json({
+    status: 'error',
+    message: '此API已关闭，请使用前端统一邮件验证API',
+    code: 'API_DISABLED',
+    recommendation: '请通过前端页面重新发送验证邮件'
+  });
 };
 
-// 忘记密码
+// 忘记密码 - 已关闭，请使用前端API
 const forgotPassword = async (req, res) => {
-  try {
-    const { error } = validateEmail(req.body);
-    if (error) {
-      return res.status(400).json({
-        status: 'error',
-        message: '邮箱格式不正确'
-      });
-    }
-    
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    
-    if (!user) {
-      // 为了安全，即使用户不存在也返回成功消息
-      return res.json({
-        status: 'success',
-        message: '如果该邮箱存在，重置链接已发送'
-      });
-    }
-    
-    // 生成重置令牌
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    user.security.passwordResetToken = resetToken;
-    user.security.passwordResetExpires = Date.now() + 1 * 60 * 60 * 1000; // 1小时
-    
-    await user.save();
-    
-    // 发送重置邮件
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
-    await sendEmail({
-      to: email,
-      subject: '重置您的梦锡账号密码',
-      template: 'passwordReset',
-      data: {
-        username: user.username,
-        resetUrl
-      }
-    });
-    
-    res.json({
-      status: 'success',
-      message: '如果该邮箱存在，重置链接已发送'
-    });
-  } catch (error) {
-    console.error('忘记密码错误:', error);
-    res.status(500).json({
-      status: 'error',
-      message: '发送重置邮件失败'
-    });
-  }
+  return res.status(403).json({
+    status: 'error',
+    message: '此API已关闭，密码重置功能暂不可用',
+    code: 'API_DISABLED',
+    recommendation: '如需重置密码，请联系管理员'
+  });
 };
 
 // 重置密码

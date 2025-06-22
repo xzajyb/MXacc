@@ -1,5 +1,5 @@
 const clientPromise = require('../_lib/mongodb')
-const { verifyToken, hashPassword } = require('../_lib/auth')
+const { verifyToken } = require('../_lib/auth')
 const { ObjectId } = require('mongodb')
 
 module.exports = async function handler(req, res) {
@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     // 验证管理员权限
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: '需要登录' })
+      return res.status(401).json({ message: '需要管理员权限' })
     }
 
     const token = authHeader.substring(7)
@@ -29,184 +29,242 @@ module.exports = async function handler(req, res) {
     const db = client.db('mxacc')
     const users = db.collection('users')
 
-    // 检查当前用户是否为管理员
-    const currentUser = await users.findOne({ _id: new ObjectId(decoded.userId) })
-    if (!currentUser || currentUser.role !== 'admin') {
-      return res.status(403).json({ message: '权限不足，需要管理员权限' })
-    }
-
-    switch (req.method) {
-      case 'GET':
-        return handleGetUsers(req, res, users)
-      case 'PUT':
-        return handleUpdateUser(req, res, users)
-      case 'DELETE':
-        return handleDeleteUser(req, res, users)
-      default:
-        return res.status(405).json({ message: '方法不允许' })
-    }
-
-  } catch (error) {
-    console.error('管理员API错误:', error)
-    res.status(500).json({ message: '服务器内部错误' })
-  }
-}
-
-// 获取所有用户
-async function handleGetUsers(req, res, users) {
-  try {
-    const { page = 1, limit = 20, search = '' } = req.query
-
-    // 构建搜索条件
-    const searchQuery = search ? {
-      $or: [
-        { username: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { 'profile.displayName': { $regex: search, $options: 'i' } }
-      ]
-    } : {}
-
-    // 分页查询
-    const skip = (parseInt(page) - 1) * parseInt(limit)
-    const totalUsers = await users.countDocuments(searchQuery)
-    
-    const userList = await users.find(searchQuery)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .project({ password: 0, verificationCode: 0 }) // 不返回敏感信息
-      .toArray()
-
-    res.status(200).json({
-      users: userList,
-      pagination: {
-        total: totalUsers,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(totalUsers / parseInt(limit))
-      }
-    })
-
-  } catch (error) {
-    console.error('获取用户列表错误:', error)
-    res.status(500).json({ message: '获取用户列表失败' })
-  }
-}
-
-// 更新用户信息
-async function handleUpdateUser(req, res, users) {
-  try {
-    const { userId } = req.query
-    const updateData = req.body
-
-    if (!userId) {
-      return res.status(400).json({ message: '缺少用户ID' })
-    }
-
-    // 构建更新对象
-    const updateFields = {}
-    
-    if (updateData.username) updateFields.username = updateData.username
-    if (updateData.email) updateFields.email = updateData.email
-    if (updateData.role) updateFields.role = updateData.role
-    if (updateData.status) updateFields.status = updateData.status
-    if (typeof updateData.isEmailVerified === 'boolean') {
-      updateFields.isEmailVerified = updateData.isEmailVerified
-    }
-
-    // 处理密码更新
-    if (updateData.password) {
-      updateFields.password = await hashPassword(updateData.password)
-    }
-
-    // 处理个人资料更新
-    if (updateData.profile) {
-      Object.keys(updateData.profile).forEach(key => {
-        updateFields[`profile.${key}`] = updateData.profile[key]
+    // 检查管理员权限
+    const adminUser = await users.findOne({ _id: new ObjectId(decoded.userId) })
+    if (!adminUser || adminUser.role !== 'admin') {
+      return res.status(403).json({ 
+        message: '权限不足，需要管理员权限',
+        code: 'INSUFFICIENT_PERMISSIONS'
       })
     }
 
-    updateFields.updatedAt = new Date()
+    if (req.method === 'GET') {
+      const { 
+        page = 1, 
+        limit = 20, 
+        search = '', 
+        verified = '', 
+        role = '' 
+      } = req.query
 
-    // 检查用户名和邮箱是否已被其他用户使用
-    if (updateData.username || updateData.email) {
-      const existingUser = await users.findOne({
-        $and: [
-          { _id: { $ne: new ObjectId(userId) } },
-          {
-            $or: [
-              updateData.username ? { username: updateData.username } : {},
-              updateData.email ? { email: updateData.email } : {}
-            ].filter(condition => Object.keys(condition).length > 0)
-          }
+      const pageNum = parseInt(page)
+      const limitNum = Math.min(parseInt(limit), 100) // 最大100条
+      const skip = (pageNum - 1) * limitNum
+
+      // 构建查询条件
+      const query = {}
+      
+      if (search) {
+        query.$or = [
+          { username: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
         ]
-      })
+      }
+      
+      if (verified === 'true') {
+        query.isEmailVerified = true
+      } else if (verified === 'false') {
+        query.isEmailVerified = false
+      }
+      
+      if (role) {
+        query.role = role
+      }
 
-      if (existingUser) {
+      // 获取用户列表
+      const userList = await users.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .project({
+          _id: 1,
+          username: 1,
+          email: 1,
+          isEmailVerified: 1,
+          role: 1,
+          createdAt: 1,
+          lastLoginAt: 1,
+          isDisabled: 1
+        })
+        .toArray()
+
+      // 获取总数
+      const total = await users.countDocuments(query)
+
+      // 统计信息
+      const stats = {
+        total: await users.countDocuments(),
+        verified: await users.countDocuments({ isEmailVerified: true }),
+        unverified: await users.countDocuments({ isEmailVerified: false }),
+        admins: await users.countDocuments({ role: 'admin' }),
+        disabled: await users.countDocuments({ isDisabled: true })
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          users: userList,
+          pagination: {
+            current: pageNum,
+            total: Math.ceil(total / limitNum),
+            pageSize: limitNum,
+            totalRecords: total
+          },
+          stats
+        }
+      })
+    }
+
+    if (req.method === 'PUT') {
+      // 更新用户状态
+      const { userId, action } = req.body
+
+      if (!userId || !ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: '无效的用户ID' })
+      }
+
+      const targetUser = await users.findOne({ _id: new ObjectId(userId) })
+      if (!targetUser) {
+        return res.status(404).json({ message: '用户不存在' })
+      }
+
+      // 防止管理员操作自己
+      if (targetUser._id.toString() === adminUser._id.toString()) {
         return res.status(400).json({ 
-          message: existingUser.username === updateData.username ? '用户名已被使用' : '邮箱已被注册' 
+          message: '不能操作自己的账户',
+          code: 'CANNOT_MODIFY_SELF'
         })
       }
+
+      let updateData = {}
+      let actionMessage = ''
+
+      switch (action) {
+        case 'disable':
+          updateData = { isDisabled: true }
+          actionMessage = '用户已禁用'
+          break
+        case 'enable':
+          updateData = { isDisabled: false }
+          actionMessage = '用户已启用'
+          break
+        case 'verify_email':
+          updateData = { isEmailVerified: true }
+          actionMessage = '邮箱已验证'
+          break
+        case 'unverify_email':
+          updateData = { isEmailVerified: false }
+          actionMessage = '邮箱验证已取消'
+          break
+        case 'make_admin':
+          if (targetUser.role === 'admin') {
+            return res.status(400).json({ message: '用户已经是管理员' })
+          }
+          updateData = { role: 'admin' }
+          actionMessage = '用户已设为管理员'
+          break
+        case 'remove_admin':
+          if (targetUser.role !== 'admin') {
+            return res.status(400).json({ message: '用户不是管理员' })
+          }
+          updateData = { role: 'user' }
+          actionMessage = '已移除管理员权限'
+          break
+        default:
+          return res.status(400).json({ message: '无效的操作' })
+      }
+
+      // 更新用户
+      await users.updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: updateData }
+      )
+
+      // 记录管理员操作日志
+      await users.updateOne(
+        { _id: adminUser._id },
+        {
+          $push: {
+            adminLogs: {
+              action: 'modify_user',
+              targetUserId: userId,
+              targetUsername: targetUser.username,
+              operation: action,
+              timestamp: new Date(),
+              ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress
+            }
+          }
+        }
+      )
+
+      return res.status(200).json({
+        success: true,
+        message: actionMessage
+      })
     }
 
-    // 更新用户
-    const result = await users.updateOne(
-      { _id: new ObjectId(userId) },
-      { $set: updateFields }
-    )
+    if (req.method === 'DELETE') {
+      // 删除用户
+      const { userId } = req.body
 
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ message: '用户不存在' })
+      if (!userId || !ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: '无效的用户ID' })
+      }
+
+      const targetUser = await users.findOne({ _id: new ObjectId(userId) })
+      if (!targetUser) {
+        return res.status(404).json({ message: '用户不存在' })
+      }
+
+      // 防止管理员删除自己
+      if (targetUser._id.toString() === adminUser._id.toString()) {
+        return res.status(400).json({ 
+          message: '不能删除自己的账户',
+          code: 'CANNOT_DELETE_SELF'
+        })
+      }
+
+      // 防止删除其他管理员
+      if (targetUser.role === 'admin') {
+        return res.status(400).json({ 
+          message: '不能删除管理员账户',
+          code: 'CANNOT_DELETE_ADMIN'
+        })
+      }
+
+      // 删除用户
+      await users.deleteOne({ _id: new ObjectId(userId) })
+
+      // 记录管理员操作日志
+      await users.updateOne(
+        { _id: adminUser._id },
+        {
+          $push: {
+            adminLogs: {
+              action: 'delete_user',
+              targetUserId: userId,
+              targetUsername: targetUser.username,
+              targetEmail: targetUser.email,
+              timestamp: new Date(),
+              ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress
+            }
+          }
+        }
+      )
+
+      return res.status(200).json({
+        success: true,
+        message: '用户已删除'
+      })
     }
 
-    // 返回更新后的用户信息
-    const updatedUser = await users.findOne(
-      { _id: new ObjectId(userId) },
-      { projection: { password: 0, verificationCode: 0 } }
-    )
+    return res.status(405).json({ message: '方法不允许' })
 
-    res.status(200).json({ 
-      message: '用户信息更新成功',
-      user: updatedUser
+  } catch (error) {
+    console.error('管理员用户操作错误:', error)
+    res.status(500).json({ 
+      message: '操作失败',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     })
-
-  } catch (error) {
-    console.error('更新用户错误:', error)
-    res.status(500).json({ message: '更新用户失败' })
-  }
-}
-
-// 删除用户
-async function handleDeleteUser(req, res, users) {
-  try {
-    const { userId } = req.query
-
-    if (!userId) {
-      return res.status(400).json({ message: '缺少用户ID' })
-    }
-
-    // 检查要删除的用户是否存在
-    const userToDelete = await users.findOne({ _id: new ObjectId(userId) })
-    if (!userToDelete) {
-      return res.status(404).json({ message: '用户不存在' })
-    }
-
-    // 防止删除管理员账户（可以根据需要调整这个逻辑）
-    if (userToDelete.role === 'admin') {
-      return res.status(400).json({ message: '不能删除管理员账户' })
-    }
-
-    // 删除用户
-    const result = await users.deleteOne({ _id: new ObjectId(userId) })
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ message: '删除失败，用户不存在' })
-    }
-
-    res.status(200).json({ message: '用户已成功删除' })
-
-  } catch (error) {
-    console.error('删除用户错误:', error)
-    res.status(500).json({ message: '删除用户失败' })
   }
 } 
