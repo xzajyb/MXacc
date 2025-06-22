@@ -48,10 +48,11 @@ const upload = multer({
 module.exports = async function handler(req, res) {
   console.log('头像上传API被调用:', req.method, req.url)
   
-  // 设置CORS头部
+  // 设置CORS头部和内容类型
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader('Content-Type', 'application/json')
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
@@ -59,23 +60,24 @@ module.exports = async function handler(req, res) {
 
   if (req.method !== 'POST') {
     console.log('方法不允许:', req.method)
-    return res.status(405).json({ message: '方法不允许' })
+    return res.status(405).json({ success: false, message: '方法不允许' })
   }
 
+  // 包装所有代码在try-catch中确保总是返回JSON
   try {
     // 验证身份
     const token = getTokenFromRequest(req)
     console.log('Token检查:', token ? '存在' : '不存在')
     
     if (!token) {
-      return res.status(401).json({ message: '需要登录' })
+      return res.status(401).json({ success: false, message: '需要登录' })
     }
 
     const decoded = verifyToken(token)
     console.log('Token验证结果:', decoded ? '成功' : '失败')
     
     if (!decoded) {
-      return res.status(401).json({ message: '无效的令牌' })
+      return res.status(401).json({ success: false, message: '无效的令牌' })
     }
 
     console.log('用户ID:', decoded.userId)
@@ -84,95 +86,100 @@ module.exports = async function handler(req, res) {
     const uploadSingle = upload.single('avatar')
     
     uploadSingle(req, res, async function (err) {
-      if (err) {
-        console.error('Multer文件上传错误:', err.message)
-        return res.status(400).json({ message: err.message || '文件上传失败' })
-      }
-
-      if (!req.file) {
-        console.log('没有收到文件')
-        return res.status(400).json({ message: '没有选择文件' })
-      }
-
-      console.log('文件上传成功:', req.file.filename, req.file.size, req.file.mimetype)
-
       try {
-        const client = await clientPromise
-        const db = client.db('mxacc')
-        const users = db.collection('users')
-
-        console.log('连接数据库成功，查找用户...')
-
-        // 获取用户信息
-        const user = await users.findOne({ _id: new ObjectId(decoded.userId) })
-        if (!user) {
-          console.log('用户不存在:', decoded.userId)
-          // 删除已上传的文件
-          try {
-            fs.unlinkSync(req.file.path)
-          } catch (deleteErr) {
-            console.error('删除文件失败:', deleteErr)
-          }
-          return res.status(404).json({ message: '用户不存在' })
+        if (err) {
+          console.error('Multer文件上传错误:', err.message)
+          return res.status(400).json({ success: false, message: err.message || '文件上传失败' })
         }
 
-        console.log('找到用户:', user.username)
+        if (!req.file) {
+          console.log('没有收到文件')
+          return res.status(400).json({ success: false, message: '没有选择文件' })
+        }
 
-        // 删除旧头像文件（如果存在）
-        if (user.profile?.avatar) {
-          const oldAvatarPath = path.join(process.cwd(), 'public', user.profile.avatar)
-          console.log('尝试删除旧头像:', oldAvatarPath)
-          if (fs.existsSync(oldAvatarPath)) {
+        console.log('文件上传成功:', req.file.filename, req.file.size, req.file.mimetype)
+
+        try {
+          const client = await clientPromise
+          const db = client.db('mxacc')
+          const users = db.collection('users')
+
+          console.log('连接数据库成功，查找用户...')
+
+          // 获取用户信息
+          const user = await users.findOne({ _id: new ObjectId(decoded.userId) })
+          if (!user) {
+            console.log('用户不存在:', decoded.userId)
+            // 删除已上传的文件
             try {
-              fs.unlinkSync(oldAvatarPath)
-              console.log('旧头像删除成功')
+              fs.unlinkSync(req.file.path)
             } catch (deleteErr) {
-              console.error('删除旧头像失败:', deleteErr)
-              // 不阻止继续执行
+              console.error('删除文件失败:', deleteErr)
+            }
+            return res.status(404).json({ success: false, message: '用户不存在' })
+          }
+
+          console.log('找到用户:', user.username)
+
+          // 删除旧头像文件（如果存在）
+          if (user.profile?.avatar) {
+            const oldAvatarPath = path.join(process.cwd(), 'public', user.profile.avatar)
+            console.log('尝试删除旧头像:', oldAvatarPath)
+            if (fs.existsSync(oldAvatarPath)) {
+              try {
+                fs.unlinkSync(oldAvatarPath)
+                console.log('旧头像删除成功')
+              } catch (deleteErr) {
+                console.error('删除旧头像失败:', deleteErr)
+                // 不阻止继续执行
+              }
             }
           }
-        }
 
-        // 构建新的头像URL
-        const avatarUrl = `/uploads/avatars/${req.file.filename}`
-        console.log('新头像URL:', avatarUrl)
+          // 构建新的头像URL
+          const avatarUrl = `/uploads/avatars/${req.file.filename}`
+          console.log('新头像URL:', avatarUrl)
 
-        // 更新数据库中的头像信息
-        const updateResult = await users.updateOne(
-          { _id: new ObjectId(decoded.userId) },
-          { $set: { 'profile.avatar': avatarUrl } }
-        )
+          // 更新数据库中的头像信息
+          const updateResult = await users.updateOne(
+            { _id: new ObjectId(decoded.userId) },
+            { $set: { 'profile.avatar': avatarUrl } }
+          )
 
-        console.log('数据库更新结果:', updateResult)
+          console.log('数据库更新结果:', updateResult)
 
-        if (updateResult.modifiedCount === 0) {
-          console.warn('数据库更新未修改任何记录')
-        }
-
-        res.status(200).json({
-          success: true,
-          message: '头像上传成功',
-          avatarUrl: avatarUrl
-        })
-
-        console.log('头像上传完成')
-
-      } catch (error) {
-        console.error('数据库操作错误:', error)
-        // 删除已上传的文件
-        if (req.file) {
-          try {
-            fs.unlinkSync(req.file.path)
-          } catch (deleteErr) {
-            console.error('删除文件失败:', deleteErr)
+          if (updateResult.modifiedCount === 0) {
+            console.warn('数据库更新未修改任何记录')
           }
+
+          res.status(200).json({
+            success: true,
+            message: '头像上传成功',
+            avatarUrl: avatarUrl
+          })
+
+          console.log('头像上传完成')
+
+        } catch (error) {
+          console.error('数据库操作错误:', error)
+          // 删除已上传的文件
+          if (req.file) {
+            try {
+              fs.unlinkSync(req.file.path)
+            } catch (deleteErr) {
+              console.error('删除文件失败:', deleteErr)
+            }
+          }
+          return res.status(500).json({ success: false, message: '数据库操作失败: ' + error.message })
         }
-        res.status(500).json({ message: '数据库操作失败: ' + error.message })
+      } catch (uploadError) {
+        console.error('文件上传回调错误:', uploadError)
+        return res.status(500).json({ success: false, message: '文件处理错误: ' + uploadError.message })
       }
     })
 
   } catch (error) {
     console.error('头像上传API顶级错误:', error)
-    res.status(500).json({ message: '服务器内部错误: ' + error.message })
+    return res.status(500).json({ success: false, message: '服务器内部错误: ' + error.message })
   }
 } 

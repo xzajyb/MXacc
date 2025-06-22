@@ -80,19 +80,34 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
       })
 
       console.log('上传响应状态:', response.status)
+      console.log('响应头:', response.headers.get('content-type'))
 
       if (response.ok) {
-        const data = await response.json()
-        console.log('上传成功:', data)
-        setMessage('头像更新成功')
-        // 刷新用户信息
-        if (refreshUser) {
-          await refreshUser()
+        try {
+          const data = await response.json()
+          console.log('上传成功:', data)
+          setMessage('头像更新成功')
+          // 刷新用户信息
+          if (refreshUser) {
+            await refreshUser()
+          }
+        } catch (jsonError) {
+          console.error('解析成功响应JSON失败:', jsonError)
+          setMessage('头像上传可能成功，但服务器响应格式异常')
         }
       } else {
-        const errorData = await response.json()
-        console.error('上传失败:', errorData)
-        setMessage(errorData.message || '头像上传失败')
+        // 尝试解析错误响应
+        const responseText = await response.text()
+        console.error('上传失败，状态码:', response.status)
+        console.error('响应内容:', responseText)
+        
+        try {
+          const errorData = JSON.parse(responseText)
+          setMessage(errorData.message || '头像上传失败')
+        } catch (jsonError) {
+          // 如果不是JSON，显示状态信息
+          setMessage(`头像上传失败 (错误码: ${response.status}): ${responseText.substring(0, 100)}`)
+        }
       }
     } catch (error) {
       console.error('头像上传失败:', error)
