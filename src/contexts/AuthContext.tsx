@@ -52,13 +52,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 暂时使用同一个token作为访问令牌和刷新令牌
         setToken(response.data.token, response.data.token)
         
-        toast.success('登录成功！')
+        toast.success(response.data.message || '登录成功！')
         navigate('/dashboard')
       } else {
-        throw new Error(response.data.message || '登录失败')
+        throw new Error(response.data?.message || '登录失败')
       }
     } catch (error: any) {
-      const message = error.response?.data?.message || error.message || '登录失败'
+      console.error('登录失败:', error)
+      
+      // 处理不同类型的错误
+      let message = '登录失败，请稍后再试'
+      
+      if (error.response?.data) {
+        const errorData = error.response.data
+        message = errorData.message || errorData.error || message
+      } else if (error.message) {
+        message = error.message
+      }
+      
       toast.error(message)
       throw error
     } finally {
@@ -69,12 +80,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (data: RegisterRequest) => {
     try {
       setIsLoading(true)
-      await authApi.register(data)
+      const response = await authApi.register(data)
       
-      toast.success('注册成功！请检查邮箱验证账号')
+      toast.success(response.data?.message || '注册成功！请检查邮箱验证账号')
       navigate('/login')
     } catch (error: any) {
-      const message = error.response?.data?.message || error.message || '注册失败'
+      console.error('注册失败:', error)
+      
+      let message = '注册失败，请稍后再试'
+      
+      if (error.response?.data) {
+        const errorData = error.response.data
+        message = errorData.message || errorData.error || message
+      } else if (error.message) {
+        message = error.message
+      }
+      
       toast.error(message)
       throw error
     } finally {

@@ -13,7 +13,10 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: '方法不允许' })
+    return res.status(405).json({ 
+      error: 'Method Not Allowed',
+      message: '请求方法不允许，仅支持POST请求' 
+    })
   }
 
   try {
@@ -21,7 +24,10 @@ module.exports = async function handler(req, res) {
 
     // 验证输入
     if (!emailOrUsername || !password) {
-      return res.status(400).json({ message: '请填写邮箱和密码' })
+      return res.status(400).json({ 
+        error: 'Bad Request',
+        message: '请填写邮箱/用户名和密码' 
+      })
     }
 
     const client = await clientPromise
@@ -30,29 +36,77 @@ module.exports = async function handler(req, res) {
 
     // 查找用户
     const user = await users.findOne({
-      $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
+      $or: [
+        { email: emailOrUsername.toLowerCase() },
+        { username: emailOrUsername }
+      ]
     })
 
     if (!user) {
-      return res.status(401).json({ message: '邮箱或密码错误' })
+      return res.status(400).json({ 
+        error: 'Invalid Credentials',
+        message: '邮箱/用户名或密码错误' 
+      })
+    }
+
+    // 检查账户状态
+    if (user.status === 'locked') {
+      return res.status(403).json({ 
+        error: 'Account Locked',
+        message: '账户已被锁定，请联系管理员' 
+      })
     }
 
     // 验证密码
     const isValidPassword = await comparePassword(password, user.password)
     if (!isValidPassword) {
-      return res.status(401).json({ message: '邮箱或密码错误' })
+      // 记录失败的登录尝试
+      await users.updateOne(
+        { _id: user._id },
+        { 
+          $inc: { loginAttempts: 1 },
+          $set: { lastFailedLogin: new Date() }
+        }
+      )
+      
+      return res.status(400).json({ 
+        error: 'Invalid Credentials',
+        message: '邮箱/用户名或密码错误' 
+      })
     }
 
-    // 更新最后登录时间
+    // 检查邮箱是否已验证
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ 
+        error: 'Email Not Verified',
+        message: '请先验证您的邮箱地址' 
+      })
+    }
+
+    // 重置登录尝试次数并更新最后登录时间
     await users.updateOne(
       { _id: user._id },
-      { $set: { lastLoginAt: new Date() } }
+      { 
+        $set: { 
+          lastLoginAt: new Date(),
+          loginAttempts: 0
+        },
+        $push: {
+          loginHistory: {
+            timestamp: new Date(),
+            ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+            userAgent: req.headers['user-agent']
+          }
+        }
+      }
     )
 
     // 生成token
     const token = generateToken(user._id)
 
+    // 返回成功响应
     res.status(200).json({
+      success: true,
       message: '登录成功',
       token,
       user: {
@@ -60,12 +114,21 @@ module.exports = async function handler(req, res) {
         username: user.username,
         email: user.email,
         isEmailVerified: user.isEmailVerified,
-        profile: user.profile || { displayName: user.username, avatar: null }
+        profile: user.profile || { 
+          displayName: user.username, 
+          avatar: null,
+          bio: null,
+          location: null,
+          website: null
+        }
       }
     })
 
   } catch (error) {
     console.error('登录错误:', error)
-    res.status(500).json({ message: '服务器内部错误' })
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: '服务器内部错误，请稍后再试' 
+    })
   }
 } 
