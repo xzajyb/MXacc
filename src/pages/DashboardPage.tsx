@@ -1,39 +1,20 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   User, 
   Shield, 
   Settings, 
   Bell, 
-  Activity, 
-  Globe, 
-  CreditCard, 
-  Users,
-  ChevronRight,
   Search,
-  Menu,
-  X,
-  Sun,
-  Moon,
-  LogOut,
-  Edit3,
-  Key,
-  Smartphone,
-  Mail,
-  Calendar,
-  BarChart3,
-  FileText,
-  HelpCircle,
   Home
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { cn } from '../utils/cn'
 import { useNavigate } from 'react-router-dom'
 
 const DashboardPage = () => {
   const { user, logout } = useAuth()
-  const { theme, setTheme, isDark } = useTheme()
+  const { theme, setTheme } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [currentTheme, setCurrentTheme] = useState(theme)
   const [activeSection, setActiveSection] = useState('overview')
@@ -48,60 +29,11 @@ const DashboardPage = () => {
     setTheme(newTheme);
   }
 
-  const menuItems = [
-    { id: 'overview', label: '概览', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h.01M3 7l9 6 9-6', active: true },
-    { id: 'profile', label: '个人资料', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-    { id: 'security', label: '安全设置', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-    { id: 'privacy', label: '隐私设置', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
-    { id: 'notifications', label: '通知管理', icon: 'M15 17h5l-5 5v-5z M15 17h5l-5 5v-5z' },
-  ]
 
-  const quickActions = [
-    {
-      title: '编辑资料',
-      description: '更新您的个人信息',
-      icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-      color: 'blue'
-    },
-    {
-      title: '安全检查',
-      description: '检查账号安全状态',
-      icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
-      color: 'green'
-    },
-    {
-      title: '隐私设置',
-      description: '管理您的隐私偏好',
-      icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
-      color: 'orange'
-    },
-    {
-      title: '通知管理',
-      description: '设置通知偏好',
-      icon: 'M15 17h5l-5 5v-5z',
-      color: 'purple'
-    }
-  ]
-
-  const recentActivity = [
-    { type: 'login', message: '在 Windows 设备上登录', time: '2 小时前', location: '中国上海' },
-    { type: 'security', message: '安全检查完成', time: '1 天前', location: '系统自动' },
-    { type: 'profile', message: '更新个人资料', time: '3 天前', location: '中国上海' },
-    { type: 'privacy', message: '隐私设置已更新', time: '1 周前', location: '中国上海' }
-  ]
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'login': return <Globe className="h-4 w-4" />
-      case 'security': return <Shield className="h-4 w-4" />
-      case 'profile': return <User className="h-4 w-4" />
-      case 'privacy': return <Settings className="h-4 w-4" />
-      default: return <Activity className="h-4 w-4" />
-    }
-  }
 
   const getDisplayName = () => {
-    return (user as any)?.nickname || user?.email?.split('@')[0] || 'User';
+    // 优先显示：昵称 > 用户名 > 邮箱前缀
+    return (user as any)?.nickname || user?.username || user?.email?.split('@')[0] || 'User';
   }
 
   const getInitial = () => {
@@ -133,7 +65,7 @@ const DashboardPage = () => {
                     />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">MX 账号</h2>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">梦锡账号</h2>
                     <p className="text-sm text-slate-500 dark:text-slate-400">统一管理</p>
                   </div>
                 </div>
@@ -300,44 +232,58 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Email Verification Banner */}
+        {/* Email Verification Required Modal */}
         {user && !user.isEmailVerified && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-6 py-3"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-8"
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                    邮箱尚未验证
-                  </p>
-                  <p className="text-xs text-yellow-600 dark:text-yellow-300">
-                    为了账号安全，建议验证您的邮箱地址：{user.email}
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                  邮箱验证required
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  为了确保账号安全，您需要先验证邮箱才能使用系统功能
+                </p>
+                <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-3 mb-6">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    邮箱地址：{user.email}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+
+              <div className="space-y-3">
                 <button
                   onClick={() => navigate('/verify-email')}
-                  className="text-sm bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors"
                 >
-                  立即验证
+                  立即验证邮箱
                 </button>
-                <button className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                <button
+                  onClick={() => {
+                    logout()
+                    navigate('/login')
+                  }}
+                  className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-medium py-3 px-4 rounded-xl transition-colors"
+                >
+                  注销登录
                 </button>
               </div>
-            </div>
-          </motion.div>
+
+              <div className="mt-6 text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  没有收到验证邮件？检查垃圾邮件文件夹或重新发送
+                </p>
+              </div>
+            </motion.div>
+          </div>
         )}
 
         {/* Main Content Area */}

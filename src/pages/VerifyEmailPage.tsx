@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function VerifyEmailPage() {
-  const { user, sendEmailVerification, verifyEmail } = useAuth();
+  const { user, sendEmailVerification, verifyEmail, logout } = useAuth();
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -168,10 +168,15 @@ export default function VerifyEmailPage() {
 
           <div className="text-center">
             <button
-              onClick={() => navigate('/dashboard')}
-              className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              onClick={() => {
+                if (confirm('确定要注销登录吗？您需要验证邮箱后才能使用系统功能。')) {
+                  logout()
+                  navigate('/login')
+                }
+              }}
+              className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 transition-colors"
             >
-              暂时跳过，稍后验证
+              注销登录
             </button>
           </div>
         </div>

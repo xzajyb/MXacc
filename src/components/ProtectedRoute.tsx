@@ -6,10 +6,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const location = useLocation()
 
-  if (isLoading) {
+  if (loading) {
     return null
   }
 

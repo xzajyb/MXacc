@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import toast from 'react-hot-toast'
-import { AuthContextType, User, LoginRequest, RegisterRequest } from '../types'
+import { AuthContextType, User } from '../types'
 import { authApi } from '../utils/api'
-import { getToken, setToken, removeToken } from '../utils/auth'
+import { setToken } from '../utils/auth'
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -27,15 +26,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // 这里可以添加验证token的API调用
-      // 暂时先检查token是否存在
-      if (token) {
-        // 这里需要调用API验证token并获取用户信息
+      // 调用API验证token并获取用户信息
+      const response = await fetch('/api/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
         setIsAuthenticated(true)
+      } else {
+        // Token无效，清除本地存储
+        localStorage.removeItem('token')
+        setIsAuthenticated(false)
+        setUser(null)
       }
     } catch (error) {
       console.error('检查认证状态失败:', error)
       localStorage.removeItem('token')
+      setIsAuthenticated(false)
+      setUser(null)
     } finally {
       setLoading(false)
     }

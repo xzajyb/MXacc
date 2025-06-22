@@ -139,4 +139,15 @@ fixtures/secrets/
 # 特定于项目的敏感文件
 api-keys.js
 database-urls.js
-auth-config.js 
+auth-config.js
+
+# 邮件配置 - 敏感信息，不能开源
+api/_lib/email-config.js
+backend/src/config/email.js
+email-config.js
+smtp-config.js
+mail-config.js
+
+# 验证码相关敏感配置
+verification-config.js
+otp-config.js 

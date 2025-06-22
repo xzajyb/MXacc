@@ -1,12 +1,10 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, Shield, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { LoginRequest } from '../types'
 import { cn } from '../utils/cn'
 import LoadingSpinner from '../components/LoadingSpinner'
 
@@ -86,7 +84,7 @@ const LoginPage = () => {
                 欢迎回来
               </h1>
               <p className="text-slate-600 dark:text-slate-300">
-                登录到您的 MX 账号
+                登录到您的 梦锡账号
               </p>
             </div>
 
@@ -245,10 +243,10 @@ const LoginPage = () => {
           </div>
           
           <h2 className="text-4xl font-bold mx-text-gradient mb-6">
-            MX 统一账号
+            梦锡账号
           </h2>
           <p className="text-xl text-slate-600 dark:text-slate-300 mb-12">
-            梦锡工作室的专业账号管理系统
+            梦锡工作室的唯一专属服务账号
           </p>
 
           {/* Feature cards */}

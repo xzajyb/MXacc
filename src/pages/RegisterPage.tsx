@@ -1,26 +1,24 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle, Shield, Sparkles } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { RegisterRequest } from '../types'
 import { cn } from '../utils/cn'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 const registerSchema = z.object({
   username: z.string()
-    .min(3, '用户名至少需要3个字符')
+    .min(2, '用户名至少需要2个字符')
     .max(20, '用户名不能超过20个字符')
-    .regex(/^[a-zA-Z0-9_]+$/, '用户名只能包含字母、数字和下划线'),
+    .regex(/^[\u4e00-\u9fa5a-zA-Z0-9_]+$/, '用户名只能包含中文、英文、数字和下划线'),
   email: z.string()
     .min(1, '请输入邮箱地址')
     .email('请输入有效的邮箱地址'),
   password: z.string()
-    .min(8, '密码至少需要8个字符')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, '密码必须包含大小写字母和数字'),
+    .min(6, '密码至少需要6个字符')
+    .regex(/^(?=.*[a-zA-Z])(?=.*\d)/, '密码必须同时包含字母和数字'),
   confirmPassword: z.string().min(1, '请确认密码'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: '两次输入的密码不一致',
@@ -47,6 +45,20 @@ const RegisterPage = () => {
 
   const password = watch('password', '')
 
+  // 监控密码变化，计算强度
+  useEffect(() => {
+    calculatePasswordStrength(password)
+  }, [password])
+
+  const calculatePasswordStrength = (password: string) => {
+    let strength = 0
+    if (password.length >= 6) strength++
+    if (/[a-zA-Z]/.test(password)) strength++
+    if (/\d/.test(password)) strength++
+    // 简化强度计算，只要满足基本要求（字母+数字）就算强密码
+    setPasswordStrength(strength >= 3 ? 3 : strength)
+  }
+
   // 如果已经登录，重定向到仪表板
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />
@@ -57,42 +69,28 @@ const RegisterPage = () => {
       setIsSubmitting(true)
       await registerUser(data.username, data.email, data.password)
     } catch (error) {
-      // 错误已在AuthContext中处理
       console.error('注册失败:', error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const calculatePasswordStrength = (password: string) => {
-    let strength = 0
-    if (password.length >= 8) strength++
-    if (/[a-z]/.test(password)) strength++
-    if (/[A-Z]/.test(password)) strength++
-    if (/\d/.test(password)) strength++
-    if (/[^a-zA-Z0-9]/.test(password)) strength++
-    setPasswordStrength(strength)
-  }
-
   const getPasswordStrengthText = () => {
     switch (passwordStrength) {
       case 0:
       case 1:
-        return { text: '弱', color: 'text-red-500' }
+        return { text: '需要字母+数字', color: 'text-red-500' }
       case 2:
-        return { text: '一般', color: 'text-yellow-500' }
+        return { text: '还需要数字', color: 'text-yellow-500' }
       case 3:
-        return { text: '中等', color: 'text-blue-500' }
-      case 4:
-      case 5:
-        return { text: '强', color: 'text-green-500' }
+        return { text: '符合要求', color: 'text-green-500' }
       default:
-        return { text: '弱', color: 'text-red-500' }
+        return { text: '需要字母+数字', color: 'text-red-500' }
     }
   }
 
   const getPasswordStrengthWidth = () => {
-    return `${(passwordStrength / 5) * 100}%`
+    return `${(passwordStrength / 3) * 100}%`
   }
 
   return (
@@ -132,7 +130,7 @@ const RegisterPage = () => {
                 创建账号
               </h1>
               <p className="text-slate-600 dark:text-slate-300">
-                加入 MX 统一账号系统
+                加入 梦锡社区
               </p>
             </div>
 

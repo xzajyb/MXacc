@@ -1,6 +1,7 @@
 const clientPromise = require('../_lib/mongodb')
 const { verifyToken } = require('../_lib/auth')
-const { sendVerificationEmail } = require('../_lib/email')
+const { sendVerificationEmail } = require('../_lib/email-config')
+const { ObjectId } = require('mongodb')
 
 module.exports = async function handler(req, res) {
   // 设置CORS头部
@@ -34,7 +35,7 @@ module.exports = async function handler(req, res) {
     const users = db.collection('users')
 
     // 查找用户
-    const user = await users.findOne({ _id: decoded.userId })
+    const user = await users.findOne({ _id: new ObjectId(decoded.userId) })
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
