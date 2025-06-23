@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X } from 'lucide-react'
+import { useToast } from '../components/Toast'
+import { 
+  Users, 
+  Mail, 
+  Shield, 
+  Settings,
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Send,
+  UserCheck,
+  UserX,
+  Crown
+} from 'lucide-react'
 import axios from 'axios'
 
 interface User {
@@ -34,6 +48,7 @@ interface AdminPageProps {
 
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
+  const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<'email' | 'users'>('email')
   
   // 邮件相关状态
@@ -147,17 +162,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   // 发送邮件
   const handleSendEmail = async () => {
     if (!selectedTemplate) {
-      alert('请选择邮件模板')
+      showToast('error', '请选择邮件模板')
       return
     }
 
     if (recipients === 'selected' && selectedUsers.length === 0) {
-      alert('请选择收件人')
+      showToast('error', '请选择收件人')
       return
     }
 
     if (recipients === 'email' && !customEmails.trim()) {
-      alert('请输入邮箱地址')
+      showToast('error', '请输入邮箱地址')
       return
     }
 
@@ -183,10 +198,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       })
 
       setEmailResults(response.data.results)
-      alert(response.data.message)
+      showToast('success', response.data.message)
     } catch (error: any) {
       console.error('发送邮件失败:', error)
-      alert(error.response?.data?.message || '发送邮件失败')
+      showToast('error', error.response?.data?.message || '发送邮件失败')
     } finally {
       setSendingEmail(false)
     }
@@ -202,11 +217,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
         headers: { Authorization: `Bearer ${token}` }
       })
       
-      alert('操作成功')
+      showToast('success', '操作成功')
       loadUsers()
     } catch (error: any) {
       console.error('用户操作失败:', error)
-      alert(error.response?.data?.message || '操作失败')
+      showToast('error', error.response?.data?.message || '操作失败')
     }
   }
 

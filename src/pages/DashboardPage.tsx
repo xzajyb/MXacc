@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useToast } from '../components/Toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Home, 
@@ -33,6 +34,7 @@ type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'veri
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
   const { theme, setTheme, isDark } = useTheme()
+  const { showToast } = useToast()
   const [activeView, setActiveView] = useState<ActiveView>('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -89,7 +91,7 @@ const DashboardPage: React.FC = () => {
   const handleNavClick = (viewId: ActiveView) => {
     // 如果邮箱未验证，除了验证邮箱和个人资料，其他功能都禁用
     if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home') {
-      alert('请先验证邮箱后再使用此功能')
+      showToast('warning', '需要验证邮箱', '请先验证您的邮箱地址后再使用此功能')
       return
     }
     setActiveView(viewId)
