@@ -146,8 +146,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
               <User className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
-              个人资料
-            </h1>
+            个人资料
+          </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的个人信息和账户设置</p>
           </div>
         )}
