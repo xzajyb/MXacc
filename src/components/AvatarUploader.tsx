@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Camera, X, Check, RotateCw, ZoomIn, ZoomOut, Trash2, User } from 'lucide-react'
 import AvatarEditor from 'react-avatar-editor'
-import { useToast } from './Toast'
 
 interface AvatarUploaderProps {
   currentAvatar?: string
@@ -28,10 +27,8 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   const [rotate, setRotate] = useState(0)
   const [position, setPosition] = useState({ x: 0.5, y: 0.5 })
   const [removeLoading, setRemoveLoading] = useState(false)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<AvatarEditor>(null)
-  const { showToast } = useToast()
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -52,13 +49,13 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
     ]
     
     if (!allowedTypes.includes(file.type)) {
-      showToast('error', '文件格式不支持', '请选择支持的图片格式：JPG、PNG、GIF、WebP、SVG')
+      alert('请选择支持的图片格式：JPG、PNG、GIF、WebP、SVG')
       return
     }
 
     // 检查文件大小 (最大10MB)
     if (file.size > 10 * 1024 * 1024) {
-      showToast('error', '文件过大', '图片大小不能超过10MB，请选择更小的文件')
+      alert('图片大小不能超过10MB')
       return
     }
 
@@ -145,20 +142,17 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
 
   const handleRemoveAvatar = async () => {
     if (!onRemove) return
-    setShowConfirmDialog(true)
-  }
-
-  const confirmRemoveAvatar = async () => {
-    setShowConfirmDialog(false)
-    setRemoveLoading(true)
-    try {
-      await onRemove!()
-      showToast('success', '头像删除成功', '已恢复默认头像显示')
-    } catch (error) {
-      console.error('删除头像失败:', error)
-      showToast('error', '删除失败', '删除头像失败，请重试')
-    } finally {
-      setRemoveLoading(false)
+    
+    if (confirm('确定要删除当前头像吗？删除后将显示默认头像。')) {
+      setRemoveLoading(true)
+      try {
+        await onRemove()
+      } catch (error) {
+        console.error('删除头像失败:', error)
+        alert('删除头像失败，请重试')
+      } finally {
+        setRemoveLoading(false)
+      }
     }
   }
 
@@ -327,63 +321,6 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
     </AnimatePresence>
   )
 
-  // 确认删除对话框
-  const confirmDialog = (
-    <AnimatePresence>
-      {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4" style={{ zIndex: 999999 }}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full"
-          >
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mr-4">
-                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  删除头像
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  此操作无法撤销
-                </p>
-              </div>
-            </div>
-            
-            <p className="text-gray-700 dark:text-gray-300 mb-6">
-              确定要删除当前头像吗？删除后将显示默认头像。
-            </p>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowConfirmDialog(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-              >
-                取消
-              </button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={confirmRemoveAvatar}
-                disabled={removeLoading}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center space-x-2"
-              >
-                {removeLoading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <Trash2 size={16} />
-                )}
-                <span>{removeLoading ? '删除中...' : '确认删除'}</span>
-              </motion.button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  )
-
   return (
     <>
       <div className={`relative group ${className}`}>
@@ -454,9 +391,6 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
 
       {/* 使用 React Portal 渲染模态框到 body，确保蒙版覆盖整个页面 */}
       {typeof document !== 'undefined' && createPortal(modalContent, document.body)}
-
-      {/* 确认删除对话框 */}
-      {typeof document !== 'undefined' && createPortal(confirmDialog, document.body)}
     </>
   )
 }
