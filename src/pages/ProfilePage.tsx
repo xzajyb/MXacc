@@ -86,6 +86,37 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
     }
   }
 
+  const handleAvatarRemove = async () => {
+    setAvatarLoading(true)
+    setMessage('')
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/upload-avatar', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        setMessage('头像删除成功')
+        // 刷新用户信息
+        if (refreshUser) {
+          await refreshUser()
+        }
+      } else {
+        const errorData = await response.json()
+        setMessage(errorData.message || '头像删除失败')
+      }
+    } catch (error) {
+      console.error('头像删除失败:', error)
+      setMessage('网络错误，头像删除失败，请重试')
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
   const handleSave = async () => {
     setLoading(true)
     setMessage('')
@@ -199,6 +230,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
               <AvatarUploader
                 currentAvatar={user?.profile?.avatar}
                 onUpload={handleAvatarUpload}
+                onRemove={handleAvatarRemove}
+                username={user?.username}
                 loading={avatarLoading}
               />
             </div>

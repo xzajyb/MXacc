@@ -43,12 +43,69 @@ module.exports = async function handler(req, res) {
   
   // 设置CORS头部和内容类型
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.setHeader('Content-Type', 'application/json')
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
+  }
+
+  // 验证身份
+  const token = getTokenFromRequest(req)
+  console.log('Token检查:', token ? '存在' : '不存在')
+  
+  if (!token) {
+    return res.status(401).json({ success: false, message: '需要登录' })
+  }
+
+  const decoded = verifyToken(token)
+  console.log('Token验证结果:', decoded ? '成功' : '失败')
+  
+  if (!decoded) {
+    return res.status(401).json({ success: false, message: '无效的令牌' })
+  }
+
+  console.log('用户ID:', decoded.userId)
+
+  // 处理DELETE请求 - 删除头像
+  if (req.method === 'DELETE') {
+    try {
+      const client = await clientPromise
+      const db = client.db('mxacc')
+      const users = db.collection('users')
+
+      console.log('删除头像：连接数据库成功，查找用户...')
+
+      // 获取用户信息
+      const user = await users.findOne({ _id: new ObjectId(decoded.userId) })
+      if (!user) {
+        console.log('用户不存在:', decoded.userId)
+        return res.status(404).json({ success: false, message: '用户不存在' })
+      }
+
+      console.log('找到用户:', user.username)
+
+      // 删除头像（移除avatar字段）
+      const updateResult = await users.updateOne(
+        { _id: new ObjectId(decoded.userId) },
+        { $unset: { 'profile.avatar': '' } }
+      )
+
+      console.log('头像删除结果:', updateResult)
+
+      res.status(200).json({
+        success: true,
+        message: '头像删除成功'
+      })
+
+      console.log('头像删除完成')
+
+    } catch (error) {
+      console.error('删除头像数据库操作错误:', error)
+      return res.status(500).json({ success: false, message: '删除头像失败: ' + error.message })
+    }
+    return
   }
 
   if (req.method !== 'POST') {
@@ -58,23 +115,6 @@ module.exports = async function handler(req, res) {
 
   // 包装所有代码在try-catch中确保总是返回JSON
   try {
-    // 验证身份
-    const token = getTokenFromRequest(req)
-    console.log('Token检查:', token ? '存在' : '不存在')
-    
-    if (!token) {
-      return res.status(401).json({ success: false, message: '需要登录' })
-    }
-
-    const decoded = verifyToken(token)
-    console.log('Token验证结果:', decoded ? '成功' : '失败')
-    
-    if (!decoded) {
-      return res.status(401).json({ success: false, message: '无效的令牌' })
-    }
-
-    console.log('用户ID:', decoded.userId)
-
     // 处理文件上传
     const uploadSingle = upload.single('avatar')
     

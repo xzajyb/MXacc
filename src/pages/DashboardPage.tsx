@@ -198,10 +198,11 @@ const DashboardPage: React.FC = () => {
                         src={user.profile.avatar} 
                         alt="头像" 
                         className="w-full h-full object-cover"
+                        style={{ backgroundColor: 'transparent' }}
                       />
                     ) : (
-                      <div className="w-full h-full bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                        <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                        <span className="text-xl font-bold text-white">
                           {user?.username?.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -416,13 +417,14 @@ const DashboardPage: React.FC = () => {
                     src={user.profile.avatar} 
                     alt="头像" 
                     className="w-full h-full object-cover"
+                    style={{ backgroundColor: 'transparent' }}
                   />
                 ) : (
-                  <div className="w-full h-full bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <span className="text-xl font-bold text-white">
                       {user?.username?.charAt(0).toUpperCase()}
                     </span>
-          </div>
+                  </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">

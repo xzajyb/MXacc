@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Upload, Camera, X, Check, RotateCw, ZoomIn, ZoomOut } from 'lucide-react'
+import { Upload, Camera, X, Check, RotateCw, ZoomIn, ZoomOut, Trash2, User } from 'lucide-react'
 import AvatarEditor from 'react-avatar-editor'
 
 interface AvatarUploaderProps {
   currentAvatar?: string
   onUpload: (file: Blob, preview: string) => Promise<void>
+  onRemove?: () => Promise<void>
+  username?: string
   loading?: boolean
   className?: string
 }
@@ -14,6 +16,8 @@ interface AvatarUploaderProps {
 const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   currentAvatar,
   onUpload,
+  onRemove,
+  username = 'U',
   loading = false,
   className = ''
 }) => {
@@ -22,6 +26,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   const [scale, setScale] = useState(1)
   const [rotate, setRotate] = useState(0)
   const [position, setPosition] = useState({ x: 0.5, y: 0.5 })
+  const [removeLoading, setRemoveLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<AvatarEditor>(null)
 
@@ -135,6 +140,22 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
     }
   }
 
+  const handleRemoveAvatar = async () => {
+    if (!onRemove) return
+    
+    if (confirm('确定要删除当前头像吗？删除后将显示默认头像。')) {
+      setRemoveLoading(true)
+      try {
+        await onRemove()
+      } catch (error) {
+        console.error('删除头像失败:', error)
+        alert('删除头像失败，请重试')
+      } finally {
+        setRemoveLoading(false)
+      }
+    }
+  }
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     const files = Array.from(e.dataTransfer.files)
@@ -145,6 +166,18 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
+  }
+
+  // 生成默认头像
+  const renderDefaultAvatar = () => {
+    const firstChar = username.charAt(0).toUpperCase()
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+        <span className="text-white font-bold text-4xl">
+          {firstChar}
+        </span>
+      </div>
+    )
   }
 
   // Modal 内容
@@ -306,14 +339,12 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
               style={{ backgroundColor: 'transparent' }} // 确保透明背景不被覆盖
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Upload size={32} className="text-gray-400" />
-            </div>
+            renderDefaultAvatar()
           )}
           
           {/* 悬停遮罩 */}
           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            {loading ? (
+            {loading || removeLoading ? (
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             ) : (
               <Camera size={24} className="text-white" />
@@ -321,15 +352,29 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
           </div>
         </div>
 
-        {/* 上传按钮 */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={loading}
-          className="mt-3 inline-flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors text-sm disabled:cursor-not-allowed"
-        >
-          <Upload size={14} />
-          <span>{loading ? '上传中...' : '更换头像'}</span>
-        </button>
+        {/* 操作按钮组 */}
+        <div className="mt-3 flex flex-col space-y-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || removeLoading}
+            className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors text-sm disabled:cursor-not-allowed"
+          >
+            <Upload size={14} />
+            <span>{loading ? '上传中...' : currentAvatar ? '更换头像' : '上传头像'}</span>
+          </button>
+          
+          {/* 删除头像按钮 - 只有当前有头像时才显示 */}
+          {currentAvatar && onRemove && (
+            <button
+              onClick={handleRemoveAvatar}
+              disabled={loading || removeLoading}
+              className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors text-sm disabled:cursor-not-allowed"
+            >
+              <Trash2 size={14} />
+              <span>{removeLoading ? '删除中...' : '删除头像'}</span>
+            </button>
+          )}
+        </div>
 
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-[160px]">
           支持拖拽上传，JPG、PNG、GIF、WebP、SVG 格式，保留透明背景
