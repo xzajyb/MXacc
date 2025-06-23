@@ -87,6 +87,11 @@ const DashboardPage: React.FC = () => {
   }
 
   const handleNavClick = (viewId: ActiveView) => {
+    // 如果邮箱未验证，除了验证邮箱和个人资料，其他功能都禁用
+    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home') {
+      alert('请先验证邮箱后再使用此功能')
+      return
+    }
     setActiveView(viewId)
     setSidebarOpen(false) // 移动端点击后关闭侧边栏
   }
@@ -114,13 +119,59 @@ const DashboardPage: React.FC = () => {
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':
-          return <SettingsPage embedded={true} />
+          return !user?.isEmailVerified ? (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
+              <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用系统设置功能</p>
+              <button
+                onClick={() => setActiveView('verify-email')}
+                className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+              >
+                立即验证
+              </button>
+            </div>
+          ) : (
+            <SettingsPage embedded={true} />
+          )
         case 'security':
-          return <SecurityPage embedded={true} />
+          return !user?.isEmailVerified ? (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
+              <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用安全中心功能</p>
+              <button
+                onClick={() => setActiveView('verify-email')}
+                className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+              >
+                立即验证
+              </button>
+            </div>
+          ) : (
+            <SecurityPage embedded={true} />
+          )
         case 'admin':
-          return user?.role === 'admin' ? <AdminPage embedded={true} /> : <div>权限不足</div>
+          return user?.role === 'admin' ? (
+            !user?.isEmailVerified ? (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+                <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
+                <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用管理控制台功能</p>
+                <button
+                  onClick={() => setActiveView('verify-email')}
+                  className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+                >
+                  立即验证
+                </button>
+              </div>
+            ) : (
+              <AdminPage embedded={true} />
+            )
+          ) : (
+            <div>权限不足</div>
+          )
         case 'verify-email':
-          return <VerifyEmailPage />
+          return <VerifyEmailPage embedded={true} />
         case 'home':
         default:
           return (
@@ -141,10 +192,20 @@ const DashboardPage: React.FC = () => {
                       })}
                     </p>
                   </div>
-                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                    <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {user?.username?.charAt(0).toUpperCase()}
-                    </span>
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+                    {user?.profile?.avatar ? (
+                      <img 
+                        src={user.profile.avatar} 
+                        alt="头像" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                        <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                          {user?.username?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -159,7 +220,7 @@ const DashboardPage: React.FC = () => {
                         邮箱未验证
                       </h3>
                       <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                        请验证您的邮箱地址以确保账户安全
+                        请验证您的邮箱地址以确保账户安全。未验证邮箱将限制部分功能使用。
                       </p>
                     </div>
                     <button
@@ -176,21 +237,40 @@ const DashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {navigationItems.filter(item => item.id !== 'home').map((item) => {
                   const Icon = item.icon
+                  const isDisabled = !user?.isEmailVerified && item.id !== 'verify-email' && item.id !== 'profile'
                   return (
                     <motion.div
                       key={item.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:shadow-md transition-all"
+                      whileHover={{ scale: isDisabled ? 1 : 1.02 }}
+                      whileTap={{ scale: isDisabled ? 1 : 0.98 }}
+                      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${
+                        isDisabled 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : 'cursor-pointer hover:shadow-md'
+                      } transition-all`}
                       onClick={() => handleNavClick(item.id as ActiveView)}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-                          <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                          isDisabled 
+                            ? 'bg-gray-100 dark:bg-gray-700' 
+                            : 'bg-blue-50 dark:bg-blue-900/20'
+                        }`}>
+                          <Icon className={`w-6 h-6 ${
+                            isDisabled 
+                              ? 'text-gray-400' 
+                              : 'text-blue-600 dark:text-blue-400'
+                          }`} />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">{item.label}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                          <h3 className={`font-semibold ${
+                            isDisabled 
+                              ? 'text-gray-500 dark:text-gray-400' 
+                              : 'text-gray-900 dark:text-white'
+                          }`}>{item.label}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {isDisabled ? '需要验证邮箱' : item.description}
+                          </p>
                         </div>
                       </div>
                     </motion.div>
@@ -330,10 +410,20 @@ const DashboardPage: React.FC = () => {
 
             {/* 用户信息 */}
             <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                  {user?.username?.charAt(0).toUpperCase()}
-                </span>
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+                {user?.profile?.avatar ? (
+                  <img 
+                    src={user.profile.avatar} 
+                    alt="头像" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {user?.username?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">

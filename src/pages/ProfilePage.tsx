@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Save, X, Edit3, Camera, Upload } from 'lucide-react'
+import { User, Save, X, Edit3 } from 'lucide-react'
+import AvatarUploader from '../components/AvatarUploader'
 
 interface ProfilePageProps {
   embedded?: boolean
@@ -12,7 +13,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [avatarLoading, setAvatarLoading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   
   // 调试日志
   console.log('ProfilePage - 用户数据:', user)
@@ -30,37 +30,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    console.log('选择的文件:', file.name, file.type, file.size)
-
-    // 检查文件类型 - 支持更多格式包括SVG
-    const allowedTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png', 
-      'image/gif',
-      'image/webp',
-      'image/svg+xml'
-    ]
-    
-    if (!allowedTypes.includes(file.type)) {
-      setMessage('请选择支持的图片格式：JPG、PNG、GIF、WebP、SVG')
-      return
-    }
-
-    // 检查文件大小 (最大2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      setMessage('图片大小不能超过2MB')
-      return
-    }
-
+  const handleAvatarUpload = async (file: Blob, preview: string) => {
     setAvatarLoading(true)
     setMessage('')
 
@@ -80,7 +50,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
       })
 
       console.log('上传响应状态:', response.status)
-      console.log('响应头:', response.headers.get('content-type'))
 
       if (response.ok) {
         try {
@@ -114,10 +83,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
       setMessage('网络错误，头像上传失败，请重试')
     } finally {
       setAvatarLoading(false)
-      // 清空文件输入，允许重新选择同一文件
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
     }
   }
 
@@ -229,53 +194,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* 头像区域 */}
             <div className="flex flex-col items-center space-y-4">
-              <div className="relative group">
-                <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
-                  {user?.profile?.avatar ? (
-                    <img 
-                      src={user.profile.avatar} 
-                      alt="头像" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <User size={48} className="text-gray-400" />
-                    </div>
-                  )}
-                </div>
-                {/* 头像悬停上传按钮 */}
-                <button
-                  onClick={handleAvatarClick}
-                  disabled={avatarLoading}
-                  className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
-                >
-                  {avatarLoading ? (
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                  ) : (
-                    <Camera size={24} className="text-white" />
-                  )}
-                </button>
-              </div>
-              {/* 头像上传按钮区域 */}
-              <div className="text-center w-full">
-                <button
-                  onClick={handleAvatarClick}
-                  disabled={avatarLoading}
-                  className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
-                >
-                  <Upload size={14} />
-                  <span>{avatarLoading ? '上传中...' : '更换头像'}</span>
-                </button>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 max-w-[160px]">
-                  支持 JPG、PNG、GIF、WebP、SVG 格式，最大2MB
-                </p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,.svg"
-                onChange={handleAvatarChange}
-                className="hidden"
+              <AvatarUploader
+                currentAvatar={user?.profile?.avatar}
+                onUpload={handleAvatarUpload}
+                loading={avatarLoading}
               />
             </div>
 
@@ -371,7 +293,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
         </div>
 
         {/* 账户信息 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">账户信息</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">

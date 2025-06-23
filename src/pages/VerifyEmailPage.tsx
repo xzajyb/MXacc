@@ -5,6 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Clock, Mail, RefreshCw, CheckCircle } from 'lucide-react';
 
+interface VerifyEmailPageProps {
+  embedded?: boolean
+}
+
 interface SendInfo {
   sendCount: number;
   remainingAttempts: number;
@@ -32,7 +36,7 @@ const formatRemainingTime = (seconds: number): string => {
   }
 };
 
-export default function VerifyEmailPage() {
+export default function VerifyEmailPage({ embedded = false }: VerifyEmailPageProps) {
   const { user, sendEmailVerification, verifyEmail, logout } = useAuth();
   const [verificationCode, setVerificationCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -132,7 +136,9 @@ export default function VerifyEmailPage() {
       const result = await verifyEmail(verificationCode);
       if (result.success) {
         setMessage(result.message);
-        setTimeout(() => navigate('/dashboard'), 2000);
+        if (!embedded) {
+          setTimeout(() => navigate('/dashboard'), 2000);
+        }
       } else {
         setError(result.message);
       }
@@ -144,208 +150,210 @@ export default function VerifyEmailPage() {
   };
 
   if (!user) {
-    navigate('/login');
+    if (!embedded) {
+      navigate('/login');
+    }
     return null;
   }
 
-  if (user.isEmailVerified) {
+  if (user.isEmailVerified && !embedded) {
     navigate('/dashboard');
     return null;
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 w-full max-w-md"
-      >
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+  const content = (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 w-full ${embedded ? 'max-w-2xl' : 'max-w-md'}`}
+    >
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-10 h-10 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
         </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
           验证您的邮箱
         </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            为了确保账号安全，请验证您的邮箱地址
+        <p className="text-slate-600 dark:text-slate-400">
+          为了确保账号安全，请验证您的邮箱地址
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {/* 邮箱信息 */}
+        <div className="text-center">
+          <div className="inline-flex items-center space-x-2 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg mb-4">
+            <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm text-blue-800 dark:text-blue-200 font-medium">{user.email}</span>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            我们将向上述邮箱发送验证码
           </p>
         </div>
 
-        <div className="space-y-6">
-          {/* 邮箱信息 */}
-          <div className="text-center">
-            <div className="inline-flex items-center space-x-2 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg mb-4">
-              <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm text-blue-800 dark:text-blue-200 font-medium">{user.email}</span>
+        {/* 发送限制信息 */}
+        {sendInfo && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <RefreshCw className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+              <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">发送状态</span>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              我们将向上述邮箱发送验证码
-            </p>
-          </div>
-
-          {/* 发送限制信息 */}
-          {sendInfo && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <RefreshCw className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">发送状态</span>
-              </div>
-              <div className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
-                <p>已发送: {sendInfo.sendCount}/3 次</p>
-                <p>剩余机会: {sendInfo.remainingAttempts} 次</p>
-                {!canSendAgain && nextSendTime && (
-                  <p>下次可发送: {formatRemainingTime(Math.max(0, Math.floor((nextSendTime.getTime() - new Date().getTime()) / 1000)))}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 验证码有效时间 */}
-          {codeExpiresAt && remainingTime > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">验证码有效时间</span>
-              </div>
-              <div className="text-xs text-blue-700 dark:text-blue-300">
-                <p>剩余时间: {formatTime(remainingTime)}</p>
-                <div className="mt-2 bg-blue-200 dark:bg-blue-800 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: `${Math.max(0, (remainingTime / 600) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 发送按钮 */}
-          <div className="text-center">
-            <motion.button
-              whileHover={{ scale: canSendAgain && !loading ? 1.02 : 1 }}
-              whileTap={{ scale: canSendAgain && !loading ? 0.98 : 1 }}
-              onClick={handleSendVerification}
-              disabled={loading || !canSendAgain}
-              className="btn-primary w-full py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <LoadingSpinner size="sm" />
-              ) : !canSendAgain ? (
-                nextSendTime ? (
-                  `请等待 ${formatRemainingTime(Math.max(0, Math.floor((nextSendTime.getTime() - new Date().getTime()) / 1000)))}`
-                ) : '发送受限'
-              ) : codeExpiresAt && remainingTime > 0 ? (
-                '重新发送验证邮件'
-              ) : (
-                '发送验证邮件'
+            <div className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
+              <p>已发送: {sendInfo.sendCount}/3 次</p>
+              <p>剩余机会: {sendInfo.remainingAttempts} 次</p>
+              {!canSendAgain && nextSendTime && (
+                <p>下次可发送: {formatRemainingTime(Math.max(0, Math.floor((nextSendTime.getTime() - new Date().getTime()) / 1000)))}</p>
               )}
-            </motion.button>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200 dark:border-slate-700" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                已收到验证码？
-              </span>
             </div>
           </div>
+        )}
 
-          <form onSubmit={handleVerifyEmail} className="space-y-4">
-            <div>
-              <label htmlFor="verificationCode" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                验证码
-              </label>
-              <div className="relative">
-                <input
-                  id="verificationCode"
-                  type="text"
-                  value={verificationCode}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, ''); // 只允许数字
-                    setVerificationCode(value);
-                  }}
-                  placeholder="请输入6位数字验证码"
-                  className="input-professional w-full py-3 px-4 rounded-xl text-center tracking-widest font-mono text-lg"
-                  maxLength={6}
+        {/* 验证码有效时间 */}
+        {codeExpiresAt && remainingTime > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">验证码有效时间</span>
+            </div>
+            <div className="text-xs text-blue-700 dark:text-blue-300">
+              <p>剩余时间: {formatTime(remainingTime)}</p>
+              <div className="mt-2 bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-1000"
+                  style={{ width: `${Math.max(0, (remainingTime / 600) * 100)}%` }}
                 />
-                {codeExpiresAt && remainingTime > 0 && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                      {formatTime(remainingTime)}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {remainingTime === 0 && codeExpiresAt && (
-                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                  验证码已过期，请重新获取
-                </p>
-              )}
-            </div>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={loading || !verificationCode.trim() || verificationCode.length !== 6 || (remainingTime === 0 && !!codeExpiresAt)}
-              className="btn-primary w-full py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-            >
-              {loading ? (
-                <LoadingSpinner size="sm" />
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  <span>验证邮箱</span>
-                </>
-              )}
-            </motion.button>
-          </form>
-
-          {/* 操作结果显示 */}
-          {message && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
-            >
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                <p className="text-sm text-green-800 dark:text-green-200">{message}</p>
-              </div>
-            </motion.div>
-          )}
-
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
-            >
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* 帮助和选项 */}
-          <div className="space-y-3">
-            <div className="text-center">
-              <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                <p>• 验证码有效期为10分钟</p>
-                <p>• 每3分钟最多发送3次验证邮件</p>
-                <p>• 请检查垃圾邮件文件夹</p>
               </div>
             </div>
-            
+          </div>
+        )}
+
+        {/* 发送按钮 */}
+        <div className="text-center">
+          <motion.button
+            whileHover={{ scale: canSendAgain && !loading ? 1.02 : 1 }}
+            whileTap={{ scale: canSendAgain && !loading ? 0.98 : 1 }}
+            onClick={handleSendVerification}
+            disabled={loading || !canSendAgain}
+            className="btn-primary w-full py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <LoadingSpinner size="sm" />
+            ) : !canSendAgain ? (
+              nextSendTime ? (
+                `请等待 ${formatRemainingTime(Math.max(0, Math.floor((nextSendTime.getTime() - new Date().getTime()) / 1000)))}`
+              ) : '发送受限'
+            ) : codeExpiresAt && remainingTime > 0 ? (
+              '重新发送验证邮件'
+            ) : (
+              '发送验证邮件'
+            )}
+          </motion.button>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              已收到验证码？
+            </span>
+          </div>
+        </div>
+
+        <form onSubmit={handleVerifyEmail} className="space-y-4">
+          <div>
+            <label htmlFor="verificationCode" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              验证码
+            </label>
+            <div className="relative">
+              <input
+                id="verificationCode"
+                type="text"
+                value={verificationCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ''); // 只允许数字
+                  setVerificationCode(value);
+                }}
+                placeholder="请输入6位数字验证码"
+                className="input-professional w-full py-3 px-4 rounded-xl text-center tracking-widest font-mono text-lg"
+                maxLength={6}
+              />
+              {codeExpiresAt && remainingTime > 0 && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
+                    {formatTime(remainingTime)}
+                  </span>
+                </div>
+              )}
+            </div>
+            {remainingTime === 0 && codeExpiresAt && (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                验证码已过期，请重新获取
+              </p>
+            )}
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            type="submit"
+            disabled={loading || !verificationCode.trim() || verificationCode.length !== 6 || (remainingTime === 0 && !!codeExpiresAt)}
+            className="btn-primary w-full py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+          >
+            {loading ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                <span>验证邮箱</span>
+              </>
+            )}
+          </motion.button>
+        </form>
+
+        {/* 操作结果显示 */}
+        {message && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+          >
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <p className="text-sm text-green-800 dark:text-green-200">{message}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
+          >
+            <div className="flex items-center space-x-2">
+              <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 帮助和选项 */}
+        <div className="space-y-3">
+          <div className="text-center">
+            <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+              <p>• 验证码有效期为10分钟</p>
+              <p>• 每3分钟最多发送3次验证邮件</p>
+              <p>• 请检查垃圾邮件文件夹</p>
+            </div>
+          </div>
+          
+          {!embedded && (
             <div className="text-center">
               <button
                 onClick={() => {
@@ -357,11 +365,25 @@ export default function VerifyEmailPage() {
                 className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 transition-colors"
               >
                 注销登录
-          </button>
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
-      </motion.div>
+    </motion.div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-4">
+      {content}
     </div>
   );
 }
