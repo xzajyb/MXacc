@@ -24,7 +24,11 @@ const upload = multer({
       'image/svg+xml'
     ]
     
-    if (allowedTypes.includes(file.mimetype)) {
+    // 额外检查SVG文件（有时候浏览器会将SVG识别为其他MIME类型）
+    const fileExtension = file.originalname.toLowerCase().split('.').pop()
+    const isSvgByExtension = fileExtension === 'svg'
+    
+    if (allowedTypes.includes(file.mimetype) || isSvgByExtension) {
       cb(null, true)
     } else {
       cb(new Error('只允许上传 JPG、PNG、GIF、WebP、SVG 格式的图片文件'))
