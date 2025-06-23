@@ -86,6 +86,37 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
     }
   }
 
+  const handleDeleteAvatar = async () => {
+    setAvatarLoading(true)
+    setMessage('')
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/upload-avatar', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        setMessage('头像删除成功')
+        // 刷新用户信息
+        if (refreshUser) {
+          await refreshUser()
+        }
+      } else {
+        const errorData = await response.json()
+        setMessage(errorData.message || '头像删除失败')
+      }
+    } catch (error) {
+      console.error('头像删除失败:', error)
+      setMessage('网络错误，头像删除失败，请重试')
+    } finally {
+      setAvatarLoading(false)
+    }
+  }
+
   const handleSave = async () => {
     setLoading(true)
     setMessage('')
@@ -139,16 +170,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
   }
 
   return (
-    <div className={embedded ? "" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
+    <div className={embedded ? "space-y-6" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
       <div className={embedded ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
         {/* 页面标题 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-            <User className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
-            个人资料
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的个人信息和账户设置</p>
-        </div>
+        {!embedded && (
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+              <User className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+              个人资料
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的个人信息和账户设置</p>
+          </div>
+        )}
 
         {/* 消息提示 */}
         {message && (
@@ -158,7 +191,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
         )}
 
         {/* 个人资料卡片 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">个人资料</h2>
             {!isEditing ? (
@@ -197,6 +230,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
               <AvatarUploader
                 currentAvatar={user?.profile?.avatar}
                 onUpload={handleAvatarUpload}
+                onDelete={handleDeleteAvatar}
                 loading={avatarLoading}
               />
             </div>
@@ -293,7 +327,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
         </div>
 
         {/* 账户信息 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">账户信息</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">

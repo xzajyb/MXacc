@@ -375,7 +375,7 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
 
   if (embedded) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-start justify-center">
         {content}
       </div>
     );

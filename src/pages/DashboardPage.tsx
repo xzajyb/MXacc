@@ -120,32 +120,44 @@ const DashboardPage: React.FC = () => {
           return <ProfilePage embedded={true} />
         case 'settings':
           return !user?.isEmailVerified ? (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-              <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
-              <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用系统设置功能</p>
-              <button
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-8 text-center shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <AlertTriangle className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-amber-800 dark:text-amber-200 mb-3">功能需要验证</h3>
+              <p className="text-amber-700 dark:text-amber-300/90 mb-6 leading-relaxed max-w-md mx-auto">
+                为了保护您的账户安全，请先验证您的邮箱地址后再使用系统设置功能
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveView('verify-email')}
-                className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                立即验证
-              </button>
+                立即验证邮箱
+              </motion.button>
             </div>
           ) : (
             <SettingsPage embedded={true} />
           )
         case 'security':
           return !user?.isEmailVerified ? (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-              <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
-              <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用安全中心功能</p>
-              <button
+            <div className="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/10 dark:to-pink-900/10 border border-red-200 dark:border-red-800/50 rounded-2xl p-8 text-center shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-red-800 dark:text-red-200 mb-3">安全功能受限</h3>
+              <p className="text-red-700 dark:text-red-300/90 mb-6 leading-relaxed max-w-md mx-auto">
+                安全中心包含敏感功能，请先验证您的邮箱地址以确保账户安全
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveView('verify-email')}
-                className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                立即验证
-              </button>
+                验证邮箱解锁
+              </motion.button>
             </div>
           ) : (
             <SecurityPage embedded={true} />
@@ -153,22 +165,34 @@ const DashboardPage: React.FC = () => {
         case 'admin':
           return user?.role === 'admin' ? (
             !user?.isEmailVerified ? (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-                <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
-                <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用管理控制台功能</p>
-                <button
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10 border border-purple-200 dark:border-purple-800/50 rounded-2xl p-8 text-center shadow-lg">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <Users className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-purple-800 dark:text-purple-200 mb-3">管理功能受限</h3>
+                <p className="text-purple-700 dark:text-purple-300/90 mb-6 leading-relaxed max-w-md mx-auto">
+                  管理控制台包含重要的系统管理功能，需要验证邮箱后才能访问
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setActiveView('verify-email')}
-                  className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  立即验证
-                </button>
+                  验证后管理
+                </motion.button>
               </div>
             ) : (
               <AdminPage embedded={true} />
             )
           ) : (
-            <div>权限不足</div>
+            <div className="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/50 dark:to-slate-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                <X className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-3">权限不足</h3>
+              <p className="text-gray-600 dark:text-gray-400">您需要管理员权限才能访问此功能</p>
+            </div>
           )
         case 'verify-email':
           return <VerifyEmailPage embedded={true} />
@@ -212,25 +236,37 @@ const DashboardPage: React.FC = () => {
 
               {/* 邮箱验证提醒 */}
               {!user?.isEmailVerified && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-6 mb-6 shadow-lg"
+                >
                   <div className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3" />
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                        邮箱未验证
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                        <AlertTriangle className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <div className="ml-4 flex-1">
+                      <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">
+                        邮箱尚未验证
                       </h3>
-                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                        请验证您的邮箱地址以确保账户安全。未验证邮箱将限制部分功能使用。
+                      <p className="text-amber-700 dark:text-amber-300/90 mt-1">
+                        为了确保账户安全并解锁所有功能，请验证您的邮箱地址
                       </p>
                     </div>
-                    <button
-                      onClick={() => setActiveView('verify-email')}
-                      className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
-                    >
-                      立即验证
-                    </button>
+                    <div className="ml-6">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setActiveView('verify-email')}
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                      >
+                        立即验证
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {/* 功能卡片网格 */}
@@ -337,7 +373,7 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex overflow-hidden">
       {/* 侧边栏遮罩层 (移动端) */}
       {sidebarOpen && (
         <div 
@@ -351,8 +387,8 @@ const DashboardPage: React.FC = () => {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
-          {/* Logo区域 */}
-          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700">
+          {/* Logo区域 - 固定高度 */}
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
             <div>
               <h1 className="font-bold text-xl text-gray-900 dark:text-white">梦锡账号</h1>
@@ -360,8 +396,8 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 导航菜单 */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {/* 导航菜单 - 可滚动区域 */}
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto min-h-0">
             {navigationItems.map((item) => {
               const Icon = item.icon
               return (
@@ -381,8 +417,8 @@ const DashboardPage: React.FC = () => {
             })}
           </nav>
 
-          {/* 主题切换和用户菜单 */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+          {/* 主题切换和用户菜单 - 固定在底部 */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-4 flex-shrink-0">
             {/* 主题切换 */}
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">主题</span>
@@ -446,9 +482,9 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 主内容区域 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 顶部栏 (移动端) */}
-        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* 顶部栏 (移动端) - 固定高度 */}
+        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -461,8 +497,8 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 内容区域 */}
-        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+        {/* 内容区域 - 可滚动 */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 min-h-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {renderContent()}
           </div>

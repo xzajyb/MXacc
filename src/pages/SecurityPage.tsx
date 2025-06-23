@@ -137,16 +137,18 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
   ]
 
   return (
-    <div className={embedded ? "" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
+    <div className={embedded ? "space-y-6" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
       <div className={embedded ? "" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"}>
         {/* 页面标题 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-            <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
-            安全中心
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的账户安全和隐私设置</p>
-        </div>
+        {!embedded && (
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+              <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+              安全中心
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的账户安全和隐私设置</p>
+          </div>
+        )}
 
         {/* 消息提示 */}
         {message && (
