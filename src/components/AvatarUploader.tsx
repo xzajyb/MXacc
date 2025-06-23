@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Camera, X, Check, RotateCw, ZoomIn, ZoomOut } from 'lucide-react'
 import AvatarEditor from 'react-avatar-editor'
@@ -32,14 +33,14 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   }
 
   const processFile = (file: File) => {
-    // 检查文件类型 - 重新支持SVG
+    // 检查文件类型 - 支持SVG和透明背景
     const allowedTypes = [
       'image/jpeg', 
       'image/jpg', 
       'image/png', 
       'image/gif', 
       'image/webp',
-      'image/svg+xml' // 重新添加SVG支持
+      'image/svg+xml'
     ]
     
     if (!allowedTypes.includes(file.type)) {
@@ -90,23 +91,45 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
 
     try {
       // 获取裁切后的canvas
-      const canvas = editorRef.current.getImage()
+      const canvas = editorRef.current.getImageScaledToCanvas()
       
-      // 将canvas转换为blob
-      canvas.toBlob(async (blob: Blob | null) => {
-        if (blob) {
-          // 生成预览URL
-          const previewUrl = canvas.toDataURL('image/jpeg', 0.9)
-          
-          try {
-            await onUpload(blob, previewUrl)
-            setIsModalOpen(false)
-            setSelectedImage(null)
-          } catch (error) {
-            console.error('上传失败:', error)
+      // 创建一个新的canvas来处理透明背景
+      const outputCanvas = document.createElement('canvas')
+      const outputCtx = outputCanvas.getContext('2d')
+      
+      if (outputCtx) {
+        outputCanvas.width = 200
+        outputCanvas.height = 200
+        
+        // 不填充背景，保持透明
+        // outputCtx.fillStyle = 'transparent' // 保持透明背景
+        
+        // 绘制圆形裁切
+        outputCtx.save()
+        outputCtx.beginPath()
+        outputCtx.arc(100, 100, 100, 0, Math.PI * 2)
+        outputCtx.clip()
+        
+        // 绘制图片
+        outputCtx.drawImage(canvas, 0, 0, 200, 200)
+        outputCtx.restore()
+        
+        // 转换为blob，使用PNG格式保持透明度
+        outputCanvas.toBlob(async (blob: Blob | null) => {
+          if (blob) {
+            // 生成预览URL，使用PNG格式保持透明度
+            const previewUrl = outputCanvas.toDataURL('image/png')
+            
+            try {
+              await onUpload(blob, previewUrl)
+              setIsModalOpen(false)
+              setSelectedImage(null)
+            } catch (error) {
+              console.error('上传失败:', error)
+            }
           }
-        }
-      }, 'image/jpeg', 0.9)
+        }, 'image/png') // 使用PNG格式保持透明度
+      }
     } catch (error) {
       console.error('处理图片失败:', error)
     }
@@ -124,6 +147,147 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
     e.preventDefault()
   }
 
+  // Modal 内容
+  const modalContent = (
+    <AnimatePresence>
+      {isModalOpen && selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4" style={{ zIndex: 999999 }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                编辑头像
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* 头像编辑器 */}
+              <div className="flex justify-center">
+                <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                  <AvatarEditor
+                    ref={editorRef}
+                    image={selectedImage}
+                    width={200}
+                    height={200}
+                    border={20}
+                    color={[255, 255, 255, 0.8]} // 白色半透明蒙版，更清晰地显示透明区域
+                    scale={scale}
+                    rotate={rotate}
+                    position={position}
+                    onPositionChange={handlePositionChange}
+                    borderRadius={100} // 圆形裁切
+                    crossOrigin="anonymous"
+                  />
+                </div>
+              </div>
+
+              {/* 控制面板 */}
+              <div className="space-y-4">
+                {/* 缩放控制 */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      缩放: {Math.round(scale * 100)}%
+                    </label>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleZoomOut}
+                        className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        title="缩小"
+                      >
+                        <ZoomOut size={16} />
+                      </button>
+                      <button
+                        onClick={handleZoomIn}
+                        className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        title="放大"
+                      >
+                        <ZoomIn size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="3"
+                    step="0.1"
+                    value={scale}
+                    onChange={handleScaleChange}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider"
+                  />
+                </div>
+
+                {/* 旋转控制 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    旋转: {rotate}°
+                  </label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleRotateLeft}
+                      className="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <RotateCw size={16} className="transform rotate-180" />
+                      <span>左转</span>
+                    </button>
+                    <button
+                      onClick={handleRotateRight}
+                      className="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <RotateCw size={16} />
+                      <span>右转</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 使用说明 */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    💡 拖拽图片调整位置，使用滑块调整大小，点击按钮旋转图片。透明背景将被保留。
+                  </p>
+                </div>
+              </div>
+
+              {/* 操作按钮 */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                >
+                  取消
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleConfirmUpload}
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center space-x-2"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  <span>{loading ? '上传中...' : '确认上传'}</span>
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  )
+
   return (
     <>
       <div className={`relative group ${className}`}>
@@ -139,6 +303,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
               src={currentAvatar} 
               alt="头像" 
               className="w-full h-full object-cover"
+              style={{ backgroundColor: 'transparent' }} // 确保透明背景不被覆盖
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
@@ -167,7 +332,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
         </button>
 
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-[160px]">
-          支持拖拽上传，JPG、PNG、GIF、WebP、SVG 格式
+          支持拖拽上传，JPG、PNG、GIF、WebP、SVG 格式，保留透明背景
         </p>
 
         <input
@@ -179,144 +344,8 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
         />
       </div>
 
-      {/* 裁切编辑模态框 - 修复蒙版问题，使用 portal 渲染到 body */}
-      <AnimatePresence>
-        {isModalOpen && selectedImage && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999] p-4" style={{ zIndex: 9999 }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-auto"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  编辑头像
-                </h3>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* 头像编辑器 */}
-                <div className="flex justify-center">
-                  <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
-                    <AvatarEditor
-                      ref={editorRef}
-                      image={selectedImage}
-                      width={200}
-                      height={200}
-                      border={20}
-                      color={[0, 0, 0, 0.3]} // 半透明黑色蒙版
-                      scale={scale}
-                      rotate={rotate}
-                      position={position}
-                      onPositionChange={handlePositionChange}
-                      borderRadius={100} // 圆形裁切
-                      crossOrigin="anonymous"
-                    />
-                  </div>
-                </div>
-
-                {/* 控制面板 */}
-                <div className="space-y-4">
-                  {/* 缩放控制 */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        缩放: {Math.round(scale * 100)}%
-                      </label>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={handleZoomOut}
-                          className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                          title="缩小"
-                        >
-                          <ZoomOut size={16} />
-                        </button>
-                        <button
-                          onClick={handleZoomIn}
-                          className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                          title="放大"
-                        >
-                          <ZoomIn size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="3"
-                      step="0.1"
-                      value={scale}
-                      onChange={handleScaleChange}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider"
-                    />
-                  </div>
-
-                  {/* 旋转控制 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      旋转: {rotate}°
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={handleRotateLeft}
-                        className="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <RotateCw size={16} className="transform rotate-180" />
-                        <span>左转</span>
-                      </button>
-                      <button
-                        onClick={handleRotateRight}
-                        className="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      >
-                        <RotateCw size={16} />
-                        <span>右转</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 使用说明 */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      💡 拖拽图片调整位置，使用滑块调整大小，点击按钮旋转图片
-                    </p>
-                  </div>
-                </div>
-
-                {/* 操作按钮 */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                  >
-                    取消
-                  </button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleConfirmUpload}
-                    disabled={loading}
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center space-x-2"
-                  >
-                    {loading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : (
-                      <Check size={16} />
-                    )}
-                    <span>{loading ? '上传中...' : '确认上传'}</span>
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* 使用 React Portal 渲染模态框到 body，确保蒙版覆盖整个页面 */}
+      {typeof document !== 'undefined' && createPortal(modalContent, document.body)}
     </>
   )
 }
