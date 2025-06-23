@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Camera, X, Check, RotateCw, ZoomIn, ZoomOut, Trash2, User } from 'lucide-react'
 import AvatarEditor from 'react-avatar-editor'
+import { useToast } from '../contexts/ToastContext'
 
 interface AvatarUploaderProps {
   currentAvatar?: string
@@ -21,6 +22,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   loading = false,
   className = ''
 }) => {
+  const { showError, showWarning } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | File | null>(null)
   const [scale, setScale] = useState(1)
@@ -49,13 +51,13 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
     ]
     
     if (!allowedTypes.includes(file.type)) {
-      alert('请选择支持的图片格式：JPG、PNG、GIF、WebP、SVG')
+      showError('请选择支持的图片格式：JPG、PNG、GIF、WebP、SVG')
       return
     }
 
     // 检查文件大小 (最大10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('图片大小不能超过10MB')
+      showError('图片大小不能超过10MB')
       return
     }
 
@@ -149,7 +151,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
         await onRemove()
       } catch (error) {
         console.error('删除头像失败:', error)
-        alert('删除头像失败，请重试')
+        showError('删除头像失败，请重试')
       } finally {
         setRemoveLoading(false)
       }

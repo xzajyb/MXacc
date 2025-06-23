@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X } from 'lucide-react'
 import axios from 'axios'
+import { motion } from 'framer-motion'
 
 interface User {
   _id: string
@@ -34,6 +36,7 @@ interface AdminPageProps {
 
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
+  const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<'email' | 'users'>('email')
   
   // 邮件相关状态
@@ -147,17 +150,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   // 发送邮件
   const handleSendEmail = async () => {
     if (!selectedTemplate) {
-      alert('请选择邮件模板')
+      showToast('请选择邮件模板', 'error')
       return
     }
 
     if (recipients === 'selected' && selectedUsers.length === 0) {
-      alert('请选择收件人')
+      showToast('请选择收件人', 'error')
       return
     }
 
     if (recipients === 'email' && !customEmails.trim()) {
-      alert('请输入邮箱地址')
+      showToast('请输入邮箱地址', 'error')
       return
     }
 
@@ -183,10 +186,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       })
 
       setEmailResults(response.data.results)
-      alert(response.data.message)
+      showToast(response.data.message, 'success')
     } catch (error: any) {
       console.error('发送邮件失败:', error)
-      alert(error.response?.data?.message || '发送邮件失败')
+      showToast(error.response?.data?.message || '发送邮件失败', 'error')
     } finally {
       setSendingEmail(false)
     }
@@ -202,11 +205,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
         headers: { Authorization: `Bearer ${token}` }
       })
       
-      alert('操作成功')
+      showToast('操作成功', 'success')
       loadUsers()
     } catch (error: any) {
       console.error('用户操作失败:', error)
-      alert(error.response?.data?.message || '操作失败')
+      showToast(error.response?.data?.message || '操作失败', 'error')
     }
   }
 
