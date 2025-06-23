@@ -120,44 +120,32 @@ const DashboardPage: React.FC = () => {
           return <ProfilePage embedded={true} />
         case 'settings':
           return !user?.isEmailVerified ? (
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-8 text-center shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <AlertTriangle className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-amber-800 dark:text-amber-200 mb-3">功能需要验证</h3>
-              <p className="text-amber-700 dark:text-amber-300/90 mb-6 leading-relaxed max-w-md mx-auto">
-                为了保护您的账户安全，请先验证您的邮箱地址后再使用系统设置功能
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
+              <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用系统设置功能</p>
+              <button
                 onClick={() => setActiveView('verify-email')}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
               >
-                立即验证邮箱
-              </motion.button>
+                立即验证
+              </button>
             </div>
           ) : (
             <SettingsPage embedded={true} />
           )
         case 'security':
           return !user?.isEmailVerified ? (
-            <div className="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/10 dark:to-pink-900/10 border border-red-200 dark:border-red-800/50 rounded-2xl p-8 text-center shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-red-800 dark:text-red-200 mb-3">安全功能受限</h3>
-              <p className="text-red-700 dark:text-red-300/90 mb-6 leading-relaxed max-w-md mx-auto">
-                安全中心包含敏感功能，请先验证您的邮箱地址以确保账户安全
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+              <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
+              <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用安全中心功能</p>
+              <button
                 onClick={() => setActiveView('verify-email')}
-                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
               >
-                验证邮箱解锁
-              </motion.button>
+                立即验证
+              </button>
             </div>
           ) : (
             <SecurityPage embedded={true} />
@@ -165,34 +153,22 @@ const DashboardPage: React.FC = () => {
         case 'admin':
           return user?.role === 'admin' ? (
             !user?.isEmailVerified ? (
-              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10 border border-purple-200 dark:border-purple-800/50 rounded-2xl p-8 text-center shadow-lg">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <Users className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-purple-800 dark:text-purple-200 mb-3">管理功能受限</h3>
-                <p className="text-purple-700 dark:text-purple-300/90 mb-6 leading-relaxed max-w-md mx-auto">
-                  管理控制台包含重要的系统管理功能，需要验证邮箱后才能访问
-                </p>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
+                <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">需要验证邮箱</h3>
+                <p className="text-yellow-700 dark:text-yellow-300 mb-4">请先验证您的邮箱地址后再使用管理控制台功能</p>
+                <button
                   onClick={() => setActiveView('verify-email')}
-                  className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
                 >
-                  验证后管理
-                </motion.button>
+                  立即验证
+                </button>
               </div>
             ) : (
               <AdminPage embedded={true} />
             )
           ) : (
-            <div className="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/50 dark:to-slate-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                <X className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-3">权限不足</h3>
-              <p className="text-gray-600 dark:text-gray-400">您需要管理员权限才能访问此功能</p>
-            </div>
+            <div>权限不足</div>
           )
         case 'verify-email':
           return <VerifyEmailPage embedded={true} />
@@ -236,37 +212,25 @@ const DashboardPage: React.FC = () => {
 
               {/* 邮箱验证提醒 */}
               {!user?.isEmailVerified && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-6 mb-6 shadow-lg"
-                >
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                        <AlertTriangle className="w-6 h-6 text-white" />
-                      </div>
-                    </div>
-                    <div className="ml-4 flex-1">
-                      <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200">
-                        邮箱尚未验证
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-3" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        邮箱未验证
                       </h3>
-                      <p className="text-amber-700 dark:text-amber-300/90 mt-1">
-                        为了确保账户安全并解锁所有功能，请验证您的邮箱地址
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                        请验证您的邮箱地址以确保账户安全。未验证邮箱将限制部分功能使用。
                       </p>
                     </div>
-                    <div className="ml-6">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setActiveView('verify-email')}
-                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                      >
-                        立即验证
-                      </motion.button>
-                    </div>
+                    <button
+                      onClick={() => setActiveView('verify-email')}
+                      className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
+                    >
+                      立即验证
+                    </button>
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* 功能卡片网格 */}

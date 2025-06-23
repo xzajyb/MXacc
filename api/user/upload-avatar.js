@@ -43,7 +43,7 @@ module.exports = async function handler(req, res) {
   
   // 设置CORS头部和内容类型
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.setHeader('Content-Type', 'application/json')
 
@@ -51,7 +51,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).end()
   }
 
-  if (req.method !== 'POST' && req.method !== 'DELETE') {
+  if (req.method !== 'POST') {
     console.log('方法不允许:', req.method)
     return res.status(405).json({ success: false, message: '方法不允许' })
   }
@@ -74,50 +74,6 @@ module.exports = async function handler(req, res) {
     }
 
     console.log('用户ID:', decoded.userId)
-
-    // 处理删除头像请求
-    if (req.method === 'DELETE') {
-      try {
-        const client = await clientPromise
-        const db = client.db('mxacc')
-        const users = db.collection('users')
-
-        console.log('删除头像，查找用户...')
-
-        // 获取用户信息
-        const user = await users.findOne({ _id: new ObjectId(decoded.userId) })
-        if (!user) {
-          console.log('用户不存在:', decoded.userId)
-          return res.status(404).json({ success: false, message: '用户不存在' })
-        }
-
-        console.log('找到用户:', user.username)
-
-        // 删除头像（清空avatar字段）
-        const updateResult = await users.updateOne(
-          { _id: new ObjectId(decoded.userId) },
-          { $unset: { 'profile.avatar': '' } }
-        )
-
-        console.log('数据库更新结果:', updateResult)
-
-        if (updateResult.modifiedCount === 0) {
-          console.warn('数据库更新未修改任何记录')
-        }
-
-        res.status(200).json({
-          success: true,
-          message: '头像删除成功'
-        })
-
-        console.log('头像删除完成')
-        return
-
-      } catch (error) {
-        console.error('删除头像数据库操作错误:', error)
-        return res.status(500).json({ success: false, message: '数据库操作失败: ' + error.message })
-      }
-    }
 
     // 处理文件上传
     const uploadSingle = upload.single('avatar')

@@ -100,18 +100,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
       })
 
       if (response.ok) {
-        setMessage('头像删除成功')
+        setMessage('头像已删除')
         // 刷新用户信息
         if (refreshUser) {
           await refreshUser()
         }
       } else {
         const errorData = await response.json()
-        setMessage(errorData.message || '头像删除失败')
+        setMessage(errorData.message || '删除头像失败')
       }
     } catch (error) {
-      console.error('头像删除失败:', error)
-      setMessage('网络错误，头像删除失败，请重试')
+      console.error('删除头像失败:', error)
+      setMessage('网络错误，删除头像失败，请重试')
     } finally {
       setAvatarLoading(false)
     }
