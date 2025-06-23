@@ -145,7 +145,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
               <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
               安全中心
-            </h1>
+          </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的账户安全和隐私设置</p>
           </div>
         )}
@@ -356,8 +356,8 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">安全设置</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     管理您的账户安全选项
-                  </p>
-                </div>
+          </p>
+        </div>
 
                 <div className="space-y-4">
                   {/* 邮箱验证状态 */}
@@ -413,7 +413,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
                         <AlertTriangle size={20} className="text-purple-600 dark:text-purple-400" />
-                      </div>
+            </div>
                       <div>
                         <h4 className="font-medium text-gray-900 dark:text-white">登录通知</h4>
                         <p className="text-sm text-gray-500 dark:text-gray-400">

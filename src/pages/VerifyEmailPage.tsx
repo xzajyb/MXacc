@@ -365,7 +365,7 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
                 className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 transition-colors"
               >
                 注销登录
-              </button>
+          </button>
             </div>
           )}
         </div>
