@@ -65,7 +65,8 @@ api.interceptors.response.use(
     const originalRequest = error.config
     
     // 如果是401错误且不是刷新令牌请求，尝试刷新令牌
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/refresh-token')) {
+    if (error.response?.status === 401 && !originalRequest._retry && 
+        !(originalRequest.url?.includes('/token-operations') && originalRequest.data?.includes('refresh'))) {
       originalRequest._retry = true
       
       try {
@@ -106,7 +107,7 @@ export const authApi = {
   // 刷新令牌
   refreshToken: (): Promise<AxiosResponse<ApiResponse<{ tokens: { accessToken: string; refreshToken: string } }>>> => {
     const refreshToken = getRefreshToken()
-    return api.post('/auth/refresh-token', { refreshToken })
+    return api.post('/auth/token-operations', { action: 'refresh', refreshToken })
   },
 
   // 邮箱验证
@@ -122,8 +123,8 @@ export const authApi = {
     api.post('/auth/forgot-password', { email }),
 
   // 重置密码
-  resetPassword: (token: string, password: string): Promise<AxiosResponse<ApiResponse>> =>
-    api.post('/auth/reset-password', { token, password }),
+  resetPassword: (email: string, resetCode: string, newPassword: string): Promise<AxiosResponse<ApiResponse>> =>
+    api.post('/auth/token-operations', { action: 'reset-password', email, resetCode, newPassword }),
 
   // 登出
   logout: (): Promise<AxiosResponse<ApiResponse>> =>

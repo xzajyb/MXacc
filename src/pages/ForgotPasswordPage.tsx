@@ -97,7 +97,8 @@ const ForgotPasswordPage: React.FC = () => {
     setMessage('')
 
     try {
-      const response = await axios.post('/api/auth/reset-password', {
+      const response = await axios.post('/api/auth/token-operations', {
+        action: 'reset-password',
         email,
         resetCode,
         newPassword
