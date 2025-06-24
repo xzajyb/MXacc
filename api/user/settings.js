@@ -1,8 +1,8 @@
-import { connectToDatabase } from '../_lib/mongodb.js'
-import { ObjectId } from 'mongodb'
-import jwt from 'jsonwebtoken'
+const clientPromise = require('../_lib/mongodb')
+const { getTokenFromRequest, verifyToken } = require('../_lib/auth')
+const { ObjectId } = require('mongodb')
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // 启用CORS
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')
@@ -13,19 +13,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 验证JWT token
-    const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: '未提供有效的认证token' })
+    // 验证身份
+    const token = getTokenFromRequest(req)
+    if (!token) {
+      return res.status(401).json({ message: '需要登录' })
     }
 
-    const token = authHeader.substring(7)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key')
-    const userId = decoded.userId
+    const decoded = verifyToken(token)
+    if (!decoded) {
+      return res.status(401).json({ message: '无效的令牌' })
+    }
 
-    console.log('Settings API - 用户ID:', userId)
+    console.log('Settings API - 用户ID:', decoded.userId)
 
-    const { db } = await connectToDatabase()
+    const client = await clientPromise
+    const db = client.db('mxacc')
     const usersCollection = db.collection('users')
 
     if (req.method === 'GET') {
@@ -33,7 +35,7 @@ export default async function handler(req, res) {
       let user
       try {
         user = await usersCollection.findOne(
-          { _id: new ObjectId(userId) },
+          { _id: new ObjectId(decoded.userId) },
           { projection: { settings: 1 } }
         )
       } catch (mongoError) {
@@ -87,7 +89,7 @@ export default async function handler(req, res) {
       let updateResult
       try {
         updateResult = await usersCollection.updateOne(
-          { _id: new ObjectId(userId) },
+          { _id: new ObjectId(decoded.userId) },
           { 
             $set: { 
               settings: settings,
@@ -117,10 +119,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('用户设置API错误:', error)
-    
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ message: '无效的认证token' })
-    }
     
     return res.status(500).json({ 
       message: '服务器内部错误',

@@ -308,23 +308,7 @@ const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 保存按钮 */}
-        {hasChanges && (
-          <div className="sticky bottom-6 flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={isLoading}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg flex items-center"
-            >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              ) : (
-                <Save className="h-5 w-5 mr-2" />
-              )}
-              {isLoading ? '保存中...' : '保存设置'}
-            </button>
-          </div>
-        )}
+     
       </div>
     </div>
   )
