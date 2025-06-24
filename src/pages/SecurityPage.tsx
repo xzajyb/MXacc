@@ -390,30 +390,12 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                     </span>
                   </div>
 
-                  {/* 两步验证 */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                        <Key size={20} className="text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">两步验证</h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          为您的账户添加额外的安全保护
-                        </p>
-                      </div>
-                    </div>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                      设置
-                    </button>
-                  </div>
-
                   {/* 登录通知 */}
                   <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
                         <AlertTriangle size={20} className="text-purple-600 dark:text-purple-400" />
-            </div>
+                      </div>
                       <div>
                         <h4 className="font-medium text-gray-900 dark:text-white">登录通知</h4>
                         <p className="text-sm text-gray-500 dark:text-gray-400">

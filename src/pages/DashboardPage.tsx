@@ -124,6 +124,41 @@ const DashboardPage: React.FC = () => {
     setTimeout(() => showInfo('提示信息！这是第四条消息'), 1500)
   }
 
+  // 主题切换并自动保存到服务器
+  const handleThemeChange = async (newTheme: 'light' | 'dark' | 'auto') => {
+    // 立即应用主题
+    setTheme(newTheme)
+    
+    // 保存到服务器
+    try {
+      const token = localStorage.getItem('token')
+      if (token) {
+        const response = await fetch('/api/user/settings', {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            settings: { 
+              theme: newTheme,
+              notifications: { email: true, browser: true, marketing: false },
+              privacy: { profileVisible: true, activityVisible: false, allowDataCollection: true },
+              language: 'zh-CN',
+              timezone: 'Asia/Shanghai'
+            }
+          })
+        })
+        
+        if (response.ok) {
+          showSuccess('主题设置已保存')
+        }
+      }
+    } catch (error) {
+      console.error('保存主题设置失败:', error)
+    }
+  }
+
   const renderContent = () => {
     const content = (() => {
       switch (activeView) {
@@ -402,20 +437,20 @@ const DashboardPage: React.FC = () => {
               <span className="text-sm text-gray-600 dark:text-gray-400">主题</span>
               <div className="flex space-x-1">
                 <button
-                  onClick={() => setTheme('light')}
-                  className={`p-2 rounded-md ${theme === 'light' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  onClick={() => handleThemeChange('light')}
+                  className={`p-2 rounded-md transition-colors ${theme === 'light' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                 >
                   <Sun size={16} />
                 </button>
                 <button
-                  onClick={() => setTheme('dark')}
-                  className={`p-2 rounded-md ${theme === 'dark' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                  onClick={() => handleThemeChange('dark')}
+                  className={`p-2 rounded-md transition-colors ${theme === 'dark' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                 >
                   <Moon size={16} />
                 </button>
                 <button
-                  onClick={() => setTheme('auto')}
-                  className={`p-2 rounded-md ${theme === 'auto' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                  onClick={() => handleThemeChange('auto')}
+                  className={`p-2 rounded-md transition-colors ${theme === 'auto' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
                 >
                   <Monitor size={16} />
                 </button>

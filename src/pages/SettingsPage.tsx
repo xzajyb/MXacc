@@ -106,8 +106,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
       if (response.ok) {
         const data = await response.json()
         if (data.settings) {
+          console.log('加载到的用户设置:', data.settings)
           setSettings(prevSettings => ({
-            ...prevSettings,
             ...data.settings,
             theme: theme // 保持当前主题设置
           }))
@@ -219,8 +219,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
                   <Settings className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
-                  系统设置
-                </h1>
+            系统设置
+          </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-2">个性化您的账户体验和偏好设置</p>
               </div>
               {/* 保存状态指示器 */}
@@ -449,8 +449,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                       </option>
                     ))}
                   </select>
-                </div>
-                
+        </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     时区设置
@@ -486,8 +486,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                 </h3>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                   您的设置会自动保存。主题更改立即生效，其他设置在修改后1秒内保存。
-                </p>
-              </div>
+            </p>
+          </div>
             </div>
           </motion.div>
         </div>
