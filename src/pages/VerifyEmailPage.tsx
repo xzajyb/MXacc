@@ -374,7 +374,7 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
     return (
       <div className="flex items-start justify-center">
         {content}
-      </div>
+    </div>
     );
   }
 

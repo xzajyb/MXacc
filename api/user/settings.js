@@ -120,6 +120,10 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error('用户设置API错误:', error)
     
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: '无效的认证token' })
+    }
+    
     return res.status(500).json({ 
       message: '服务器内部错误',
       error: process.env.NODE_ENV === 'development' ? error.message : error.name
