@@ -32,7 +32,7 @@
     }
   ],
   "functions": {
-    "api/user/upload-avatar.js": {
+    "api/user.js": {
       "maxDuration": 30
     }
   }
