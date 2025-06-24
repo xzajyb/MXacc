@@ -490,14 +490,7 @@ const DashboardPage: React.FC = () => {
             {renderContent()}
 
             {/* 添加测试按钮 */}
-            <div className="mb-6">
-              <button
-                onClick={testMultipleToasts}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-              >
-                测试多条Toast通知
-              </button>
-            </div>
+
           </div>
         </main>
         </div>

@@ -55,17 +55,49 @@ const userSchema = new mongoose.Schema({
   settings: {
     theme: {
       type: String,
-      enum: ['light', 'dark', 'auto'],
-      default: 'auto'
+      enum: ['light', 'dark', 'system'],
+      default: 'system'
+    },
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true
+      },
+      browser: {
+        type: Boolean,
+        default: true
+      },
+      security: {
+        type: Boolean,
+        default: true
+      },
+      marketing: {
+        type: Boolean,
+        default: false
+      }
+    },
+    privacy: {
+      profileVisible: {
+        type: Boolean,
+        default: true
+      },
+      activityVisible: {
+        type: Boolean,
+        default: false
+      },
+      allowDataCollection: {
+        type: Boolean,
+        default: true
+      }
     },
     language: {
       type: String,
-      enum: ['zh-CN', 'en-US'],
+      enum: ['zh-CN', 'zh-TW', 'en-US', 'ja-JP'],
       default: 'zh-CN'
     },
-    emailNotifications: {
-      type: Boolean,
-      default: true
+    timezone: {
+      type: String,
+      default: 'Asia/Shanghai'
     },
     twoFactorEnabled: {
       type: Boolean,

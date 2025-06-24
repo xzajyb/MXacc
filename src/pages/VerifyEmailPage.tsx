@@ -378,9 +378,28 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
     );
   }
 
+  const confirmLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-4">
-      {content}
-    </div>
+    <>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-4">
+        {content}
+      </div>
+      
+      {/* 确认注销对话框 */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+        title="确认注销"
+        message="确定要注销登录吗？您需要验证邮箱后才能使用系统功能。"
+        confirmText="注销"
+        cancelText="取消"
+        type="warning"
+      />
+    </>
   );
 }

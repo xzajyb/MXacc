@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, X } from 'lucide-react'
 
@@ -54,7 +55,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     onClose()
   }
 
-  return (
+  const dialogContent = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -65,6 +66,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000]"
             onClick={onClose}
+            style={{ margin: 0, padding: 0 }}
           />
           
           {/* 对话框 */}
@@ -74,6 +76,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: -50 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[10001] w-full max-w-md mx-4"
+            style={{ margin: 0 }}
           >
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               {/* 头部 */}
@@ -120,6 +123,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       )}
     </AnimatePresence>
   )
+
+  // 使用 React Portal 渲染到 body，确保不受父容器影响
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  return createPortal(dialogContent, document.body)
 }
 
 export default ConfirmDialog 
