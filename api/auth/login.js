@@ -134,7 +134,7 @@ module.exports = async function handler(req, res) {
     )
 
     // 发送登录通知邮件（如果用户启用了通知）
-    if (user.settings?.notifications?.loginNotification !== false && user.isEmailVerified) {
+    if (user.securitySettings?.loginNotifications !== false && user.isEmailVerified) {
       try {
         await sendLoginNotification(user.email, loginInfo)
       } catch (error) {
