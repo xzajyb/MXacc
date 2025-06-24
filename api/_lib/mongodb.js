@@ -23,4 +23,10 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect()
 }
 
-module.exports = clientPromise 
+async function connectToDatabase() {
+  const client = await clientPromise
+  const db = client.db('mxacc')
+  return { client, db }
+}
+
+module.exports = { connectToDatabase } 
