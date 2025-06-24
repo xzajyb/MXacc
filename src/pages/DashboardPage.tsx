@@ -135,7 +135,7 @@ const DashboardPage: React.FC = () => {
     try {
       const token = localStorage.getItem('token')
       if (token) {
-        const response = await fetch('/api/user/settings', {
+        const response = await fetch('/api/user?action=settings', {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,

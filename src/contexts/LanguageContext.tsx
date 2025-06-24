@@ -724,7 +724,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const response = await fetch('/api/user/settings', {
+        const response = await fetch('/api/user?action=settings', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

@@ -35,53 +35,46 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
     setMessage('')
 
     try {
-      const formData = new FormData()
-      formData.append('avatar', file)
-
-      console.log('开始上传头像...')
-
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/user/upload-avatar', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      })
-
-      console.log('上传响应状态:', response.status)
-
-      if (response.ok) {
+      // 将文件转换为base64
+      const reader = new FileReader()
+      reader.onload = async () => {
         try {
-          const data = await response.json()
-          console.log('上传成功:', data)
-          setMessage('头像更新成功')
-          // 刷新用户信息
-          if (refreshUser) {
-            await refreshUser()
+          const base64 = reader.result as string
+          
+          const token = localStorage.getItem('token')
+          const response = await fetch('/api/user?action=upload-avatar', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ avatar: base64 })
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            console.log('上传成功:', data)
+            setMessage('头像更新成功')
+            // 刷新用户信息
+            if (refreshUser) {
+              await refreshUser()
+            }
+          } else {
+            const errorData = await response.json()
+            setMessage(errorData.message || '头像上传失败')
           }
-        } catch (jsonError) {
-          console.error('解析成功响应JSON失败:', jsonError)
-          setMessage('头像上传可能成功，但服务器响应格式异常')
-        }
-      } else {
-        // 尝试解析错误响应
-        const responseText = await response.text()
-        console.error('上传失败，状态码:', response.status)
-        console.error('响应内容:', responseText)
-        
-        try {
-          const errorData = JSON.parse(responseText)
-          setMessage(errorData.message || '头像上传失败')
-        } catch (jsonError) {
-          // 如果不是JSON，显示状态信息
-          setMessage(`头像上传失败 (错误码: ${response.status}): ${responseText.substring(0, 100)}`)
+        } catch (error) {
+          console.error('头像上传失败:', error)
+          setMessage('网络错误，头像上传失败，请重试')
+        } finally {
+          setAvatarLoading(false)
         }
       }
+      
+      reader.readAsDataURL(file)
     } catch (error) {
-      console.error('头像上传失败:', error)
-      setMessage('网络错误，头像上传失败，请重试')
-    } finally {
+      console.error('文件读取失败:', error)
+      setMessage('文件读取失败，请重试')
       setAvatarLoading(false)
     }
   }
@@ -92,11 +85,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/user/upload-avatar', {
-        method: 'DELETE',
+      const response = await fetch('/api/user?action=upload-avatar', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ remove: true })
       })
 
       if (response.ok) {
@@ -122,14 +117,15 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
     setMessage('')
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/user?action=profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          profile: formData
+          username: user?.username,
+          bio: formData.bio
         })
       })
 

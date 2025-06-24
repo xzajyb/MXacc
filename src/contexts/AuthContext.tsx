@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // 调用API验证token并获取用户信息
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/user?action=profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -64,12 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth?action=login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ emailOrUsername, password, rememberMe }),
+        body: JSON.stringify({ email: emailOrUsername, password, rememberMe }),
       })
 
       const data = await response.json()
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth?action=register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,18 +108,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json()
 
       if (response.ok) {
-        localStorage.setItem('token', data.token)
-        setTokenState(data.token)
-        setUser(data.user)
-        setIsAuthenticated(true)
-        
-        // 注册成功直接跳转到Dashboard
-        navigate('/dashboard')
+        // 注册成功后需要用户登录
+        setError(null)
+        navigate('/login')
+        return { success: true, message: data.message }
       } else {
         setError(data.message || '注册失败')
+        return { success: false, message: data.message }
       }
     } catch (error) {
       setError('网络错误，请稍后重试')
+      return { success: false, message: '网络错误，请稍后重试' }
     } finally {
       setLoading(false)
     }
@@ -152,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendEmailVerification = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/send-verification', {
+      const response = await fetch('/api/auth?action=send-verification', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -185,19 +184,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyEmail = async (verificationCode: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/verify-email', {
+      const response = await fetch('/api/auth?action=verify-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ verificationCode }),
+        body: JSON.stringify({ code: verificationCode }),
       })
 
       const data = await response.json()
       
       if (response.ok) {
-        setUser(data.user)
+        // 重新获取用户信息
+        await refreshUser()
         return { success: true, message: data.message }
       } else {
         return { success: false, message: data.message }
@@ -212,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) return
 
     try {
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/user?action=profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

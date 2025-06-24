@@ -107,7 +107,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/user/settings', {
+      const response = await fetch('/api/user?action=settings', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -137,7 +137,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/user/settings', {
+      const response = await fetch('/api/user?action=settings', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -259,7 +259,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
                   <Settings className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
                   {t.settings.title}
-                </h1>
+          </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-2">{t.settings.description}</p>
               </div>
               {/* 保存状态指示器 */}
@@ -469,8 +469,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                 </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t.settings.languageDesc}</p>
-            </div>
-            
+        </div>
+
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -525,8 +525,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                 </h3>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                   {t.settings.autoSaveDesc}
-                </p>
-              </div>
+            </p>
+          </div>
             </div>
           </motion.div>
         </div>
