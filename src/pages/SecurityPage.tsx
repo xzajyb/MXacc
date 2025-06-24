@@ -24,7 +24,7 @@ interface LoginRecord {
 }
 
 interface SecuritySettings {
-  loginNotification: boolean
+  loginNotifications: boolean
   emailVerified: boolean
 }
 
@@ -43,7 +43,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loginHistory, setLoginHistory] = useState<LoginRecord[]>([])
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
-    loginNotification: true,
+    loginNotifications: true,
     emailVerified: false
   })
 
@@ -90,7 +90,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const response = await fetch('/api/user/security-settings', {
+        const response = await fetch('/api/user/user-settings?type=security', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -149,17 +149,17 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/user/security-settings', {
+      const response = await fetch('/api/user/user-settings?type=security', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ loginNotification: enabled })
+        body: JSON.stringify({ securitySettings: { loginNotifications: enabled } })
       })
 
       if (response.ok) {
-        setSecuritySettings(prev => ({ ...prev, loginNotification: enabled }))
+        setSecuritySettings(prev => ({ ...prev, loginNotifications: enabled }))
         showSuccess(enabled ? '登录通知已开启' : '登录通知已关闭')
       } else {
         showError('设置更新失败')
@@ -469,7 +469,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                       <input 
                         type="checkbox" 
                         className="sr-only peer" 
-                        checked={securitySettings.loginNotification}
+                        checked={securitySettings.loginNotifications}
                         onChange={(e) => handleLoginNotificationToggle(e.target.checked)}
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>

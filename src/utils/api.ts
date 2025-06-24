@@ -161,7 +161,7 @@ export const userApi = {
 
   // 获取登录历史
   getLoginHistory: (page: number = 1, limit: number = 10): Promise<AxiosResponse<ApiResponse<{ loginHistory: LoginHistory[]; pagination: any }>>> =>
-    api.get(`/user/login-history?page=${page}&limit=${limit}`),
+    api.get(`/user/user-profile?type=login-history&page=${page}&limit=${limit}`),
 
   // 删除账户
   deleteAccount: (password: string): Promise<AxiosResponse<ApiResponse>> =>
