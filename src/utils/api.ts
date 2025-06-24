@@ -120,7 +120,7 @@ export const authApi = {
 
   // 忘记密码
   forgotPassword: (email: string): Promise<AxiosResponse<ApiResponse>> =>
-    api.post('/auth/forgot-password', { email }),
+    api.post('/auth/password-reset', { email }),
 
   // 重置密码
   resetPassword: (email: string, resetCode: string, newPassword: string): Promise<AxiosResponse<ApiResponse>> =>
