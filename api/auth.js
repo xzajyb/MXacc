@@ -1,4 +1,5 @@
 const { connectToDatabase } = require('./_lib/mongodb')
+const { ObjectId } = require('mongodb')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const { sendEmail } = require('./_lib/email')
@@ -269,7 +270,7 @@ async function handleSendVerification(req, res, db) {
     const token = authHeader.split(' ')[1]
     const decoded = jwt.verify(token, JWT_SECRET)
     
-    const user = await db.collection('users').findOne({ _id: decoded.userId })
+    const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) })
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
@@ -332,7 +333,7 @@ async function handleRefreshToken(req, res, db) {
     const token = authHeader.split(' ')[1]
     const decoded = jwt.verify(token, JWT_SECRET)
     
-    const user = await db.collection('users').findOne({ _id: decoded.userId })
+    const user = await db.collection('users').findOne({ _id: new ObjectId(decoded.userId) })
     if (!user) {
       return res.status(404).json({ message: '用户不存在' })
     }
