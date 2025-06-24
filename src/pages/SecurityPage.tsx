@@ -60,7 +60,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
         const token = localStorage.getItem('token')
         if (!token) return
 
-        const response = await fetch('/api/user/login-history', {
+        const response = await fetch('/api/user/user-profile?type=login-history', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
