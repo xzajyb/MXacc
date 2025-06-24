@@ -73,11 +73,11 @@ const Toast: React.FC<ToastProps> = ({
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, y: -50, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -50, scale: 0.95 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          className={`fixed top-4 right-4 z-50 max-w-sm w-full ${config.bgColor} ${config.borderColor} border rounded-lg shadow-lg p-4`}
+          initial={{ opacity: 0, x: 300, scale: 0.95 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: 300, scale: 0.95 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className={`w-full max-w-sm ${config.bgColor} ${config.borderColor} border rounded-lg shadow-lg p-4 backdrop-blur-sm`}
         >
           <div className="flex items-start space-x-3">
             <Icon className={`w-5 h-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />

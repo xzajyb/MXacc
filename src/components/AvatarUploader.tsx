@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, Camera, X, Check, RotateCw, ZoomIn, ZoomOut, Trash2, User } from 'lucide-react'
 import AvatarEditor from 'react-avatar-editor'
 import { useToast } from '../contexts/ToastContext'
+import ConfirmDialog from './ConfirmDialog'
 
 interface AvatarUploaderProps {
   currentAvatar?: string
@@ -29,6 +30,7 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   const [rotate, setRotate] = useState(0)
   const [position, setPosition] = useState({ x: 0.5, y: 0.5 })
   const [removeLoading, setRemoveLoading] = useState(false)
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<AvatarEditor>(null)
 
@@ -145,16 +147,20 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
   const handleRemoveAvatar = async () => {
     if (!onRemove) return
     
-    if (confirm('确定要删除当前头像吗？删除后将显示默认头像。')) {
-      setRemoveLoading(true)
-      try {
-        await onRemove()
-      } catch (error) {
-        console.error('删除头像失败:', error)
-        showError('删除头像失败，请重试')
-      } finally {
-        setRemoveLoading(false)
-      }
+    setShowConfirmDelete(true)
+  }
+
+  const confirmRemoveAvatar = async () => {
+    if (!onRemove) return
+    
+    setRemoveLoading(true)
+    try {
+      await onRemove()
+    } catch (error) {
+      console.error('删除头像失败:', error)
+      showError('删除头像失败，请重试')
+    } finally {
+      setRemoveLoading(false)
     }
   }
 
@@ -393,6 +399,18 @@ const AvatarUploader: React.FC<AvatarUploaderProps> = ({
 
       {/* 使用 React Portal 渲染模态框到 body，确保蒙版覆盖整个页面 */}
       {typeof document !== 'undefined' && createPortal(modalContent, document.body)}
+      
+      {/* 确认删除对话框 */}
+      <ConfirmDialog
+        isOpen={showConfirmDelete}
+        onClose={() => setShowConfirmDelete(false)}
+        onConfirm={confirmRemoveAvatar}
+        title="删除头像"
+        message="确定要删除当前头像吗？删除后将显示默认头像。"
+        confirmText="删除"
+        cancelText="取消"
+        type="danger"
+      />
     </>
   )
 }

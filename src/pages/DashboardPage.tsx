@@ -21,6 +21,7 @@ import {
   Moon,
   Monitor
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 // 导入各功能组件
 import ProfilePage from './ProfilePage'
@@ -34,9 +35,10 @@ type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'veri
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
   const { theme, setTheme, isDark } = useTheme()
-  const { showWarning } = useToast()
+  const { showSuccess, showError, showWarning, showInfo } = useToast()
   const [activeView, setActiveView] = useState<ActiveView>('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navigate = useNavigate()
 
   // 根据用户状态自动显示邮箱验证
   useEffect(() => {
@@ -113,6 +115,13 @@ const DashboardPage: React.FC = () => {
     type: 'tween',
     ease: 'anticipate',
     duration: 0.3
+  }
+
+  const testMultipleToasts = () => {
+    showSuccess('操作成功！这是第一条消息')
+    setTimeout(() => showError('出现错误！这是第二条消息'), 500)
+    setTimeout(() => showWarning('警告信息！这是第三条消息'), 1000)
+    setTimeout(() => showInfo('提示信息！这是第四条消息'), 1500)
   }
 
   const renderContent = () => {
@@ -280,6 +289,16 @@ const DashboardPage: React.FC = () => {
                   )
                 })}
             </div>
+
+              {/* 测试区域 */}
+              <div className="mt-6 mb-6">
+                <button
+                  onClick={testMultipleToasts}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  测试多条Toast通知
+                </button>
+              </div>
 
               {/* 快速统计 */}
               <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -469,6 +488,16 @@ const DashboardPage: React.FC = () => {
         <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 min-h-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {renderContent()}
+
+            {/* 添加测试按钮 */}
+            <div className="mb-6">
+              <button
+                onClick={testMultipleToasts}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                测试多条Toast通知
+              </button>
+            </div>
           </div>
         </main>
         </div>

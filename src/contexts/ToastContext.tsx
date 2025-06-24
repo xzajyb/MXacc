@@ -64,10 +64,10 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     }}>
       {children}
       
-      {/* 渲染所有Toast */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        {toasts.map((toast, index) => (
-          <div key={toast.id} style={{ zIndex: 1000 + index }}>
+      {/* Toast容器 - 使用flex布局垂直堆叠 */}
+      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
+        {toasts.map((toast) => (
+          <div key={toast.id} className="pointer-events-auto">
             <Toast
               message={toast.message}
               type={toast.type}

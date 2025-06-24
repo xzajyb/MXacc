@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { Clock, Mail, RefreshCw, CheckCircle } from 'lucide-react';
 
 interface VerifyEmailPageProps {
@@ -47,6 +48,7 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
   const [remainingTime, setRemainingTime] = useState(0);
   const [canSendAgain, setCanSendAgain] = useState(true);
   const [nextSendTime, setNextSendTime] = useState<Date | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
 
   // 倒计时更新
@@ -356,12 +358,7 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
           {!embedded && (
             <div className="text-center">
               <button
-                onClick={() => {
-                  if (confirm('确定要注销登录吗？您需要验证邮箱后才能使用系统功能。')) {
-                    logout()
-                    navigate('/login')
-                  }
-                }}
+                onClick={() => setShowLogoutConfirm(true)}
                 className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-200 transition-colors"
               >
                 注销登录
