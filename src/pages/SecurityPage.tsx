@@ -53,56 +53,59 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
     confirmPassword: ''
   })
 
-  const loadLoginHistory = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const response = await fetch('/api/user?action=login-history', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setLoginHistory(data.loginHistory || [])
-      }
-    } catch (error) {
-      console.error('加载登录历史失败:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadSecuritySettings = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const response = await fetch('/api/user?action=security-settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setSecuritySettings(data.securitySettings || { loginNotifications: false })
-      }
-    } catch (error) {
-      console.error('加载安全设置失败:', error)
-    }
-  }
-
+  // 获取登录历史数据
   useEffect(() => {
-    loadLoginHistory()
+    const fetchLoginHistory = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch('/api/user/login-history', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('登录历史API返回数据:', data) // 调试日志
+          setLoginHistory(data.loginHistory || [])
+        } else {
+          console.error('获取登录历史失败:', response.status)
+          setLoginHistory([])
+        }
+      } catch (error) {
+        console.error('获取登录历史失败:', error)
+        setLoginHistory([])
+      }
+    }
+
+    fetchLoginHistory()
   }, [])
 
+  // 获取安全设置
   useEffect(() => {
-    loadSecuritySettings()
+    const fetchSecuritySettings = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch('/api/user/security-settings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setSecuritySettings(data.securitySettings)
+        }
+      } catch (error) {
+        console.error('获取安全设置失败:', error)
+      }
+    }
+
+    fetchSecuritySettings()
   }, [])
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -141,30 +144,29 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
     }
   }
 
-  const handleLoginNotificationChange = async (enabled: boolean) => {
+  const handleLoginNotificationToggle = async (enabled: boolean) => {
     try {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/user?action=security-settings', {
+      const response = await fetch('/api/user/security-settings', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ loginNotifications: enabled })
+        body: JSON.stringify({ loginNotification: enabled })
       })
 
       if (response.ok) {
-        setSecuritySettings(prev => ({ ...prev, loginNotifications: enabled }))
+        setSecuritySettings(prev => ({ ...prev, loginNotification: enabled }))
         showSuccess(enabled ? '登录通知已开启' : '登录通知已关闭')
       } else {
-        const data = await response.json()
-        showError(data.message || '设置失败')
+        showError('设置更新失败')
       }
     } catch (error) {
       console.error('更新登录通知设置失败:', error)
-      showError('设置失败，请重试')
+      showError('设置更新失败，请重试')
     }
   }
 
@@ -468,7 +470,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                         type="checkbox" 
                         className="sr-only peer" 
                         checked={securitySettings.loginNotification}
-                        onChange={(e) => handleLoginNotificationChange(e.target.checked)}
+                        onChange={(e) => handleLoginNotificationToggle(e.target.checked)}
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                     </label>

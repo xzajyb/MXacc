@@ -107,7 +107,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/user?action=settings', {
+      const response = await fetch('/api/user/settings', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -137,7 +137,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/user?action=settings', {
+      const response = await fetch('/api/user/settings', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

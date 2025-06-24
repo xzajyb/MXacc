@@ -106,7 +106,7 @@ export interface AuthContextType {
   error: string | null
   token: string | null
   login: (emailOrUsername: string, password: string) => Promise<void>
-  register: (username: string, email: string, password: string) => Promise<{success: boolean, message: string}>
+  register: (username: string, email: string, password: string) => Promise<void>
   logout: () => void
   refreshUser: () => Promise<void>
   sendEmailVerification: () => Promise<{success: boolean, message: string, verificationCode?: string}>
