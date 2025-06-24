@@ -20,6 +20,7 @@ import {
 import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useLanguage } from '../contexts/LanguageContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 interface SettingsPageProps {
@@ -46,6 +47,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
   const { theme, setTheme } = useTheme()
   const { showSuccess, showError } = useToast()
   const { user } = useAuth()
+  const { language, timezone, t, setLanguage, setTimezone } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState<UserSettings>({
@@ -60,8 +62,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
       activityVisible: false,
       allowDataCollection: true
     },
-    language: 'zh-CN',
-    timezone: 'Asia/Shanghai'
+    language: language,
+    timezone: timezone
   })
 
   // 防抖保存函数
@@ -83,12 +85,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     loadUserSettings()
   }, [])
 
-  // 监听设置变化，自动保存（除了主题）
+  // 监听设置变化，自动保存（除了主题和语言）
   useEffect(() => {
     if (user) {
       debouncedSave(settings)
     }
-  }, [settings.notifications, settings.privacy, settings.language, settings.timezone, debouncedSave, user])
+  }, [settings.notifications, settings.privacy, debouncedSave, user])
+
+  // 同步语言上下文的变化到本地状态
+  useEffect(() => {
+    setSettings(prev => ({
+      ...prev,
+      language: language,
+      timezone: timezone
+    }))
+  }, [language, timezone])
 
   const loadUserSettings = async () => {
     setLoading(true)
@@ -138,7 +149,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
       if (response.ok) {
         // 静默保存，不显示成功消息（除非是主题更改）
         if (settingsToSave && settingsToSave.theme !== settings.theme) {
-          showSuccess('主题设置已保存')
+          showSuccess(t.settings.title + '已保存')
         }
       } else {
         const data = await response.json()
@@ -181,10 +192,38 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     await saveSettings(newSettings)
   }
 
+  // 处理语言更改
+  const handleLanguageChange = async (newLanguage: string) => {
+    // 立即应用语言
+    setLanguage(newLanguage as any)
+    
+    // 更新设置状态
+    const newSettings = { ...settings, language: newLanguage }
+    setSettings(newSettings)
+    
+    // 立即保存到服务器
+    await saveSettings(newSettings)
+    showSuccess(t.settings.interfaceLanguage + '已更新')
+  }
+
+  // 处理时区更改
+  const handleTimezoneChange = async (newTimezone: string) => {
+    // 立即应用时区
+    setTimezone(newTimezone)
+    
+    // 更新设置状态
+    const newSettings = { ...settings, timezone: newTimezone }
+    setSettings(newSettings)
+    
+    // 立即保存到服务器
+    await saveSettings(newSettings)
+    showSuccess(t.settings.timezoneSettings + '已更新')
+  }
+
   const themes = [
-    { value: 'light', label: '浅色模式', icon: Sun, desc: '始终使用浅色主题' },
-    { value: 'dark', label: '深色模式', icon: Moon, desc: '始终使用深色主题' },
-    { value: 'auto', label: '跟随系统', icon: Monitor, desc: '根据系统设置自动切换' }
+    { value: 'light', label: t.settings.lightMode, icon: Sun, desc: t.settings.lightModeDesc },
+    { value: 'dark', label: t.settings.darkMode, icon: Moon, desc: t.settings.darkModeDesc },
+    { value: 'auto', label: t.settings.autoMode, icon: Monitor, desc: t.settings.autoModeDesc }
   ]
 
   const languages = [
@@ -219,15 +258,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
                   <Settings className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
-            系统设置
-          </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">个性化您的账户体验和偏好设置</p>
+                  {t.settings.title}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">{t.settings.description}</p>
               </div>
               {/* 保存状态指示器 */}
               {saving && (
                 <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                   <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  正在保存...
+                  {t.settings.saving}
                 </div>
               )}
             </div>
@@ -245,20 +284,20 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Palette className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">外观设置</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.settings.appearance}</h2>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  立即生效
+                  {t.settings.immediately}
                 </div>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">自定义界面主题和显示偏好</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t.settings.appearanceDesc}</p>
             </div>
             
             <div className="p-6">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    主题模式
+                    {t.settings.theme}
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {themes.map((themeOption) => {
@@ -309,21 +348,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">通知设置</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.settings.notifications}</h2>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  自动保存
+                  {t.settings.autoSave}
                 </div>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">管理您接收通知的方式和类型</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t.settings.notificationsDesc}</p>
             </div>
             
             <div className="p-6">
               <div className="space-y-4">
                 {[
-                  { key: 'email', label: '邮件通知', desc: '接收重要账户信息和安全提醒', icon: Mail },
-                  { key: 'browser', label: '浏览器通知', desc: '在浏览器中显示实时通知', icon: MessageSquare },
-                  { key: 'marketing', label: '营销推广', desc: '接收产品更新和促销信息', icon: Bell }
+                  { key: 'email', label: t.settings.emailNotifications, desc: t.settings.emailNotificationsDesc, icon: Mail },
+                  { key: 'browser', label: t.settings.browserNotifications, desc: t.settings.browserNotificationsDesc, icon: MessageSquare },
+                  { key: 'marketing', label: t.settings.marketingNotifications, desc: t.settings.marketingNotificationsDesc, icon: Bell }
                 ].map((notification) => {
                   const Icon = notification.icon
                   return (
@@ -366,21 +405,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">隐私设置</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.settings.privacy}</h2>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  自动保存
+                  {t.settings.autoSave}
                 </div>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">控制您的个人信息可见性和数据收集偏好</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t.settings.privacyDesc}</p>
             </div>
             
             <div className="p-6">
               <div className="space-y-4">
                 {[
-                  { key: 'profileVisible', label: '公开个人资料', desc: '允许其他用户查看您的基本信息', icon: Eye },
-                  { key: 'activityVisible', label: '显示活动状态', desc: '显示您的在线状态和最后活动时间', icon: Globe },
-                  { key: 'allowDataCollection', label: '数据收集', desc: '允许收集匿名使用数据以改善服务', icon: Shield }
+                  { key: 'profileVisible', label: t.settings.profileVisible, desc: t.settings.profileVisibleDesc, icon: Eye },
+                  { key: 'activityVisible', label: t.settings.activityVisible, desc: t.settings.activityVisibleDesc, icon: Globe },
+                  { key: 'allowDataCollection', label: t.settings.dataCollection, desc: t.settings.dataCollectionDesc, icon: Shield }
                 ].map((privacy) => {
                   const Icon = privacy.icon
                   return (
@@ -423,24 +462,24 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">语言和地区</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t.settings.language}</h2>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  自动保存
+                  {t.settings.immediately}
                 </div>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">设置界面语言和时区偏好</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t.settings.languageDesc}</p>
             </div>
             
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    界面语言
+                    {t.settings.interfaceLanguage}
                   </label>
                   <select
                     value={settings.language}
-                    onChange={(e) => setSettings(prev => ({ ...prev, language: e.target.value }))}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
                     className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     {languages.map((lang) => (
@@ -449,15 +488,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                       </option>
                     ))}
                   </select>
-        </div>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    时区设置
+                    {t.settings.timezoneSettings}
                   </label>
                   <select
                     value={settings.timezone}
-                    onChange={(e) => setSettings(prev => ({ ...prev, timezone: e.target.value }))}
+                    onChange={(e) => handleTimezoneChange(e.target.value)}
                     className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     {timezones.map((tz) => (
@@ -482,12 +521,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <Check className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
               <div>
                 <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                  自动保存已启用
+                  {t.settings.autoSaveEnabled}
                 </h3>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  您的设置会自动保存。主题更改立即生效，其他设置在修改后1秒内保存。
-            </p>
-          </div>
+                  {t.settings.autoSaveDesc}
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>

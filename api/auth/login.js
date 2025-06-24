@@ -1,5 +1,6 @@
 const clientPromise = require('../_lib/mongodb')
 const { comparePassword, generateToken } = require('../_lib/auth')
+const { sendLoginNotification } = require('../_lib/login-notification')
 const { ObjectId } = require('mongodb')
 
 module.exports = async function handler(req, res) {
@@ -108,6 +109,13 @@ module.exports = async function handler(req, res) {
     const clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.connection.remoteAddress || req.socket.remoteAddress
     const userAgent = req.headers['user-agent']
     
+    const loginInfo = {
+      timestamp: new Date(),
+      ip: clientIp,
+      userAgent: parseUserAgent(userAgent),
+      location: parseLocation(clientIp)
+    }
+
     // 重置登录尝试次数并更新最后登录时间，记录登录历史
     await users.updateOne(
       { _id: user._id },
@@ -118,17 +126,22 @@ module.exports = async function handler(req, res) {
         },
         $push: {
           loginHistory: {
-            $each: [{
-              timestamp: new Date(),
-              ip: clientIp,
-              userAgent: parseUserAgent(userAgent),
-              location: parseLocation(clientIp)
-            }],
+            $each: [loginInfo],
             $slice: -20 // 只保留最近20条记录
           }
         }
       }
     )
+
+    // 发送登录通知邮件（如果用户启用了通知）
+    if (user.settings?.notifications?.loginNotification !== false && user.isEmailVerified) {
+      try {
+        await sendLoginNotification(user.email, loginInfo)
+      } catch (error) {
+        console.error('发送登录通知失败:', error)
+        // 不影响登录流程，只记录错误
+      }
+    }
 
     // 生成token
     const token = generateToken(user._id, rememberMe ? '48h' : '24h')

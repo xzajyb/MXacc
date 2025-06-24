@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 import { 
   Shield, 
   Lock, 
@@ -22,12 +23,18 @@ interface LoginRecord {
   timestamp: string
 }
 
+interface SecuritySettings {
+  loginNotification: boolean
+  emailVerified: boolean
+}
+
 interface SecurityPageProps {
   embedded?: boolean
 }
 
 const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [activeTab, setActiveTab] = useState('password')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,6 +42,10 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loginHistory, setLoginHistory] = useState<LoginRecord[]>([])
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
+    loginNotification: true,
+    emailVerified: false
+  })
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -72,6 +83,31 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
     fetchLoginHistory()
   }, [])
 
+  // 获取安全设置
+  useEffect(() => {
+    const fetchSecuritySettings = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch('/api/user/security-settings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setSecuritySettings(data.securitySettings)
+        }
+      } catch (error) {
+        console.error('获取安全设置失败:', error)
+      }
+    }
+
+    fetchSecuritySettings()
+  }, [])
+
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setPasswordForm(prev => ({ ...prev, [name]: value }))
@@ -105,6 +141,32 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
       setMessage('密码修改失败，请重试')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleLoginNotificationToggle = async (enabled: boolean) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/user/security-settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ loginNotification: enabled })
+      })
+
+      if (response.ok) {
+        setSecuritySettings(prev => ({ ...prev, loginNotification: enabled }))
+        showSuccess(enabled ? '登录通知已开启' : '登录通知已关闭')
+      } else {
+        showError('设置更新失败')
+      }
+    } catch (error) {
+      console.error('更新登录通知设置失败:', error)
+      showError('设置更新失败，请重试')
     }
   }
 
@@ -145,7 +207,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
               <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
               安全中心
-          </h1>
+            </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">管理您的账户安全和隐私设置</p>
           </div>
         )}
@@ -356,8 +418,8 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">安全设置</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     管理您的账户安全选项
-          </p>
-        </div>
+                  </p>
+                </div>
 
                 <div className="space-y-4">
                   {/* 邮箱验证状态 */}
@@ -404,7 +466,12 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={securitySettings.loginNotification}
+                        onChange={(e) => handleLoginNotificationToggle(e.target.checked)}
+                      />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                     </label>
                   </div>

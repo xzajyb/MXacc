@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
+import { useLanguage } from '../contexts/LanguageContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Home, 
@@ -36,6 +37,7 @@ const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
   const { theme, setTheme, isDark } = useTheme()
   const { showSuccess, showError, showWarning, showInfo } = useToast()
+  const { t, formatDate, language } = useLanguage()
   const [activeView, setActiveView] = useState<ActiveView>('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
@@ -50,39 +52,39 @@ const DashboardPage: React.FC = () => {
   const navigationItems = [
     {
       id: 'home',
-      label: '首页',
+      label: t.navigation.dashboard,
       icon: Home,
-      description: '系统概览'
+      description: t.dashboard.stats
     },
     {
       id: 'profile',
-      label: '个人资料',
+      label: t.navigation.profile,
       icon: User,
-      description: '管理个人信息'
+      description: t.profile.description
     },
     {
       id: 'settings',
-      label: '系统设置',
+      label: t.navigation.settings,
       icon: Settings,
-      description: '个性化配置'
+      description: t.settings.description
     },
     {
       id: 'security',
-      label: '安全中心',
+      label: t.navigation.security,
       icon: Shield,
-      description: '账户安全管理'
+      description: t.security.description
     },
     ...(user?.role === 'admin' ? [{
       id: 'admin',
-      label: '管理控制台',
+      label: t.navigation.admin,
       icon: Users,
-      description: '系统管理'
+      description: t.admin.systemStats
     }] : []),
     ...(!user?.isEmailVerified ? [{
       id: 'verify-email',
-      label: '邮箱验证',
+      label: t.auth.verifyEmail,
       icon: Mail,
-      description: '验证邮箱地址'
+      description: t.auth.emailVerified
     }] : [])
   ]
 
@@ -102,7 +104,7 @@ const DashboardPage: React.FC = () => {
 
   const getPageTitle = () => {
     const item = navigationItems.find(item => item.id === activeView)
-    return item?.label || '首页'
+    return item?.label || t.navigation.dashboard
   }
 
   const pageVariants = {
@@ -144,14 +146,14 @@ const DashboardPage: React.FC = () => {
               theme: newTheme,
               notifications: { email: true, browser: true, marketing: false },
               privacy: { profileVisible: true, activityVisible: false, allowDataCollection: true },
-              language: 'zh-CN',
+              language: language,
               timezone: 'Asia/Shanghai'
             }
           })
         })
         
         if (response.ok) {
-          showSuccess('主题设置已保存')
+          showSuccess(t.settings.title + '已保存')
         }
       }
     } catch (error) {
@@ -225,24 +227,19 @@ const DashboardPage: React.FC = () => {
               {/* 欢迎区域 */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-sm border border-blue-200/50 dark:border-blue-800/50 p-6 mb-6">
                 <div className="flex items-center justify-between">
-              <div>
+                  <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      欢迎回来，{user?.username}！
+                      {t.dashboard.welcome}，{user?.username}！
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">
-                      今天是 {new Date().toLocaleDateString('zh-CN', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric',
-                        weekday: 'long'
-                      })}
+                      {formatDate(new Date(), 'date')}
                     </p>
                   </div>
                   <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
                     {user?.profile?.avatar ? (
                       <img 
                         src={user.profile.avatar} 
-                        alt="头像" 
+                        alt={t.profile.avatar} 
                         className="w-full h-full object-cover"
                         style={{ backgroundColor: 'transparent' }}
                       />
@@ -323,9 +320,7 @@ const DashboardPage: React.FC = () => {
                     </motion.div>
                   )
                 })}
-            </div>
-
-     
+              </div>
 
               {/* 快速统计 */}
               <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -335,9 +330,9 @@ const DashboardPage: React.FC = () => {
                     <div className="ml-4">
                       <p className="text-sm text-gray-500 dark:text-gray-400">账户状态</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">正常</p>
-            </div>
-          </div>
-        </div>
+                    </div>
+                  </div>
+                </div>
                 
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center">
@@ -349,15 +344,15 @@ const DashboardPage: React.FC = () => {
                       </p>
                     </div>
                   </div>
-        </div>
+                </div>
 
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center">
                     <Clock className="w-8 h-8 text-purple-600" />
                     <div className="ml-4">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">最后登录</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t.profile.lastLogin}</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '今天'}
+                        {user?.lastLogin ? formatDate(user.lastLogin, 'date') : '今天'}
                       </p>
                     </div>
                   </div>
@@ -403,7 +398,7 @@ const DashboardPage: React.FC = () => {
           {/* Logo区域 - 固定高度 */}
           <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
-              <div>
+            <div>
               <h1 className="font-bold text-xl text-gray-900 dark:text-white">梦锡账号</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">统一管理</p>
             </div>
@@ -434,7 +429,7 @@ const DashboardPage: React.FC = () => {
           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-4 flex-shrink-0">
             {/* 主题切换 */}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">主题</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t.settings.theme}</span>
               <div className="flex space-x-1">
                 <button
                   onClick={() => handleThemeChange('light')}
@@ -463,7 +458,7 @@ const DashboardPage: React.FC = () => {
                 {user?.profile?.avatar ? (
                   <img 
                     src={user.profile.avatar} 
-                    alt="头像" 
+                    alt={t.profile.avatar} 
                     className="w-full h-full object-cover"
                     style={{ backgroundColor: 'transparent' }}
                   />
@@ -486,7 +481,7 @@ const DashboardPage: React.FC = () => {
               <button
                 onClick={handleLogout}
                 className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                title="退出登录"
+                title={t.auth.logout}
               >
                 <LogOut size={16} />
               </button>
@@ -515,12 +510,9 @@ const DashboardPage: React.FC = () => {
         <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 min-h-0">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {renderContent()}
-
-            {/* 添加测试按钮 */}
-
           </div>
         </main>
-        </div>
+      </div>
     </div>
   )
 }
