@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer')
 
 // 邮件配置
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   host: 'smtp-mail.outlook.com',
   port: 587,
   secure: false,
