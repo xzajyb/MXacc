@@ -290,15 +290,7 @@ const DashboardPage: React.FC = () => {
                 })}
             </div>
 
-              {/* 测试区域 */}
-              <div className="mt-6 mb-6">
-                <button
-                  onClick={testMultipleToasts}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                >
-                  测试多条Toast通知
-                </button>
-              </div>
+     
 
               {/* 快速统计 */}
               <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">

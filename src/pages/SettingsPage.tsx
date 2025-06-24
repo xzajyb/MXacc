@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Settings, 
@@ -6,7 +6,6 @@ import {
   Bell, 
   Shield, 
   Globe, 
-  Save,
   Sun,
   Moon,
   Monitor,
@@ -65,10 +64,31 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     timezone: 'Asia/Shanghai'
   })
 
+  // 防抖保存函数
+  const debouncedSave = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout
+      return (settingsToSave: UserSettings) => {
+        clearTimeout(timeoutId)
+        timeoutId = setTimeout(() => {
+          saveSettings(settingsToSave)
+        }, 1000) // 1秒后自动保存
+      }
+    })(),
+    []
+  )
+
   // 加载用户设置
   useEffect(() => {
     loadUserSettings()
   }, [])
+
+  // 监听设置变化，自动保存（除了主题）
+  useEffect(() => {
+    if (user) {
+      debouncedSave(settings)
+    }
+  }, [settings.notifications, settings.privacy, settings.language, settings.timezone, debouncedSave, user])
 
   const loadUserSettings = async () => {
     setLoading(true)
@@ -100,7 +120,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     }
   }
 
-  const saveSettings = async () => {
+  const saveSettings = async (settingsToSave?: UserSettings) => {
     setSaving(true)
     try {
       const token = localStorage.getItem('token')
@@ -112,15 +132,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ settings })
+        body: JSON.stringify({ settings: settingsToSave || settings })
       })
 
       if (response.ok) {
-        showSuccess('设置保存成功！')
-        
-        // 应用主题设置
-        if (settings.theme !== theme) {
-          setTheme(settings.theme)
+        // 静默保存，不显示成功消息（除非是主题更改）
+        if (settingsToSave && settingsToSave.theme !== settings.theme) {
+          showSuccess('主题设置已保存')
         }
       } else {
         const data = await response.json()
@@ -151,8 +169,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     }
   }
 
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'auto') => {
-    setSettings(prev => ({ ...prev, theme: newTheme }))
+  const handleThemeChange = async (newTheme: 'light' | 'dark' | 'auto') => {
+    // 立即应用主题
+    setTheme(newTheme)
+    
+    // 更新设置状态
+    const newSettings = { ...settings, theme: newTheme }
+    setSettings(newSettings)
+    
+    // 立即保存到服务器
+    await saveSettings(newSettings)
   }
 
   const themes = [
@@ -189,11 +215,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
         {/* 页面标题 */}
         {!embedded && (
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-              <Settings className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
-              系统设置
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">个性化您的账户体验和偏好设置</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+                  <Settings className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+                  系统设置
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">个性化您的账户体验和偏好设置</p>
+              </div>
+              {/* 保存状态指示器 */}
+              {saving && (
+                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  正在保存...
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -205,9 +242,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
             className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
           >
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <Palette className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">外观设置</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Palette className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">外观设置</h2>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  立即生效
+                </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">自定义界面主题和显示偏好</p>
             </div>
@@ -264,9 +306,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
             className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
           >
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">通知设置</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Bell className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">通知设置</h2>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  自动保存
+                </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">管理您接收通知的方式和类型</p>
             </div>
@@ -316,9 +363,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
             className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
           >
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">隐私设置</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">隐私设置</h2>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  自动保存
+                </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">控制您的个人信息可见性和数据收集偏好</p>
             </div>
@@ -368,9 +420,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
             className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
           >
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center">
-                <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">语言和地区</h2>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">语言和地区</h2>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  自动保存
+                </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">设置界面语言和时区偏好</p>
             </div>
@@ -414,27 +471,24 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
             </div>
           </motion.div>
 
-          {/* 保存按钮 */}
+          {/* 自动保存提示 */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="flex justify-end"
+            className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
           >
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={saveSettings}
-              disabled={saving}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
-            >
-              {saving ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              <span>{saving ? '保存中...' : '保存设置'}</span>
-            </motion.button>
+            <div className="flex items-center">
+              <Check className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+              <div>
+                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                  自动保存已启用
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  您的设置会自动保存。主题更改立即生效，其他设置在修改后1秒内保存。
+                </p>
+              </div>
+            </div>
           </motion.div>
         </div>
       </div>
