@@ -135,7 +135,7 @@ const DashboardPage: React.FC = () => {
     try {
       const token = localStorage.getItem('token')
       if (token) {
-        const response = await fetch('/api/user/settings', {
+        const response = await fetch('/api/user/user-settings', {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -227,7 +227,7 @@ const DashboardPage: React.FC = () => {
               {/* 欢迎区域 */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-sm border border-blue-200/50 dark:border-blue-800/50 p-6 mb-6">
                 <div className="flex items-center justify-between">
-                  <div>
+              <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                       {t.dashboard.welcome}，{user?.username}！
                     </h1>
@@ -320,7 +320,7 @@ const DashboardPage: React.FC = () => {
                     </motion.div>
                   )
                 })}
-              </div>
+            </div>
 
               {/* 快速统计 */}
               <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -330,9 +330,9 @@ const DashboardPage: React.FC = () => {
                     <div className="ml-4">
                       <p className="text-sm text-gray-500 dark:text-gray-400">账户状态</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">正常</p>
-                    </div>
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
                 
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center">
@@ -344,7 +344,7 @@ const DashboardPage: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                </div>
+        </div>
 
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                   <div className="flex items-center">
@@ -398,7 +398,7 @@ const DashboardPage: React.FC = () => {
           {/* Logo区域 - 固定高度 */}
           <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
-            <div>
+              <div>
               <h1 className="font-bold text-xl text-gray-900 dark:text-white">梦锡账号</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">统一管理</p>
             </div>
@@ -467,7 +467,7 @@ const DashboardPage: React.FC = () => {
                     <span className="text-xl font-bold text-white">
                       {user?.username?.charAt(0).toUpperCase()}
                     </span>
-                  </div>
+          </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -512,7 +512,7 @@ const DashboardPage: React.FC = () => {
             {renderContent()}
           </div>
         </main>
-      </div>
+        </div>
     </div>
   )
 }
