@@ -28,11 +28,10 @@ interface SettingsPageProps {
 }
 
 interface UserSettings {
-  theme: 'light' | 'dark' | 'system'
+  theme: 'light' | 'dark' | 'auto'
   notifications: {
     email: boolean
     browser: boolean
-    security: boolean
     marketing: boolean
   }
   privacy: {
@@ -55,7 +54,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     notifications: {
       email: true,
       browser: true,
-      security: true,
       marketing: false
     },
     privacy: {
@@ -137,23 +135,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
   }
 
   const updateSettings = (section: keyof UserSettings, key: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value
-      }
-    }))
+    if (typeof settings[section] === 'object' && settings[section] !== null) {
+      setSettings(prev => ({
+        ...prev,
+        [section]: {
+          ...(prev[section] as object),
+          [key]: value
+        }
+      }))
+    } else {
+      setSettings(prev => ({
+        ...prev,
+        [section]: value
+      }))
+    }
   }
 
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'auto') => {
     setSettings(prev => ({ ...prev, theme: newTheme }))
   }
 
   const themes = [
     { value: 'light', label: '浅色模式', icon: Sun, desc: '始终使用浅色主题' },
     { value: 'dark', label: '深色模式', icon: Moon, desc: '始终使用深色主题' },
-    { value: 'system', label: '跟随系统', icon: Monitor, desc: '根据系统设置自动切换' }
+    { value: 'auto', label: '跟随系统', icon: Monitor, desc: '根据系统设置自动切换' }
   ]
 
   const languages = [
@@ -223,24 +228,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => handleThemeChange(themeOption.value as any)}
-                          className={`p-4 border-2 rounded-lg transition-all ${
+                          className={`p-4 border-2 rounded-lg transition-all duration-200 ${
                             isSelected
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                           }`}
                         >
-                          <Icon className={`h-6 w-6 mx-auto mb-2 ${
+                          <Icon className={`h-6 w-6 mx-auto mb-2 transition-colors duration-200 ${
                             isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
                           }`} />
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className={`text-sm font-medium transition-colors duration-200 ${
+                            isSelected ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-white'
+                          }`}>
                             {themeOption.label}
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          <div className={`text-xs mt-1 transition-colors duration-200 ${
+                            isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400'
+                          }`}>
                             {themeOption.desc}
                           </div>
-                          {isSelected && (
-                            <Check className="h-4 w-4 text-blue-600 dark:text-blue-400 mx-auto mt-2" />
-                          )}
                         </motion.button>
                       )
                     })}
@@ -270,7 +276,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                 {[
                   { key: 'email', label: '邮件通知', desc: '接收重要账户信息和安全提醒', icon: Mail },
                   { key: 'browser', label: '浏览器通知', desc: '在浏览器中显示实时通知', icon: MessageSquare },
-                  { key: 'security', label: '安全通知', desc: '登录异常和安全相关提醒', icon: Shield },
                   { key: 'marketing', label: '营销推广', desc: '接收产品更新和促销信息', icon: Bell }
                 ].map((notification) => {
                   const Icon = notification.icon

@@ -23,15 +23,23 @@ export default async function handler(req, res) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key')
     const userId = decoded.userId
 
+    console.log('Settings API - 用户ID:', userId)
+
     const { db } = await connectToDatabase()
     const usersCollection = db.collection('users')
 
     if (req.method === 'GET') {
       // 获取用户设置
-      const user = await usersCollection.findOne(
-        { _id: new ObjectId(userId) },
-        { projection: { settings: 1 } }
-      )
+      let user
+      try {
+        user = await usersCollection.findOne(
+          { _id: new ObjectId(userId) },
+          { projection: { settings: 1 } }
+        )
+      } catch (mongoError) {
+        console.error('MongoDB查询错误:', mongoError)
+        return res.status(500).json({ message: 'Database query failed', error: mongoError.message })
+      }
 
       if (!user) {
         return res.status(404).json({ message: '用户不存在' })
@@ -39,11 +47,10 @@ export default async function handler(req, res) {
 
       // 返回默认设置或用户自定义设置
       const defaultSettings = {
-        theme: 'system',
+        theme: 'auto',
         notifications: {
           email: true,
           browser: true,
-          security: true,
           marketing: false
         },
         privacy: {
@@ -69,26 +76,35 @@ export default async function handler(req, res) {
       }
 
       // 验证设置数据结构
-      const allowedThemes = ['light', 'dark', 'system']
+      const allowedThemes = ['light', 'dark', 'auto']
       if (settings.theme && !allowedThemes.includes(settings.theme)) {
         return res.status(400).json({ message: '无效的主题设置' })
       }
 
+      console.log('更新设置:', settings)
+
       // 更新用户设置
-      const updateResult = await usersCollection.updateOne(
-        { _id: new ObjectId(userId) },
-        { 
-          $set: { 
-            settings: settings,
-            updatedAt: new Date()
+      let updateResult
+      try {
+        updateResult = await usersCollection.updateOne(
+          { _id: new ObjectId(userId) },
+          { 
+            $set: { 
+              settings: settings,
+              updatedAt: new Date()
+            }
           }
-        }
-      )
+        )
+      } catch (mongoError) {
+        console.error('MongoDB更新错误:', mongoError)
+        return res.status(500).json({ message: 'Database update failed', error: mongoError.message })
+      }
 
       if (updateResult.matchedCount === 0) {
         return res.status(404).json({ message: '用户不存在' })
       }
 
+      console.log('设置更新成功')
       return res.status(200).json({
         success: true,
         message: '设置保存成功'
@@ -108,7 +124,7 @@ export default async function handler(req, res) {
     
     return res.status(500).json({ 
       message: '服务器内部错误',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : error.name
     })
   }
 } 
