@@ -13,7 +13,8 @@ const transporter = nodemailer.createTransporter({
 
 // 发送登录通知邮件
 async function sendLoginNotification(email, loginInfo) {
-  const { ip, userAgent, location, timestamp } = loginInfo
+  const { ip, userAgent, timestamp } = loginInfo
+  const location = loginInfo.location || '未知位置'
   
   const mailOptions = {
     from: `"梦锡账号安全" <${process.env.EMAIL_USER || 'qrfuci164227@outlook.com'}>`,
