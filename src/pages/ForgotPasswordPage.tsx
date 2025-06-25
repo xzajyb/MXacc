@@ -28,7 +28,7 @@ const ForgotPasswordPage: React.FC = () => {
     setMessage('')
 
     try {
-      const response = await axios.post('/api/auth/password-reset', { 
+      const response = await axios.post('/api/auth/password-recovery', { 
         action: 'send-code',
         email 
       })
@@ -100,7 +100,7 @@ const ForgotPasswordPage: React.FC = () => {
     setMessage('')
 
     try {
-      const response = await axios.post('/api/auth/password-reset', {
+      const response = await axios.post('/api/auth/password-recovery', {
         action: 'reset-password',
         email,
         resetCode,
