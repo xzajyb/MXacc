@@ -360,6 +360,11 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
               验证码
             </label>
             <div className="relative">
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               <input
                 id="verificationCode"
                 type="text"
@@ -369,12 +374,12 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
                   setVerificationCode(value);
                 }}
                 placeholder="请输入6位数字验证码"
-                className="input-professional w-full py-3 px-4 rounded-xl text-center tracking-widest font-mono text-lg"
+                className="w-full pl-12 pr-20 py-4 border-2 border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20 transition-all duration-200 text-center tracking-widest font-mono text-lg shadow-sm"
                 maxLength={6}
               />
               {codeExpiresAt && remainingTime > 0 && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded-md">
+                  <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
                     {formatTime(remainingTime)}
                   </span>
                 </div>
@@ -448,10 +453,12 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
           </div>
 
           {/* 更改绑定邮箱 */}
-          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
             <motion.button
               onClick={() => toggleSection('changeEmail')}
-              className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+              whileHover={{ scale: 1.005 }}
+              whileTap={{ scale: 0.995 }}
+              className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-600 hover:from-slate-100 hover:to-slate-150 dark:hover:from-slate-600 dark:hover:to-slate-500 transition-all duration-200"
             >
               <div className="flex items-center space-x-3">
                 <Settings className="w-5 h-5 text-slate-600 dark:text-slate-400" />
@@ -466,40 +473,48 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
             
             <AnimatePresence>
               {expandedSection === 'changeEmail' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="border-t border-slate-200 dark:border-slate-700"
-                >
-                  <form onSubmit={handleChangeEmail} className="p-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        新邮箱地址
-                      </label>
-                      <input
-                        type="email"
-                        value={newEmail}
-                        onChange={(e) => setNewEmail(e.target.value)}
-                        placeholder="请输入新的邮箱地址"
-                        className="input-professional w-full"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        确认密码
-                      </label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="请输入当前账户密码"
-                        className="input-professional w-full"
-                        required
-                      />
-                    </div>
+                                 <motion.div
+                   initial={{ height: 0, opacity: 0 }}
+                   animate={{ height: 'auto', opacity: 1 }}
+                   exit={{ height: 0, opacity: 0 }}
+                   transition={{ duration: 0.3, ease: 'easeInOut' }}
+                   className="border-t border-slate-200 dark:border-slate-700 bg-gradient-to-b from-slate-50/50 to-white dark:from-slate-800/50 dark:to-slate-700"
+                 >
+                   <form onSubmit={handleChangeEmail} className="p-6 space-y-5">
+                     <div>
+                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                         新邮箱地址
+                       </label>
+                       <div className="relative">
+                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                         <input
+                           type="email"
+                           value={newEmail}
+                           onChange={(e) => setNewEmail(e.target.value)}
+                           placeholder="请输入新的邮箱地址"
+                           className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                           required
+                         />
+                       </div>
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                         确认密码
+                       </label>
+                       <div className="relative">
+                         <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                         </svg>
+                         <input
+                           type="password"
+                           value={confirmPassword}
+                           onChange={(e) => setConfirmPassword(e.target.value)}
+                           placeholder="请输入当前账户密码"
+                           className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+                           required
+                         />
+                       </div>
+                     </div>
                     
                     {changeEmailError && (
                       <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -507,30 +522,42 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
                       </div>
                     )}
                     
-                    <div className="flex space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => setExpandedSection('none')}
-                        className="flex-1 py-2 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-600 hover:bg-slate-200 dark:hover:bg-slate-500 rounded-lg transition-colors"
-                      >
-                        取消
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={actionLoading}
-                        className="flex-1 py-2 px-4 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center space-x-2"
-                      >
-                        {actionLoading ? (
-                          <LoadingSpinner size="sm" />
-                        ) : (
-                          <span>确认更改</span>
-                        )}
-                      </button>
-                    </div>
+                                         <div className="flex space-x-3">
+                       <motion.button
+                         type="button"
+                         whileHover={{ scale: 1.02 }}
+                         whileTap={{ scale: 0.98 }}
+                         onClick={() => setExpandedSection('none')}
+                         className="flex-1 py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-600 hover:bg-slate-200 dark:hover:bg-slate-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow"
+                       >
+                         取消
+                       </motion.button>
+                       <motion.button
+                         type="submit"
+                         disabled={actionLoading}
+                         whileHover={{ scale: actionLoading ? 1 : 1.02 }}
+                         whileTap={{ scale: actionLoading ? 1 : 0.98 }}
+                         className="flex-1 py-3 px-4 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
+                       >
+                         {actionLoading ? (
+                           <LoadingSpinner size="sm" />
+                         ) : (
+                           <>
+                             <Mail className="w-4 h-4" />
+                             <span>确认更改</span>
+                           </>
+                         )}
+                       </motion.button>
+                     </div>
                     
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      更改邮箱后需要重新验证新邮箱地址
-                    </p>
+                                         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                       <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center space-x-2">
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                         </svg>
+                         <span>更改邮箱后需要重新验证新邮箱地址</span>
+                       </p>
+                     </div>
                   </form>
                 </motion.div>
               )}
@@ -538,10 +565,12 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
           </div>
 
           {/* 删除账号 */}
-          <div className="border border-red-200 dark:border-red-800 rounded-xl overflow-hidden">
+          <div className="border border-red-200 dark:border-red-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
             <motion.button
               onClick={() => toggleSection('deleteAccount')}
-              className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              whileHover={{ scale: 1.005 }}
+              whileTap={{ scale: 0.995 }}
+              className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 hover:from-red-100 hover:to-red-150 dark:hover:from-red-900/30 dark:hover:to-red-800/30 transition-all duration-200"
             >
               <div className="flex items-center space-x-3">
                 <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
@@ -556,14 +585,14 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
             
             <AnimatePresence>
               {expandedSection === 'deleteAccount' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="border-t border-red-200 dark:border-red-800"
-                >
-                  <form onSubmit={handleDeleteAccount} className="p-4 space-y-4">
+                                 <motion.div
+                   initial={{ height: 0, opacity: 0 }}
+                   animate={{ height: 'auto', opacity: 1 }}
+                   exit={{ height: 0, opacity: 0 }}
+                   transition={{ duration: 0.3, ease: 'easeInOut' }}
+                   className="border-t border-red-200 dark:border-red-800 bg-gradient-to-b from-red-50/30 to-red-50/10 dark:from-red-900/10 dark:to-red-900/5"
+                 >
+                   <form onSubmit={handleDeleteAccount} className="p-6 space-y-5">
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                       <div className="flex items-center space-x-2">
                         <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -578,19 +607,24 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
                       </p>
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        确认密码
-                      </label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="请输入当前账户密码"
-                        className="input-professional w-full"
-                        required
-                      />
-                    </div>
+                                         <div>
+                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                         确认密码
+                       </label>
+                       <div className="relative">
+                         <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                         </svg>
+                         <input
+                           type="password"
+                           value={confirmPassword}
+                           onChange={(e) => setConfirmPassword(e.target.value)}
+                           placeholder="请输入当前账户密码"
+                           className="w-full pl-10 pr-4 py-3 border border-red-300 dark:border-red-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:border-red-500 dark:focus:border-red-400 focus:ring-2 focus:ring-red-500/20 transition-all duration-200"
+                           required
+                         />
+                       </div>
+                     </div>
                     
                     {deleteAccountError && (
                       <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -598,26 +632,33 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
                       </div>
                     )}
                     
-                    <div className="flex space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => setExpandedSection('none')}
-                        className="flex-1 py-2 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-600 hover:bg-slate-200 dark:hover:bg-slate-500 rounded-lg transition-colors"
-                      >
-                        取消
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={actionLoading}
-                        className="flex-1 py-2 px-4 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center space-x-2"
-                      >
-                        {actionLoading ? (
-                          <LoadingSpinner size="sm" />
-                        ) : (
-                          <span>确认删除</span>
-                        )}
-                      </button>
-                    </div>
+                                         <div className="flex space-x-3">
+                       <motion.button
+                         type="button"
+                         whileHover={{ scale: 1.02 }}
+                         whileTap={{ scale: 0.98 }}
+                         onClick={() => setExpandedSection('none')}
+                         className="flex-1 py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-600 hover:bg-slate-200 dark:hover:bg-slate-500 rounded-lg transition-all duration-200 shadow-sm hover:shadow"
+                       >
+                         取消
+                       </motion.button>
+                       <motion.button
+                         type="submit"
+                         disabled={actionLoading}
+                         whileHover={{ scale: actionLoading ? 1 : 1.02 }}
+                         whileTap={{ scale: actionLoading ? 1 : 0.98 }}
+                         className="flex-1 py-3 px-4 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
+                       >
+                         {actionLoading ? (
+                           <LoadingSpinner size="sm" />
+                         ) : (
+                           <>
+                             <Trash2 className="w-4 h-4" />
+                             <span>确认删除</span>
+                           </>
+                         )}
+                       </motion.button>
+                     </div>
                   </form>
                 </motion.div>
               )}
