@@ -248,30 +248,44 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
 
   // 发送欢迎邮件
   let welcomeEmailSent = false
+  let welcomeEmailError = null
+  
   try {
     console.log('📧 开始发送欢迎邮件到:', user.email, '用户名:', user.username)
-    const welcomeResult = await sendWelcomeEmail(user.email, user.username)
-    console.log('✅ 欢迎邮件发送结果:', JSON.stringify(welcomeResult, null, 2))
     
-    // 检查发送结果
+    // 确保邮件模块已正确导入
+    if (!sendWelcomeEmail) {
+      throw new Error('欢迎邮件功能未正确初始化')
+    }
+    
+    const welcomeResult = await sendWelcomeEmail(user.email, user.username)
+    console.log('✅ 欢迎邮件发送结果:', welcomeResult)
+    
     if (welcomeResult && welcomeResult.success) {
       welcomeEmailSent = true
     } else {
-      console.warn('⚠️ 欢迎邮件发送返回非成功状态:', welcomeResult)
+      welcomeEmailError = welcomeResult?.error || '邮件服务返回失败状态'
     }
   } catch (error) {
-    console.error('❌ 发送欢迎邮件失败:', {
-      message: error.message,
-      stack: error.stack,
-      userEmail: user.email,
-      username: user.username
-    })
+    console.error('❌ 发送欢迎邮件失败:', error)
+    welcomeEmailError = error.message || '未知错误'
+  }
+
+  // 构建响应消息
+  let message = '邮箱验证成功！'
+  if (welcomeEmailSent) {
+    message += '已发送欢迎邮件。'
+  } else {
+    message += '但欢迎邮件发送失败，请稍后重试。'
+    console.warn('⚠️ 欢迎邮件发送失败，错误信息:', welcomeEmailError)
   }
 
   res.status(200).json({ 
-    message: welcomeEmailSent 
-      ? '邮箱验证成功！已发送欢迎邮件' 
-      : '邮箱验证成功！',
+    message: message,
+    welcomeEmailSent: welcomeEmailSent,
+    ...(welcomeEmailError && process.env.NODE_ENV === 'development' && { 
+      welcomeEmailError: welcomeEmailError 
+    }),
     user: {
       id: user._id,
       username: user.username,

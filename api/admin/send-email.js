@@ -27,13 +27,17 @@ const EMAIL_TEMPLATES = {
           <p style="color: #e1e8ff; margin: 10px 0 0 0; font-size: 16px;">MXacc 梦锡账号管理系统</p>
         </div>
         <div style="background: white; padding: 40px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <h2 style="color: #333; margin-bottom: 20px;">📢 系统通知</h2>
+          <h2 style="color: #333; margin-bottom: 20px; display: flex; align-items: center;">
+            <span style="display: inline-block; width: 20px; height: 20px; background: #667eea; border-radius: 3px; margin-right: 8px;"></span>
+            系统通知
+          </h2>
           <p style="color: #666; line-height: 1.6; font-size: 16px;">尊敬的用户 <strong>${data.username || '用户'}</strong>，您好！</p>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
             <div style="color: #333; line-height: 1.8; font-size: 15px;">
               ${data.content || '这是一条系统通知消息。'}
             </div>
           </div>
+          
           ${data.actionUrl ? `
             <div style="text-align: center; margin: 30px 0;">
               <a href="${data.actionUrl}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">立即查看</a>
@@ -56,15 +60,24 @@ const EMAIL_TEMPLATES = {
     template: (data) => `
       <div style="font-family: 'Microsoft YaHei', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
         <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">🔐 安全提醒</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px; display: flex; align-items: center; justify-content: center;">
+            <span style="display: inline-block; width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; line-height: 32px; text-align: center; margin-right: 10px; font-weight: bold;">!</span>
+            安全提醒
+          </h1>
           <p style="color: #ffe1e1; margin: 10px 0 0 0; font-size: 16px;">梦锡工作室团队</p>
         </div>
         <div style="background: white; padding: 40px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <h2 style="color: #333; margin-bottom: 20px;">⚠️ 重要安全提醒</h2>
+          <h2 style="color: #333; margin-bottom: 20px; display: flex; align-items: center;">
+            <span style="color: #ff6b6b; font-size: 18px; margin-right: 8px; font-weight: bold;">⚠</span>
+            重要安全提醒
+          </h2>
           <p style="color: #666; line-height: 1.6; font-size: 16px;">尊敬的用户 <strong>${data.username || '用户'}</strong>，</p>
           <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
             <div style="color: #856404; line-height: 1.8; font-size: 15px;">
-              <strong>🚨 检测到以下安全事件：</strong><br><br>
+              <strong style="display: flex; align-items: center;">
+                <span style="display: inline-block; width: 16px; height: 16px; background: #856404; border-radius: 3px; margin-right: 8px;"></span>
+                检测到以下安全事件：
+              </strong><br><br>
               ${data.content || '您的账户出现异常活动，请及时处理。'}
             </div>
           </div>
@@ -77,7 +90,7 @@ const EMAIL_TEMPLATES = {
             </p>
           </div>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}/security" style="background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">立即处理</a>
+            <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}/security" style="background: #ff6b6b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">立即处理</a>
           </div>
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
           <p style="color: #999; font-size: 14px; margin: 0;">
@@ -96,17 +109,26 @@ const EMAIL_TEMPLATES = {
     template: (data) => `
       <div style="font-family: 'Microsoft YaHei', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
         <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">🎉 欢迎加入</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px; display: flex; align-items: center; justify-content: center;">
+            <span style="display: inline-block; width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; line-height: 32px; text-align: center; margin-right: 10px; font-weight: bold;">✓</span>
+            欢迎加入
+          </h1>
           <p style="color: #e1f5ff; margin: 10px 0 0 0; font-size: 18px; font-weight: bold;">梦锡工作室</p>
           <p style="color: #b3e5ff; margin: 5px 0 0 0; font-size: 14px;">MXacc 梦锡账号管理系统</p>
         </div>
         <div style="background: white; padding: 40px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-          <h2 style="color: #333; margin-bottom: 20px;">👋 欢迎您的加入！</h2>
+          <h2 style="color: #333; margin-bottom: 20px; display: flex; align-items: center;">
+            <span style="display: inline-block; width: 20px; height: 20px; background: #4facfe; border-radius: 3px; margin-right: 8px;"></span>
+            欢迎您的加入！
+          </h2>
           <p style="color: #666; line-height: 1.6; font-size: 16px;">尊敬的 <strong>${data.username || '用户'}</strong>，</p>
           <p style="color: #666; line-height: 1.6; font-size: 16px;">欢迎您加入梦锡工作室大家庭！您的账号已成功创建。</p>
           
           <div style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4facfe;">
-            <h3 style="color: #1565c0; margin: 0 0 15px 0; font-size: 16px;">🌟 您可以使用以下功能：</h3>
+            <h3 style="color: #1565c0; margin: 0 0 15px 0; font-size: 16px; display: flex; align-items: center;">
+              <span style="display: inline-block; width: 16px; height: 16px; background: #1565c0; border-radius: 3px; margin-right: 8px;"></span>
+              您可以使用以下功能：
+            </h3>
             <ul style="color: #333; line-height: 1.8; margin: 0; padding-left: 20px;">
               <li>个人资料管理</li>
               <li>安全设置配置</li>
@@ -115,21 +137,53 @@ const EMAIL_TEMPLATES = {
             </ul>
           </div>
 
-          ${data.content ? `
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <div style="color: #333; line-height: 1.8; font-size: 15px;">
-                ${data.content}
-              </div>
-            </div>
-          ` : ''}
-
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}/dashboard" style="background: #4facfe; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">开始使用</a>
+            <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}/dashboard" style="background: #4facfe; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">立即体验</a>
           </div>
+          
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
           <p style="color: #999; font-size: 14px; margin: 0;">
-            感谢您选择 <strong>梦锡工作室</strong><br>
-            如有任何问题，我们的团队随时为您服务
+            此邮件由 <strong>梦锡工作室官方</strong> 发送<br>
+            感谢您对我们的信任与支持
+          </p>
+        </div>
+      </div>
+    `
+  },
+
+  // 维护通知
+  maintenance: {
+    name: '维护通知',
+    subject: '梦锡账号 - 系统维护通知',
+    template: (data) => `
+      <div style="font-family: 'Microsoft YaHei', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
+        <div style="background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%); padding: 30px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px; display: flex; align-items: center; justify-content: center;">
+            <span style="display: inline-block; width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; line-height: 32px; text-align: center; margin-right: 10px; font-weight: bold;">⚙</span>
+            维护通知
+          </h1>
+          <p style="color: #fff3e0; margin: 10px 0 0 0; font-size: 16px;">梦锡工作室技术团队</p>
+        </div>
+        <div style="background: white; padding: 40px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h2 style="color: #333; margin-bottom: 20px; display: flex; align-items: center;">
+            <span style="color: #ffa726; font-size: 18px; margin-right: 8px; font-weight: bold;">i</span>
+            系统维护通知
+          </h2>
+          <p style="color: #666; line-height: 1.6; font-size: 16px;">尊敬的用户 <strong>${data.username || '用户'}</strong>，您好！</p>
+          <div style="background: #fff8e1; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffa726;">
+            <div style="color: #e65100; line-height: 1.8; font-size: 15px;">
+              ${data.content || '我们将进行系统维护，期间可能影响服务使用。'}
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}" style="background: #ffa726; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">了解详情</a>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #999; font-size: 14px; margin: 0;">
+            此邮件由 <strong>梦锡工作室官方</strong> 技术团队发送<br>
+            感谢您的理解与配合
           </p>
         </div>
       </div>

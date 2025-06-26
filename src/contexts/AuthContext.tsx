@@ -223,8 +223,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({ 
           action: 'change-email',
-          newEmail,
-          confirmPassword
+          newEmail: newEmail,
+          confirmPassword: confirmPassword
         }),
       })
 
@@ -252,21 +252,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({ 
           action: 'delete-account',
-          confirmPassword
+          confirmPassword: confirmPassword
         }),
       })
 
       const data = await response.json()
       
       if (response.ok) {
-        // 账户删除成功，注销用户
+        // 删除成功后自动登出
         logout()
         return { success: true, message: data.message }
       } else {
         return { success: false, message: data.message }
       }
     } catch (error) {
-      return { success: false, message: '删除账户失败' }
+      return { success: false, message: '删除账号失败' }
     }
   }
 

@@ -82,8 +82,10 @@ const sendVerificationEmail = async (email, code, username = '') => {
         .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
         .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
         .security-tips { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; }
-        .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; }
+        .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
         .security-list { color: #047857; margin: 0; padding-left: 20px; }
+        .icon { display: inline-block; width: 16px; height: 16px; margin-right: 8px; }
+        .shield-icon { background: #065f46; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
       </style>
     </head>
     <body>
@@ -118,7 +120,9 @@ const sendVerificationEmail = async (email, code, username = '') => {
           </div>
           
           <div class="security-tips">
-            <div class="security-title">[安全] 安全小贴士</div>
+            <div class="security-title">
+              <span class="icon shield-icon"></span>安全小贴士
+            </div>
             <ul class="security-list">
               <li>定期更新您的账户密码</li>
               <li>不要在公共设备上保存登录信息</li>
@@ -167,13 +171,15 @@ const sendWelcomeEmail = async (email, username) => {
         .welcome-title { font-size: 24px; color: #1f2937; margin-bottom: 20px; text-align: center; }
         .features { margin: 30px 0; }
         .feature-item { display: flex; align-items: center; margin: 15px 0; padding: 15px; background: #f8fafc; border-radius: 8px; }
-        .feature-icon { width: 40px; height: 40px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; color: white; font-weight: bold; }
+        .feature-icon { width: 40px; height: 40px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; color: white; font-weight: bold; font-size: 16px; }
         .feature-text { flex: 1; }
         .feature-title { font-weight: bold; color: #1f2937; margin-bottom: 5px; }
         .feature-desc { color: #6b7280; font-size: 14px; }
         .cta-button { background: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold; text-align: center; margin: 25px 0; }
         .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
         .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
+        .celebration { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center; }
+        .celebration-icon { display: inline-block; width: 48px; height: 48px; background: #10b981; border-radius: 50%; color: white; line-height: 48px; font-size: 24px; margin-bottom: 10px; }
       </style>
     </head>
     <body>
@@ -184,7 +190,10 @@ const sendWelcomeEmail = async (email, username) => {
         </div>
         
         <div class="content">
-          <h1 class="welcome-title">[欢迎] 欢迎加入 梦锡工作室，${username}！</h1>
+          <div class="celebration">
+            <div class="celebration-icon">✓</div>
+            <h1 class="welcome-title">欢迎加入 梦锡工作室，${username}！</h1>
+          </div>
           
           <p style="color: #4b5563; line-height: 1.6; text-align: center;">
             恭喜您成功注册梦锡账号！现在您可以享受我们提供的各种便捷服务。
@@ -192,7 +201,7 @@ const sendWelcomeEmail = async (email, username) => {
           
           <div class="features">
             <div class="feature-item">
-              <div class="feature-icon">🛡️</div>
+              <div class="feature-icon">S</div>
               <div class="feature-text">
                 <div class="feature-title">安全可靠</div>
                 <div class="feature-desc">企业级安全防护，保障您的账户安全</div>
@@ -200,7 +209,7 @@ const sendWelcomeEmail = async (email, username) => {
             </div>
             
             <div class="feature-item">
-              <div class="feature-icon">⚡</div>
+              <div class="feature-icon">F</div>
               <div class="feature-text">
                 <div class="feature-title">高效便捷</div>
                 <div class="feature-desc">一键登录多个系统，提升使用效率</div>
@@ -208,7 +217,7 @@ const sendWelcomeEmail = async (email, username) => {
             </div>
             
             <div class="feature-item">
-              <div class="feature-icon">✨</div>
+              <div class="feature-icon">D</div>
               <div class="feature-text">
                 <div class="feature-title">现代设计</div>
                 <div class="feature-desc">简洁美观的界面，带来愉悦的使用体验</div>
@@ -238,7 +247,17 @@ const sendWelcomeEmail = async (email, username) => {
     </html>
   `
 
-  return await sendEmail(email, subject, htmlContent, true)
+  console.log('📧 准备发送欢迎邮件到:', email, '用户名:', username)
+  
+  try {
+    const result = await sendEmail(email, subject, htmlContent, true)
+    console.log('✅ 欢迎邮件发送结果:', result)
+    return result
+  } catch (error) {
+    console.error('❌ 欢迎邮件发送失败:', error)
+    // 重新抛出错误以便上层处理
+    throw error
+  }
 }
 
 module.exports = {

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Clock, Mail, RefreshCw, CheckCircle, UserMinus, Settings, Shield, Eye, EyeOff } from 'lucide-react';
+import { Clock, Mail, RefreshCw, CheckCircle, Settings, Trash2, ArrowRight } from 'lucide-react';
 
 interface VerifyEmailPageProps {
   embedded?: boolean
@@ -50,25 +50,14 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
   const [nextSendTime, setNextSendTime] = useState<Date | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
-  // 更改邮箱相关状态
+  // 新增状态
   const [showChangeEmail, setShowChangeEmail] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
-  const [changeEmailPassword, setChangeEmailPassword] = useState('');
-  const [showChangeEmailPassword, setShowChangeEmailPassword] = useState(false);
-  const [changeEmailLoading, setChangeEmailLoading] = useState(false);
-  
-  // 删除账号相关状态
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
-  const [showDeletePassword, setShowDeletePassword] = useState(false);
-  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   
   const navigate = useNavigate();
-
-  // 调试信息
-  useEffect(() => {
-    console.log('弹窗状态变化:', { showChangeEmail, showDeleteAccount });
-  }, [showChangeEmail, showDeleteAccount]);
 
   // 倒计时更新
   useEffect(() => {
@@ -170,70 +159,57 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
     }
   };
 
-  // 处理更改邮箱
   const handleChangeEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail.trim() || !changeEmailPassword.trim()) {
-      setError('请填写完整的邮箱和密码信息');
+    if (!newEmail.trim() || !confirmPassword.trim()) {
+      setError('请填写完整信息');
       return;
     }
 
-    // 验证邮箱格式
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-      setError('邮箱格式无效');
-      return;
-    }
-
-    setChangeEmailLoading(true);
+    setActionLoading(true);
     setError('');
     setMessage('');
 
     try {
-      const result = await changeEmail(newEmail, changeEmailPassword);
+      const result = await changeEmail(newEmail, confirmPassword);
       if (result.success) {
         setMessage(result.message);
         setShowChangeEmail(false);
         setNewEmail('');
-        setChangeEmailPassword('');
-        // 清空验证相关状态，因为需要重新验证新邮箱
-        setVerificationCode('');
-        setCodeExpiresAt(null);
-        setSendInfo(null);
+        setConfirmPassword('');
       } else {
         setError(result.message);
       }
-    } catch (err: any) {
-      setError(err.message || '更改邮箱失败');
+    } catch (err) {
+      setError('更改邮箱失败');
     } finally {
-      setChangeEmailLoading(false);
+      setActionLoading(false);
     }
   };
 
-  // 处理删除账号
   const handleDeleteAccount = async () => {
-    if (!deleteAccountPassword.trim()) {
+    if (!confirmPassword.trim()) {
       setError('请输入密码确认删除');
       return;
     }
 
-    setDeleteAccountLoading(true);
+    setActionLoading(true);
     setError('');
     setMessage('');
 
     try {
-      const result = await deleteAccount(deleteAccountPassword);
+      const result = await deleteAccount(confirmPassword);
       if (result.success) {
         setMessage(result.message);
         setShowDeleteAccount(false);
-        // 账号删除成功，用户会自动注销
+        // 账户删除成功，会自动登出
       } else {
         setError(result.message);
       }
-    } catch (err: any) {
-      setError(err.message || '删除账户失败');
+    } catch (err) {
+      setError('删除账号失败');
     } finally {
-      setDeleteAccountLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -267,10 +243,6 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
         <p className="text-slate-600 dark:text-slate-400">
           为了确保账号安全，请验证您的邮箱地址
         </p>
-        {/* 调试信息 */}
-        <div className="text-xs text-gray-500 mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-          调试: showChangeEmail={showChangeEmail.toString()}, showDeleteAccount={showDeleteAccount.toString()}
-        </div>
       </div>
 
       <div className="space-y-6">
@@ -435,38 +407,50 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
           </motion.div>
         )}
 
-        {/* 其他操作按钮 */}
+        {/* 其他操作选项 */}
         <div className="space-y-3">
-          <div className="grid grid-cols-1 gap-3">
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('点击了更改绑定邮箱按钮');
-                setShowChangeEmail(true);
-              }}
-              type="button"
-              className="flex items-center justify-center space-x-2 py-3 px-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
-            >
-              <Settings className="w-4 h-4" />
-              <span>更改绑定邮箱</span>
-            </button>
-            
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('点击了删除账号按钮');
-                setShowDeleteAccount(true);
-              }}
-              type="button"
-              className="flex items-center justify-center space-x-2 py-3 px-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
-            >
-              <UserMinus className="w-4 h-4" />
-              <span>删除账号</span>
-            </button>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                其他操作
+              </span>
+            </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowChangeEmail(true)}
+              className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-xl transition-colors text-left"
+            >
+              <div className="flex items-center space-x-3">
+                <Settings className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                <span className="text-sm text-slate-700 dark:text-slate-300">更改绑定邮箱</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400" />
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowDeleteAccount(true)}
+              className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-colors text-left"
+            >
+              <div className="flex items-center space-x-3">
+                <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span className="text-sm text-red-700 dark:text-red-300">删除账号</span>
+              </div>
+              <ArrowRight className="w-4 h-4 text-red-400" />
+            </motion.button>
+          </div>
+        </div>
+
+        {/* 帮助和选项 */}
+        <div className="space-y-3">
           <div className="text-center">
             <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
               <p>• 验证码有效期为10分钟</p>
@@ -521,189 +505,93 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
         type="warning"
       />
 
-      {/* 更改邮箱表单弹窗 */}
-      {showChangeEmail && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
-          onClick={() => {
-            console.log('点击了弹窗背景');
-            setShowChangeEmail(false);
-            setNewEmail('');
-            setChangeEmailPassword('');
-          }}
-        >
-          <div
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">更改绑定邮箱</h3>
+      {/* 更改邮箱对话框 */}
+      <ConfirmDialog
+        isOpen={showChangeEmail}
+        onClose={() => {
+          setShowChangeEmail(false);
+          setNewEmail('');
+          setConfirmPassword('');
+          setError('');
+        }}
+        title="更改绑定邮箱"
+        confirmText="确认更改"
+        cancelText="取消"
+        type="info"
+        onConfirm={handleChangeEmail}
+        loading={actionLoading}
+        customContent={
+          <form onSubmit={handleChangeEmail} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                新邮箱地址
+              </label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="请输入新的邮箱地址"
+                className="input-professional w-full"
+                required
+              />
             </div>
-            
-            <form onSubmit={handleChangeEmail} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  新邮箱地址
-                </label>
-                <input
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="请输入新的邮箱地址"
-                  className="input-professional w-full"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  确认密码
-                </label>
-                <div className="relative">
-                  <input
-                    type={showChangeEmailPassword ? "text" : "password"}
-                    value={changeEmailPassword}
-                    onChange={(e) => setChangeEmailPassword(e.target.value)}
-                    placeholder="请输入当前账户密码"
-                    className="input-professional w-full pr-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowChangeEmailPassword(!showChangeEmailPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-400"
-                  >
-                    {showChangeEmailPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  更改邮箱后，您需要重新验证新邮箱地址才能正常使用账户功能。
-                </p>
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowChangeEmail(false);
-                    setNewEmail('');
-                    setChangeEmailPassword('');
-                  }}
-                  disabled={changeEmailLoading}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  disabled={changeEmailLoading || !newEmail.trim() || !changeEmailPassword.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 flex items-center space-x-2"
-                >
-                  {changeEmailLoading ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      <span>处理中...</span>
-                    </>
-                  ) : (
-                    <span>确认更改</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                确认密码
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="请输入当前账户密码"
+                className="input-professional w-full"
+                required
+              />
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              更改邮箱后需要重新验证新邮箱地址
+            </p>
+          </form>
+        }
+      />
 
-      {/* 删除账号表单弹窗 */}
-      {showDeleteAccount && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
-          onClick={() => {
-            console.log('点击了删除账号弹窗背景');
-            setShowDeleteAccount(false);
-            setDeleteAccountPassword('');
-          }}
-        >
-          <div
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">危险操作：删除账号</h3>
+      {/* 删除账号确认对话框 */}
+      <ConfirmDialog
+        isOpen={showDeleteAccount}
+        onClose={() => {
+          setShowDeleteAccount(false);
+          setConfirmPassword('');
+          setError('');
+        }}
+        title="删除账号"
+        confirmText="确认删除"
+        cancelText="取消"
+        type="danger"
+        onConfirm={handleDeleteAccount}
+        loading={actionLoading}
+        customContent={
+          <div className="space-y-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-sm text-red-800 dark:text-red-200">
+                <strong>警告：</strong>此操作不可撤销！删除账号后，所有数据将永久丢失。
+              </p>
             </div>
-            
-            <div className="p-6 space-y-4">
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Shield className="w-5 h-5 text-red-600 dark:text-red-400" />
-                  <h4 className="font-medium text-red-800 dark:text-red-200">警告</h4>
-                </div>
-                <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
-                  <li>• 此操作不可逆转</li>
-                  <li>• 您的所有数据将被永久删除</li>
-                  <li>• 删除后无法恢复账户信息</li>
-                  <li>• 请确保您已备份重要数据</li>
-                </ul>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  确认密码
-                </label>
-                <div className="relative">
-                  <input
-                    type={showDeletePassword ? "text" : "password"}
-                    value={deleteAccountPassword}
-                    onChange={(e) => setDeleteAccountPassword(e.target.value)}
-                    placeholder="请输入当前账户密码确认删除"
-                    className="input-professional w-full pr-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowDeletePassword(!showDeletePassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-400"
-                  >
-                    {showDeletePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDeleteAccount(false);
-                    setDeleteAccountPassword('');
-                  }}
-                  disabled={deleteAccountLoading}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
-                >
-                  取消
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteAccount}
-                  disabled={deleteAccountLoading || !deleteAccountPassword.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 flex items-center space-x-2"
-                >
-                  {deleteAccountLoading ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      <span>删除中...</span>
-                    </>
-                  ) : (
-                    <span>确认删除</span>
-                  )}
-                </button>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                确认密码
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="请输入当前账户密码"
+                className="input-professional w-full"
+                required
+              />
             </div>
           </div>
-        </div>
-      )}
+        }
+      />
     </>
   );
 }
