@@ -172,59 +172,83 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
   };
 
   const handleChangeEmail = async () => {
+    console.log('handleChangeEmail 被调用');
+    console.log('newEmail:', newEmail, 'confirmPassword:', confirmPassword ? '***' : '空');
+    
     if (!newEmail.trim() || !confirmPassword.trim()) {
+      console.log('表单验证失败：缺少必填信息');
       setChangeEmailError('请填写完整信息');
       return;
     }
 
+    console.log('开始更改邮箱流程...');
     setActionLoading(true);
     setChangeEmailError('');
     setError('');
     setMessage('');
 
     try {
+      console.log('调用 changeEmail API...');
       const result = await changeEmail(newEmail, confirmPassword);
+      console.log('changeEmail API 返回结果:', result);
+      
       if (result.success) {
+        console.log('更改邮箱成功');
         setMessage(result.message);
         setShowChangeEmail(false);
         setNewEmail('');
         setConfirmPassword('');
         setChangeEmailError('');
       } else {
+        console.log('更改邮箱失败:', result.message);
         setChangeEmailError(result.message);
       }
     } catch (err) {
+      console.log('更改邮箱异常:', err);
       setChangeEmailError('更改邮箱失败');
     } finally {
+      console.log('更改邮箱流程结束');
       setActionLoading(false);
     }
   };
 
   const handleDeleteAccount = async () => {
+    console.log('handleDeleteAccount 被调用');
+    console.log('confirmPassword:', confirmPassword ? '***' : '空');
+    
     if (!confirmPassword.trim()) {
+      console.log('表单验证失败：缺少密码');
       setDeleteAccountError('请输入密码确认删除');
       return;
     }
 
+    console.log('开始删除账号流程...');
     setActionLoading(true);
     setDeleteAccountError('');
     setError('');
     setMessage('');
 
     try {
+      console.log('调用 deleteAccount API...');
       const result = await deleteAccount(confirmPassword);
+      console.log('deleteAccount API 返回结果:', result);
+      
       if (result.success) {
+        console.log('删除账号成功');
         setMessage(result.message);
         setShowDeleteAccount(false);
         setConfirmPassword('');
         setDeleteAccountError('');
         // 账户删除成功，会自动登出
       } else {
+        console.log('删除账号失败:', result.message);
         setDeleteAccountError(result.message);
       }
     } catch (err) {
+      console.log('删除账号异常:', err);
       setDeleteAccountError('删除账号失败');
     } finally {
+      console.log('删除账号流程结束');
       setActionLoading(false);
     }
   };
@@ -440,7 +464,10 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowChangeEmail(true)}
+              onClick={() => {
+                console.log('更改绑定邮箱按钮被点击');
+                setShowChangeEmail(true);
+              }}
               className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 rounded-xl transition-colors text-left"
             >
               <div className="flex items-center space-x-3">
@@ -453,7 +480,10 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowDeleteAccount(true)}
+              onClick={() => {
+                console.log('删除账号按钮被点击');
+                setShowDeleteAccount(true);
+              }}
               className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition-colors text-left"
             >
               <div className="flex items-center space-x-3">
