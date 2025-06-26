@@ -1,5 +1,5 @@
 const clientPromise = require('../_lib/mongodb')
-const { verifyToken, hashPassword } = require('../_lib/auth')
+const { verifyToken, hashPassword, comparePassword } = require('../_lib/auth')
 const { ObjectId } = require('mongodb')
 
 // 导入邮件服务
@@ -268,10 +268,9 @@ module.exports = async function handler(req, res) {
         }
 
         // 验证当前密码
-        const crypto = require('crypto')
-        const currentPasswordHash = crypto.createHash('sha256').update(currentPassword).digest('hex')
+        const isPasswordValid = await comparePassword(currentPassword, user.password)
         
-        if (user.password !== currentPasswordHash) {
+        if (!isPasswordValid) {
           return res.status(400).json({ 
             success: false, 
             message: '当前密码错误' 

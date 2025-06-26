@@ -152,11 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendEmailVerification = async () => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/send-verification', {
+      const response = await fetch('/api/auth/email-verification', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify({ action: 'send' })
       })
 
       const data = await response.json()
@@ -165,7 +167,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { 
           success: true, 
           message: data.message, 
-          verificationCode: data.verificationCode,
           expiresAt: data.expiresAt,
           sendInfo: data.sendInfo
         }
@@ -173,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { 
           success: false, 
           message: data.message,
+          code: data.code,
           canSendAgainAt: data.canSendAgainAt,
           remainingTime: data.remainingTime
         }
@@ -185,13 +187,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyEmail = async (verificationCode: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/auth/verify-email', {
+      const response = await fetch('/api/auth/email-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ verificationCode }),
+        body: JSON.stringify({ 
+          action: 'verify',
+          verificationCode: verificationCode
+        }),
       })
 
       const data = await response.json()
