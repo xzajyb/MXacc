@@ -1,4 +1,4 @@
-﻿// 独立测试API
+// 独立测试API
 module.exports = async function handler(req, res) {
   console.log('=== Test API Called ===')
   console.log('Method:', req.method)
