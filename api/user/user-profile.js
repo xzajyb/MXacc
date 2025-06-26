@@ -314,14 +314,25 @@ module.exports = async function handler(req, res) {
 
         console.log('✅ 密码修改完成:', user.email)
 
-        // 发送安全通知邮件（异步，不阻塞响应）
-        sendPasswordChangeNotification(user.email, user.username, clientIP, userAgent).catch(error => {
-          console.error('发送密码修改安全通知失败:', error)
-        })
+        // 发送安全通知邮件
+        let emailSent = false
+        let emailError = null
+        
+        try {
+          await sendPasswordChangeNotification(user.email, user.username, clientIP, userAgent)
+          emailSent = true
+          console.log('✅ 安全通知邮件发送成功')
+        } catch (error) {
+          emailError = error.message
+          console.error('❌ 发送密码修改安全通知失败:', error)
+        }
 
         return res.status(200).json({
           success: true,
-          message: '密码修改成功，已发送安全通知邮件'
+          message: emailSent 
+            ? '密码修改成功，已发送安全通知邮件' 
+            : '密码修改成功，但邮件发送失败：' + (emailError || '未知错误'),
+          emailSent: emailSent
         })
       } else {
         // 更新用户资料
