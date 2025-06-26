@@ -56,12 +56,16 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const config = getTypeConfig()
 
   const handleConfirm = async (e?: React.FormEvent) => {
+    console.log('ConfirmDialog handleConfirm 被调用', { title, loading });
+    
     if (e) {
       e.preventDefault()
     }
     
     try {
+      console.log('开始执行 onConfirm 回调...');
       await onConfirm()
+      console.log('onConfirm 回调执行完成');
       // 只有在操作成功且没有错误时才关闭对话框
       // 让父组件决定何时关闭
     } catch (error) {
