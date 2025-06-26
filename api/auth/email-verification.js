@@ -1,13 +1,18 @@
 const clientPromise = require('../_lib/mongodb')
 const { verifyToken } = require('../_lib/auth')
 // 修复导入问题
-let sendVerificationEmail
+let sendVerificationEmail, sendWelcomeEmail
 try {
   const emailModule = require('../_lib/luckycola-email')
   sendVerificationEmail = emailModule.sendVerificationEmail
+  sendWelcomeEmail = emailModule.sendWelcomeEmail
+  console.log('✅ 邮件模块加载成功')
 } catch (error) {
-  console.error('无法导入邮件模块:', error)
+  console.error('❌ 无法导入邮件模块:', error)
   sendVerificationEmail = async () => {
+    throw new Error('邮件服务配置错误，请检查配置文件')
+  }
+  sendWelcomeEmail = async () => {
     throw new Error('邮件服务配置错误，请检查配置文件')
   }
 }
@@ -28,7 +33,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { action, verificationCode } = req.body
+    const { action, verificationCode, newEmail, confirmPassword } = req.body
 
     // 获取token
     const authHeader = req.headers.authorization
@@ -59,6 +64,12 @@ module.exports = async function handler(req, res) {
     } else if (action === 'verify') {
       // 验证邮箱
       return await handleVerifyEmail(user, users, verificationCode, res)
+    } else if (action === 'change-email') {
+      // 更改绑定邮箱
+      return await handleChangeEmail(user, users, newEmail, confirmPassword, res)
+    } else if (action === 'delete-account') {
+      // 删除账号
+      return await handleDeleteAccount(user, users, confirmPassword, res)
     } else {
       return res.status(400).json({ message: '无效的操作类型' })
     }
@@ -166,7 +177,10 @@ async function handleSendVerification(user, users, res) {
 
   // 发送验证邮件
   try {
-    await sendVerificationEmail(user.email, verificationCode, user.username)
+    console.log('📧 开始发送验证邮件到:', user.email)
+    const emailResult = await sendVerificationEmail(user.email, verificationCode, user.username)
+    console.log('✅ 验证邮件发送结果:', emailResult)
+    
     res.status(200).json({ 
       message: '验证邮件已发送，请检查您的邮箱',
       expiresAt: expiresAt,
@@ -178,7 +192,7 @@ async function handleSendVerification(user, users, res) {
       }
     })
   } catch (emailError) {
-    console.error('发送邮件失败:', emailError)
+    console.error('❌ 发送邮件失败:', emailError)
     
     // 邮件发送失败，回滚计数器
     emailSendInfo.sendCount -= 1
@@ -232,8 +246,32 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
     }
   )
 
+  // 发送欢迎邮件
+  let welcomeEmailSent = false
+  try {
+    console.log('📧 开始发送欢迎邮件到:', user.email, '用户名:', user.username)
+    const welcomeResult = await sendWelcomeEmail(user.email, user.username)
+    console.log('✅ 欢迎邮件发送结果:', JSON.stringify(welcomeResult, null, 2))
+    
+    // 检查发送结果
+    if (welcomeResult && welcomeResult.success) {
+      welcomeEmailSent = true
+    } else {
+      console.warn('⚠️ 欢迎邮件发送返回非成功状态:', welcomeResult)
+    }
+  } catch (error) {
+    console.error('❌ 发送欢迎邮件失败:', {
+      message: error.message,
+      stack: error.stack,
+      userEmail: user.email,
+      username: user.username
+    })
+  }
+
   res.status(200).json({ 
-    message: '邮箱验证成功！',
+    message: welcomeEmailSent 
+      ? '邮箱验证成功！已发送欢迎邮件' 
+      : '邮箱验证成功！',
     user: {
       id: user._id,
       username: user.username,
@@ -242,5 +280,98 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
       role: user.role || 'user',
       profile: user.profile
     }
+  })
+}
+
+// 处理更改绑定邮箱
+async function handleChangeEmail(user, users, newEmail, confirmPassword, res) {
+  if (!newEmail || !confirmPassword) {
+    return res.status(400).json({ message: '请提供新邮箱和确认密码' })
+  }
+
+  // 验证邮箱格式
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(newEmail)) {
+    return res.status(400).json({ message: '邮箱格式无效' })
+  }
+
+  // 验证密码
+  const { comparePassword } = require('../_lib/auth')
+  const isPasswordValid = await comparePassword(confirmPassword, user.password)
+  if (!isPasswordValid) {
+    return res.status(400).json({ message: '密码错误' })
+  }
+
+  // 检查新邮箱是否已存在
+  const existingUser = await users.findOne({
+    email: newEmail.toLowerCase(),
+    _id: { $ne: user._id }
+  })
+
+  if (existingUser) {
+    return res.status(400).json({ message: '该邮箱已被其他用户使用' })
+  }
+
+  // 更新邮箱并重置验证状态
+  await users.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        email: newEmail.toLowerCase(),
+        isEmailVerified: false,
+        updatedAt: new Date()
+      },
+      $unset: {
+        verificationCode: '',
+        verificationCodeExpiresAt: '',
+        emailSendInfo: ''
+      }
+    }
+  )
+
+  res.status(200).json({
+    success: true,
+    message: '邮箱更改成功，请验证新邮箱',
+    user: {
+      id: user._id,
+      username: user.username,
+      email: newEmail.toLowerCase(),
+      isEmailVerified: false,
+      role: user.role || 'user',
+      profile: user.profile
+    }
+  })
+}
+
+// 处理删除账号
+async function handleDeleteAccount(user, users, confirmPassword, res) {
+  if (!confirmPassword) {
+    return res.status(400).json({ message: '请输入密码确认删除' })
+  }
+
+  // 验证密码
+  const { comparePassword } = require('../_lib/auth')
+  const isPasswordValid = await comparePassword(confirmPassword, user.password)
+  if (!isPasswordValid) {
+    return res.status(400).json({ message: '密码错误' })
+  }
+
+  // 检查是否为管理员账户
+  if (user.role === 'admin') {
+    // 检查是否为唯一管理员
+    const adminCount = await users.countDocuments({ role: 'admin' })
+    if (adminCount <= 1) {
+      return res.status(403).json({ 
+        message: '无法删除唯一的管理员账户' 
+      })
+    }
+  }
+
+  // 删除用户账户
+  await users.deleteOne({ _id: user._id })
+
+  res.status(200).json({
+    success: true,
+    message: '账户已成功删除'
   })
 } 

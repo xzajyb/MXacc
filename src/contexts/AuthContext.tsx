@@ -212,6 +212,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const changeEmail = async (newEmail: string, confirmPassword: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/auth/email-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          action: 'change-email',
+          newEmail,
+          confirmPassword
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        setUser(data.user)
+        return { success: true, message: data.message }
+      } else {
+        return { success: false, message: data.message }
+      }
+    } catch (error) {
+      return { success: false, message: '更改邮箱失败' }
+    }
+  }
+
+  const deleteAccount = async (confirmPassword: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/auth/email-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          action: 'delete-account',
+          confirmPassword
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        // 账户删除成功，注销用户
+        logout()
+        return { success: true, message: data.message }
+      } else {
+        return { success: false, message: data.message }
+      }
+    } catch (error) {
+      return { success: false, message: '删除账户失败' }
+    }
+  }
+
   const refreshUser = async () => {
     const token = localStorage.getItem('token')
     if (!token) return
@@ -244,6 +302,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser,
     sendEmailVerification,
     verifyEmail,
+    changeEmail,
+    deleteAccount,
   }
 
   return (

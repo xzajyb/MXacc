@@ -64,7 +64,7 @@ const sendVerificationEmail = async (email, code, username = '') => {
     <html>
     <head>
       <meta charset="utf-8">
-      <title>MXacc 邮箱验证</title>
+      <title>梦锡账号邮箱验证</title>
       <style>
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
         .container { max-width: 600px; margin: 0 auto; background: white; }
@@ -89,7 +89,7 @@ const sendVerificationEmail = async (email, code, username = '') => {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">MXacc</div>
+          <div class="logo">梦锡账号</div>
           <div class="subtitle">梦锡工作室</div>
         </div>
         
@@ -118,7 +118,7 @@ const sendVerificationEmail = async (email, code, username = '') => {
           </div>
           
           <div class="security-tips">
-            <div class="security-title">🔒 安全小贴士</div>
+            <div class="security-title">[安全] 安全小贴士</div>
             <ul class="security-list">
               <li>定期更新您的账户密码</li>
               <li>不要在公共设备上保存登录信息</li>
@@ -184,7 +184,7 @@ const sendWelcomeEmail = async (email, username) => {
         </div>
         
         <div class="content">
-          <h1 class="welcome-title">🎉 欢迎加入 梦锡工作室，${username}！</h1>
+          <h1 class="welcome-title">[欢迎] 欢迎加入 梦锡工作室，${username}！</h1>
           
           <p style="color: #4b5563; line-height: 1.6; text-align: center;">
             恭喜您成功注册梦锡账号！现在您可以享受我们提供的各种便捷服务。
@@ -192,7 +192,7 @@ const sendWelcomeEmail = async (email, username) => {
           
           <div class="features">
             <div class="feature-item">
-              <div class="feature-icon">🔐</div>
+              <div class="feature-icon">🛡️</div>
               <div class="feature-text">
                 <div class="feature-title">安全可靠</div>
                 <div class="feature-desc">企业级安全防护，保障您的账户安全</div>
@@ -208,7 +208,7 @@ const sendWelcomeEmail = async (email, username) => {
             </div>
             
             <div class="feature-item">
-              <div class="feature-icon">🎨</div>
+              <div class="feature-icon">✨</div>
               <div class="feature-text">
                 <div class="feature-title">现代设计</div>
                 <div class="feature-desc">简洁美观的界面，带来愉悦的使用体验</div>

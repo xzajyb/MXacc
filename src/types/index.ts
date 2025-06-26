@@ -111,4 +111,6 @@ export interface AuthContextType {
   refreshUser: () => Promise<void>
   sendEmailVerification: () => Promise<{success: boolean, message: string, verificationCode?: string}>
   verifyEmail: (verificationCode: string) => Promise<{success: boolean, message: string}>
+  changeEmail: (newEmail: string, confirmPassword: string) => Promise<{success: boolean, message: string}>
+  deleteAccount: (confirmPassword: string) => Promise<{success: boolean, message: string}>
 } 

@@ -82,8 +82,8 @@ export const getTemplatePreview = (templateId: string, data: Partial<EmailTempla
           <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
             <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0;">
               如有任何疑问，请联系我们的技术支持团队：<br>
-              📧 邮箱：<a href="mailto:${safeData.contactEmail}" style="color: #3b82f6; text-decoration: none;">${safeData.contactEmail}</a><br>
-              🌐 网站：<a href="${safeData.websiteUrl}" style="color: #3b82f6; text-decoration: none;">${safeData.websiteUrl}</a>
+              [邮箱] ${safeData.contactEmail}<br>
+              [网站] ${safeData.websiteUrl}
             </p>
           </div>
         </div>
@@ -96,8 +96,7 @@ export const getTemplatePreview = (templateId: string, data: Partial<EmailTempla
     'security_alert': `
       <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <div style="background: linear-gradient(135deg, #dc2626, #b91c1c); padding: 40px 30px; text-align: center;">
-          <div style="color: white; font-size: 32px; margin-bottom: 10px;">🛡️</div>
-          <div style="color: white; font-size: 24px; font-weight: bold; margin-bottom: 10px;">安全警报</div>
+          <div style="color: white; font-size: 24px; font-weight: bold; margin-bottom: 10px;">[安全] 安全警报</div>
           <div style="color: rgba(255,255,255,0.9); font-size: 16px;">${safeData.companyName} 安全中心</div>
         </div>
         <div style="padding: 40px 30px;">
@@ -142,8 +141,7 @@ export const getTemplatePreview = (templateId: string, data: Partial<EmailTempla
     'welcome': `
       <div style="max-width: 600px; margin: 0 auto; background: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <div style="background: linear-gradient(135deg, #059669, #047857); padding: 40px 30px; text-align: center;">
-          <div style="color: white; font-size: 40px; margin-bottom: 15px;">🎉</div>
-          <div style="color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px;">欢迎加入我们！</div>
+          <div style="color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px;">[欢迎] 欢迎加入我们！</div>
           <div style="color: rgba(255,255,255,0.9); font-size: 16px;">${safeData.companyName}</div>
         </div>
         <div style="padding: 40px 30px;">
@@ -153,7 +151,7 @@ export const getTemplatePreview = (templateId: string, data: Partial<EmailTempla
             <p style="color: #065f46; line-height: 1.6; margin: 0; ${!data.content ? 'color: #9ca3af; font-style: italic;' : ''}">${safeData.content}</p>
           </div>
           <div style="background: #f8fafc; padding: 25px; border-radius: 8px; margin: 25px 0;">
-            <h3 style="color: #1f2937; font-size: 18px; margin: 0 0 15px 0;">🚀 快速开始指南：</h3>
+            <h3 style="color: #1f2937; font-size: 18px; margin: 0 0 15px 0;">[指南] 快速开始指南：</h3>
             <div style="display: grid; gap: 12px;">
               <div style="display: flex; align-items: center; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
                 <span style="color: #10b981; font-size: 18px; margin-right: 12px;">✓</span>
@@ -178,9 +176,9 @@ export const getTemplatePreview = (templateId: string, data: Partial<EmailTempla
           <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
             <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0;">
               需要帮助？我们随时为您服务：<br>
-              📧 客服邮箱：<a href="mailto:${safeData.contactEmail}" style="color: #059669; text-decoration: none;">${safeData.contactEmail}</a><br>
-              🌐 帮助中心：<a href="${safeData.websiteUrl}/help" style="color: #059669; text-decoration: none;">${safeData.websiteUrl}/help</a><br>
-              📖 用户指南：<a href="${safeData.websiteUrl}/guide" style="color: #059669; text-decoration: none;">${safeData.websiteUrl}/guide</a>
+              [邮箱] 客服邮箱：${safeData.contactEmail}<br>
+              [帮助] 帮助中心：${safeData.websiteUrl}/help<br>
+              [指南] 用户指南：${safeData.websiteUrl}/guide
             </p>
           </div>
         </div>
