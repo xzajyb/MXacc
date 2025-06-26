@@ -284,8 +284,7 @@ const ForgotPasswordPage: React.FC = () => {
                   <CheckCircle className="h-5 w-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
                   <div className="text-green-600 text-sm">
                     {message}
-                    <br />
-                    <span className="text-xs">2秒后自动跳转到登录页面...</span>
+
                   </div>
                 </div>
               )}

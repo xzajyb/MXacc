@@ -3,11 +3,12 @@ const { hashPassword, generateToken } = require('../_lib/auth')
 const { ObjectId } = require('mongodb')
 
 // 导入邮件服务
-let sendWelcomeEmail, sendEmail
+let sendWelcomeEmail, sendEmail, sendPasswordResetSuccessEmail
 try {
   const emailModule = require('../_lib/luckycola-email')
   sendWelcomeEmail = emailModule.sendWelcomeEmail
   sendEmail = emailModule.sendEmail
+  sendPasswordResetSuccessEmail = emailModule.sendPasswordResetSuccessEmail
   console.log('✅ 邮件模块加载成功')
 } catch (error) {
   console.error('❌ 无法导入邮件模块:', error)
@@ -18,11 +19,59 @@ try {
   sendEmail = async () => {
     throw new Error('邮件服务配置错误，请检查配置文件')
   }
+  sendPasswordResetSuccessEmail = async () => {
+    console.log('邮件服务不可用，跳过重置成功通知发送')
+    return { success: false, error: '邮件服务不可用' }
+  }
 }
 
 // 生成6位数字验证码
 function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// 获取客户端IP地址
+function getClientIP(req) {
+  return req.headers['x-forwarded-for'] || 
+         req.headers['x-real-ip'] || 
+         req.connection.remoteAddress || 
+         req.socket.remoteAddress ||
+         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+         '未知IP'
+}
+
+// 解析User-Agent获取设备信息
+function parseUserAgent(userAgent) {
+  if (!userAgent) return '未知设备'
+  
+  // 检测操作系统
+  let os = '未知系统'
+  if (userAgent.includes('Windows NT 10.0')) os = 'Windows 10'
+  else if (userAgent.includes('Windows NT 6.3')) os = 'Windows 8.1'
+  else if (userAgent.includes('Windows NT 6.1')) os = 'Windows 7'
+  else if (userAgent.includes('Mac OS X')) os = 'macOS'
+  else if (userAgent.includes('Android')) os = 'Android'
+  else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) os = 'iOS'
+  else if (userAgent.includes('Linux')) os = 'Linux'
+  
+  // 检测浏览器
+  let browser = '未知浏览器'
+  if (userAgent.includes('Chrome')) browser = 'Chrome'
+  else if (userAgent.includes('Firefox')) browser = 'Firefox'
+  else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) browser = 'Safari'
+  else if (userAgent.includes('Edge')) browser = 'Edge'
+  else if (userAgent.includes('Opera')) browser = 'Opera'
+  
+  return `${browser} - ${os}`
+}
+
+// 获取IP地址位置信息（简单实现）
+function getLocationFromIP(ip) {
+  // 这里可以集成第三方IP定位服务，现在先返回简单信息
+  if (ip.startsWith('192.168.') || ip.startsWith('127.0.') || ip.startsWith('10.')) {
+    return '本地网络'
+  }
+  return '未知位置' // 在实际应用中可以调用IP定位API
 }
 
 // 发送密码重置邮件模板
@@ -446,10 +495,29 @@ module.exports = async function handler(req, res) {
 
       console.log('✅ 密码重置完成:', user.email)
 
-      return res.status(200).json({
-        success: true,
-        message: '密码重置成功，请使用新密码登录'
-      })
+      // 发送密码重置成功通知邮件
+      const ip = getClientIP(req)
+      const device = parseUserAgent(req.headers['user-agent'])
+      const location = getLocationFromIP(ip)
+
+      try {
+        console.log('📧 发送密码重置成功通知邮件...')
+        await sendPasswordResetSuccessEmail(email, ip, device, location)
+        
+        console.log('✅ 密码重置成功通知邮件发送成功')
+        
+        return res.status(200).json({
+          success: true,
+          message: '密码重置成功，请使用新密码登录'
+        })
+      } catch (emailError) {
+        console.error('❌ 密码重置成功通知邮件发送失败:', emailError)
+        return res.status(500).json({
+          success: false,
+          message: '密码重置成功通知邮件发送失败，请稍后重试',
+          error: process.env.NODE_ENV === 'development' ? emailError.message : undefined
+        })
+      }
 
     } else {
       console.log('❌ 无效的操作类型:', action)

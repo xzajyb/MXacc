@@ -241,8 +241,135 @@ const sendWelcomeEmail = async (email, username) => {
   return await sendEmail(email, subject, htmlContent, true)
 }
 
+// 发送密码重置成功通知邮件
+const sendPasswordResetSuccessEmail = async (email, username, resetInfo) => {
+  const subject = '密码重置成功通知 - 梦锡账号'
+  
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>密码重置成功通知</title>
+      <style>
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }
+        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; }
+        .content { padding: 40px 30px; }
+        .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
+        .success-icon { background: #d1fae5; border: 2px solid #10b981; border-radius: 50%; width: 80px; height: 80px; margin: 20px auto; display: flex; align-items: center; justify-content: center; font-size: 36px; color: #059669; }
+        .info-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin: 25px 0; }
+        .info-title { color: #0369a1; font-weight: bold; margin-bottom: 10px; font-size: 16px; }
+        .info-item { margin: 8px 0; color: #374151; }
+        .info-label { font-weight: 600; color: #1f2937; display: inline-block; min-width: 80px; }
+        .warning { background: #fef3cd; border-left: 4px solid #f59e0b; padding: 15px; margin: 25px 0; border-radius: 4px; }
+        .warning-text { color: #92400e; margin: 0; }
+        .security-tips { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; }
+        .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; }
+        .security-list { color: #047857; margin: 0; padding-left: 20px; }
+        .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
+        .button { background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">✅ 密码重置成功</div>
+          <div class="subtitle">梦锡工作室安全中心</div>
+        </div>
+        
+        <div class="content">
+          <div class="success-icon">🔒</div>
+          
+          <div class="greeting">
+            您好 ${username}！
+          </div>
+          
+          <p style="color: #4b5563; line-height: 1.6; text-align: center; font-size: 16px;">
+            您的梦锡账号密码已成功重置。为了您的账户安全，我们将此次操作的详细信息发送给您。
+          </p>
+          
+          <div class="info-box">
+            <div class="info-title">🔍 重置操作详情</div>
+            <div class="info-item">
+              <span class="info-label">操作时间：</span>
+              ${resetInfo.timestamp}
+            </div>
+            <div class="info-item">
+              <span class="info-label">IP 地址：</span>
+              ${resetInfo.ip}
+            </div>
+            <div class="info-item">
+              <span class="info-label">设备信息：</span>
+              ${resetInfo.userAgent}
+            </div>
+            <div class="info-item">
+              <span class="info-label">位置信息：</span>
+              ${resetInfo.location || '未知位置'}
+            </div>
+            <div class="info-item">
+              <span class="info-label">重置方式：</span>
+              ${resetInfo.method === 'email' ? '邮箱验证码重置' : '安全中心重置'}
+            </div>
+          </div>
+          
+          <div class="warning">
+            <p class="warning-text">
+              <strong>⚠️ 重要提醒：</strong>如果这不是您本人的操作，请立即联系我们的客服团队，您的账户可能存在安全风险。
+            </p>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}/security" class="button">
+              查看安全中心
+            </a>
+          </div>
+          
+          <div class="security-tips">
+            <div class="security-title">🛡️ 安全建议</div>
+            <ul class="security-list">
+              <li>定期更换密码，使用强密码组合</li>
+              <li>不要在多个网站使用相同密码</li>
+              <li>开启登录通知功能</li>
+              <li>发现异常活动请及时联系我们</li>
+              <li>不要在公共网络环境下进行敏感操作</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p class="footer-text">
+            此邮件由梦锡工作室安全系统自动发送，请勿回复<br>
+            如有疑问请联系我们 QQ:915435295<br>
+            © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  try {
+    const result = await sendEmail(email, subject, htmlContent, true)
+    
+    if (!result.success) {
+      throw new Error(result.error || result.message || '邮件发送失败')
+    }
+    
+    console.log('✅ 密码重置成功通知邮件发送成功:', email)
+    return result
+  } catch (error) {
+    console.error('❌ 密码重置成功通知邮件发送失败:', error)
+    throw error
+  }
+}
+
 module.exports = {
   sendEmail,
   sendVerificationEmail,
-  sendWelcomeEmail
+  sendWelcomeEmail,
+  sendPasswordResetSuccessEmail
 } 

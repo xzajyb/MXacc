@@ -121,8 +121,8 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
       return
     }
 
-    if (passwordForm.newPassword.length < 8) {
-      setMessage('新密码至少需要8个字符')
+    if (passwordForm.newPassword.length < 6) {
+      setMessage('新密码至少需要6个字符')
       return
     }
 
@@ -130,15 +130,42 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
     setMessage('')
     
     try {
-      // TODO: 实现密码修改API调用
-      setMessage('密码修改功能正在开发中')
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setMessage('请先登录')
+        return
+      }
+
+      const response = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
       })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setMessage('密码修改成功！安全通知邮件已发送到您的邮箱')
+        showSuccess('密码修改成功')
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        })
+      } else {
+        setMessage(data.message || '密码修改失败，请重试')
+        showError(data.message || '密码修改失败')
+      }
     } catch (error: any) {
+      console.error('密码修改错误:', error)
       setMessage('密码修改失败，请重试')
+      showError('密码修改失败，请重试')
     } finally {
       setLoading(false)
     }
@@ -293,7 +320,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                         value={passwordForm.newPassword}
                         onChange={handlePasswordChange}
                         required
-                        minLength={8}
+                        minLength={6}
                         className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <button
@@ -309,7 +336,7 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                       </button>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      密码至少需要8个字符
+                      密码至少需要6个字符
                     </p>
                   </div>
 
