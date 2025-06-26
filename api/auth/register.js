@@ -126,6 +126,173 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
   }
 }
 
+// 发送密码重置安全通知邮件
+const sendPasswordResetNotification = async (email, username, ip, userAgent) => {
+  console.log('📧 准备发送密码重置安全通知到:', email)
+  
+  const subject = '梦锡账号 - 密码重置安全通知'
+  
+  // 解析设备信息
+  const getDeviceInfo = (userAgent) => {
+    const ua = userAgent.toLowerCase()
+    let device = '未知设备'
+    let os = '未知系统'
+    let browser = '未知浏览器'
+
+    // 检测设备类型
+    if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
+      device = '移动设备'
+    } else if (ua.includes('tablet') || ua.includes('ipad')) {
+      device = '平板设备'
+    } else {
+      device = '桌面设备'
+    }
+
+    // 检测操作系统
+    if (ua.includes('windows')) os = 'Windows'
+    else if (ua.includes('mac')) os = 'macOS'
+    else if (ua.includes('linux')) os = 'Linux'
+    else if (ua.includes('android')) os = 'Android'
+    else if (ua.includes('ios') || ua.includes('iphone') || ua.includes('ipad')) os = 'iOS'
+
+    // 检测浏览器
+    if (ua.includes('chrome')) browser = 'Chrome'
+    else if (ua.includes('firefox')) browser = 'Firefox'
+    else if (ua.includes('safari')) browser = 'Safari'
+    else if (ua.includes('edge')) browser = 'Edge'
+
+    return { device, os, browser }
+  }
+
+  const deviceInfo = getDeviceInfo(userAgent)
+  const timestamp = new Date().toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>MXacc 密码重置安全通知</title>
+      <style>
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: linear-gradient(135deg, #f59e0b, #d97706); padding: 40px 30px; text-align: center; }
+        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; }
+        .content { padding: 40px 30px; }
+        .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
+        .alert-box { background: #fef3cd; border: 2px solid #f59e0b; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
+        .alert-icon { font-size: 48px; margin-bottom: 15px; }
+        .alert-title { font-size: 20px; font-weight: bold; color: #92400e; margin-bottom: 10px; }
+        .alert-desc { color: #6b7280; font-size: 14px; }
+        .info-table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+        .info-table th, .info-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .info-table th { background-color: #f9fafb; font-weight: bold; color: #374151; width: 120px; }
+        .info-table td { color: #6b7280; }
+        .security-tips { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; }
+        .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; }
+        .security-list { color: #047857; margin: 0; padding-left: 20px; }
+        .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
+        .action-button { background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">🔐 安全通知</div>
+          <div class="subtitle">梦锡工作室</div>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">
+            您好 ${username}！
+          </div>
+          
+          <div class="alert-box">
+            <div class="alert-icon">🛡️</div>
+            <div class="alert-title">您的账户密码已成功重置</div>
+            <div class="alert-desc">如果这不是您本人的操作，请立即联系我们的客服团队</div>
+          </div>
+          
+          <p style="color: #4b5563; line-height: 1.6; margin: 25px 0;">
+            为了您的账户安全，我们会在密码重置后向您发送通知。以下是本次重置的详细信息：
+          </p>
+          
+          <table class="info-table">
+            <tr>
+              <th>重置时间</th>
+              <td>${timestamp}</td>
+            </tr>
+            <tr>
+              <th>IP 地址</th>
+              <td>${ip}</td>
+            </tr>
+            <tr>
+              <th>设备类型</th>
+              <td>${deviceInfo.device}</td>
+            </tr>
+            <tr>
+              <th>操作系统</th>
+              <td>${deviceInfo.os}</td>
+            </tr>
+            <tr>
+              <th>浏览器</th>
+              <td>${deviceInfo.browser}</td>
+            </tr>
+          </table>
+          
+          <div style="text-align: center;">
+            <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}/security" class="action-button">
+              查看安全中心
+            </a>
+          </div>
+          
+          <div class="security-tips">
+            <div class="security-title">🔒 安全建议</div>
+            <ul class="security-list">
+              <li>如果您没有进行此操作，请立即联系客服</li>
+              <li>定期检查您的登录历史记录</li>
+              <li>不要在公共设备上保存密码</li>
+              <li>启用两步验证提高账户安全性</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p class="footer-text">
+            此邮件由系统自动发送，请勿回复。如有疑问请联系我们QQ:915435295<br>
+            © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  try {
+    const result = await sendEmail(email, subject, htmlContent, true)
+    
+    if (!result.success) {
+      throw new Error(result.error || result.message || '邮件发送失败')
+    }
+    
+    console.log('✅ 密码重置安全通知发送成功:', email)
+    return result
+  } catch (error) {
+    console.error('❌ 密码重置安全通知发送失败:', error)
+    throw error
+  }
+}
+
 module.exports = async function handler(req, res) {
   // 设置CORS头部
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -427,7 +594,15 @@ module.exports = async function handler(req, res) {
       // 使用与注册相同的密码哈希方法
       const hashedPassword = await hashPassword(newPassword)
 
-      // 更新密码并清除重置信息
+      // 获取客户端信息
+      const clientIP = req.headers['x-forwarded-for'] || 
+                       req.headers['x-real-ip'] || 
+                       req.connection.remoteAddress || 
+                       req.socket.remoteAddress ||
+                       '未知'
+      const userAgent = req.headers['user-agent'] || '未知设备'
+
+      // 更新密码并清除重置信息，同时记录安全日志
       console.log('🔄 更新密码...')
       await users.updateOne(
         { _id: user._id },
@@ -440,11 +615,28 @@ module.exports = async function handler(req, res) {
             passwordResetCode: '',
             passwordResetExpires: '',
             passwordResetAttempts: ''
+          },
+          $push: {
+            securityLogs: {
+              type: 'password_reset',
+              timestamp: new Date(),
+              ip: clientIP,
+              userAgent: userAgent,
+              details: {
+                email: email,
+                resetMethod: 'email_verification'
+              }
+            }
           }
         }
       )
 
       console.log('✅ 密码重置完成:', user.email)
+
+      // 发送安全通知邮件（异步，不阻塞响应）
+      sendPasswordResetNotification(email, user.username, clientIP, userAgent).catch(error => {
+        console.error('发送密码重置安全通知失败:', error)
+      })
 
       return res.status(200).json({
         success: true,
