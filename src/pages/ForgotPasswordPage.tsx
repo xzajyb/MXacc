@@ -29,7 +29,7 @@ const ForgotPasswordPage: React.FC = () => {
 
     try {
       const response = await axios.post('/api/auth/password-recovery', { 
-        action: 'send-code',
+        step: 'send-code',
         email 
       })
       
@@ -85,13 +85,8 @@ const ForgotPasswordPage: React.FC = () => {
       return
     }
 
-    if (newPassword.length < 8) {
-      setError('密码长度不能少于8位')
-      return
-    }
-
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(newPassword)) {
-      setError('密码必须包含大小写字母和数字')
+    if (newPassword.length < 6) {
+      setError('密码长度不能少于6位')
       return
     }
 
@@ -101,9 +96,9 @@ const ForgotPasswordPage: React.FC = () => {
 
     try {
       const response = await axios.post('/api/auth/password-recovery', {
-        action: 'reset-password',
+        step: 'reset-password',
         email,
-        resetCode,
+        code: resetCode,
         newPassword
       })
       
@@ -259,7 +254,7 @@ const ForgotPasswordPage: React.FC = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="输入新密码（至少8位，包含大小写字母和数字）"
+                  placeholder="输入新密码（至少6位，包含大小写字母和数字）"
                   required
                 />
               </div>
