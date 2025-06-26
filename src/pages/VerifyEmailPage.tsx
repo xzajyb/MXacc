@@ -434,31 +434,35 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
         {/* 其他操作按钮 */}
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('点击了更改绑定邮箱按钮');
+                alert('更改邮箱按钮被点击了！');
                 setShowChangeEmail(true);
               }}
-              className="flex items-center justify-center space-x-2 py-3 px-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              type="button"
+              className="flex items-center justify-center space-x-2 py-3 px-4 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
             >
               <Settings className="w-4 h-4" />
               <span>更改绑定邮箱</span>
-            </motion.button>
+            </button>
             
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('点击了删除账号按钮');
+                alert('删除账号按钮被点击了！');
                 setShowDeleteAccount(true);
               }}
-              className="flex items-center justify-center space-x-2 py-3 px-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              type="button"
+              className="flex items-center justify-center space-x-2 py-3 px-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
             >
               <UserMinus className="w-4 h-4" />
               <span>删除账号</span>
-            </motion.button>
+            </button>
           </div>
 
           <div className="text-center">
