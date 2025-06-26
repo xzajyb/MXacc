@@ -28,15 +28,15 @@ const ForgotPasswordPage: React.FC = () => {
     setMessage('')
 
     try {
-      const response = await axios.post('/api/auth/password-recovery', { 
-        step: 'send-code',
+      const response = await axios.post('/api/auth/register', { 
+        action: 'send-reset-code',
         email 
       })
       
       setMessage(response.data.message)
-      if (response.data.expiresAt) {
-        setExpiresAt(new Date(response.data.expiresAt))
-        setSendInfo(response.data.sendInfo)
+      if (response.data.success) {
+        // 设置10分钟后过期
+        setExpiresAt(new Date(Date.now() + 10 * 60 * 1000))
         setStep('reset')
       }
     } catch (error: any) {
@@ -95,8 +95,8 @@ const ForgotPasswordPage: React.FC = () => {
     setMessage('')
 
     try {
-      const response = await axios.post('/api/auth/password-recovery', {
-        step: 'reset-password',
+      const response = await axios.post('/api/auth/register', {
+        action: 'reset-password',
         email,
         code: resetCode,
         newPassword
@@ -254,7 +254,7 @@ const ForgotPasswordPage: React.FC = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="输入新密码（至少6位，包含大小写字母和数字）"
+                  placeholder="输入新密码（至少6位）"
                   required
                 />
               </div>
@@ -324,8 +324,8 @@ const ForgotPasswordPage: React.FC = () => {
             <h4 className="text-sm font-medium text-gray-900 mb-2">🔐 安全提示</h4>
             <ul className="text-xs text-gray-600 space-y-1">
               <li>• 验证码有效期为10分钟</li>
-              <li>• 3分钟内最多可发送3次验证码</li>
-              <li>• 新密码必须包含大小写字母和数字</li>
+              <li>• 密码长度至少为6位</li>
+              <li>• 建议使用包含数字、字母的复杂密码</li>
               <li>• 如非本人操作，请立即联系客服</li>
             </ul>
           </div>
