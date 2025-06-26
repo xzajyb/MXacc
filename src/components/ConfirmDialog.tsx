@@ -2,16 +2,19 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, X } from 'lucide-react'
+import LoadingSpinner from './LoadingSpinner'
 
 interface ConfirmDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   title: string
-  message: string
+  message?: string
   confirmText?: string
   cancelText?: string
   type?: 'danger' | 'warning' | 'info'
+  loading?: boolean
+  customContent?: React.ReactNode
 }
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -22,7 +25,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   message,
   confirmText = '确定',
   cancelText = '取消',
-  type = 'warning'
+  type = 'warning',
+  loading = false,
+  customContent
 }) => {
   const getTypeConfig = () => {
     switch (type) {
@@ -50,9 +55,19 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   const config = getTypeConfig()
 
-  const handleConfirm = () => {
-    onConfirm()
-    onClose()
+  const handleConfirm = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault()
+    }
+    
+    try {
+      await onConfirm()
+      // 只有在操作成功且没有错误时才关闭对话框
+      // 让父组件决定何时关闭
+    } catch (error) {
+      // 错误由父组件处理，不关闭对话框
+      console.error('确认操作失败:', error)
+    }
   }
 
   const dialogContent = (
@@ -65,7 +80,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000]"
-            onClick={onClose}
+            onClick={loading ? undefined : onClose} // 加载时禁止点击关闭
             style={{ margin: 0, padding: 0 }}
           />
           
@@ -89,7 +104,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+                  disabled={loading}
+                  className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X size={20} />
                 </button>
@@ -97,24 +113,33 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               
               {/* 内容 */}
               <div className="p-6">
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {message}
-                </p>
+                {customContent ? (
+                  <div>{customContent}</div>
+                ) : (
+                  message && (
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {message}
+                    </p>
+                  )
+                )}
               </div>
               
               {/* 按钮 */}
               <div className="flex justify-end space-x-3 p-6 bg-gray-50 dark:bg-gray-750">
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {cancelText}
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className={`px-4 py-2 text-sm font-medium ${config.confirmText} ${config.confirmBg} rounded-md transition-colors`}
+                  disabled={loading}
+                  className={`px-4 py-2 text-sm font-medium ${config.confirmText} ${config.confirmBg} rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2`}
                 >
-                  {confirmText}
+                  {loading && <LoadingSpinner size="sm" />}
+                  <span>{confirmText}</span>
                 </button>
               </div>
             </div>

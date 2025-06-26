@@ -56,6 +56,8 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
   const [newEmail, setNewEmail] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [changeEmailError, setChangeEmailError] = useState('');
+  const [deleteAccountError, setDeleteAccountError] = useState('');
   
   const navigate = useNavigate();
 
@@ -87,6 +89,16 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
 
     return () => clearInterval(timer);
   }, [codeExpiresAt, nextSendTime]);
+
+  // 清理对话框状态
+  useEffect(() => {
+    if (!showChangeEmail) {
+      setChangeEmailError(''); // 清除更改邮箱错误信息
+    }
+    if (!showDeleteAccount) {
+      setDeleteAccountError(''); // 清除删除账号错误信息
+    }
+  }, [showChangeEmail, showDeleteAccount]);
 
   const handleSendVerification = async () => {
     setLoading(true);
@@ -159,14 +171,14 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
     }
   };
 
-  const handleChangeEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleChangeEmail = async () => {
     if (!newEmail.trim() || !confirmPassword.trim()) {
-      setError('请填写完整信息');
+      setChangeEmailError('请填写完整信息');
       return;
     }
 
     setActionLoading(true);
+    setChangeEmailError('');
     setError('');
     setMessage('');
 
@@ -177,11 +189,12 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
         setShowChangeEmail(false);
         setNewEmail('');
         setConfirmPassword('');
+        setChangeEmailError('');
       } else {
-        setError(result.message);
+        setChangeEmailError(result.message);
       }
     } catch (err) {
-      setError('更改邮箱失败');
+      setChangeEmailError('更改邮箱失败');
     } finally {
       setActionLoading(false);
     }
@@ -189,11 +202,12 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
 
   const handleDeleteAccount = async () => {
     if (!confirmPassword.trim()) {
-      setError('请输入密码确认删除');
+      setDeleteAccountError('请输入密码确认删除');
       return;
     }
 
     setActionLoading(true);
+    setDeleteAccountError('');
     setError('');
     setMessage('');
 
@@ -202,12 +216,14 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
       if (result.success) {
         setMessage(result.message);
         setShowDeleteAccount(false);
+        setConfirmPassword('');
+        setDeleteAccountError('');
         // 账户删除成功，会自动登出
       } else {
-        setError(result.message);
+        setDeleteAccountError(result.message);
       }
     } catch (err) {
-      setError('删除账号失败');
+      setDeleteAccountError('删除账号失败');
     } finally {
       setActionLoading(false);
     }
@@ -509,10 +525,12 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
       <ConfirmDialog
         isOpen={showChangeEmail}
         onClose={() => {
-          setShowChangeEmail(false);
-          setNewEmail('');
-          setConfirmPassword('');
-          setError('');
+          if (!actionLoading) {
+            setShowChangeEmail(false);
+            setNewEmail('');
+            setConfirmPassword('');
+            setChangeEmailError('');
+          }
         }}
         title="更改绑定邮箱"
         confirmText="确认更改"
@@ -521,7 +539,7 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
         onConfirm={handleChangeEmail}
         loading={actionLoading}
         customContent={
-          <form onSubmit={handleChangeEmail} className="space-y-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 新邮箱地址
@@ -551,7 +569,12 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
             <p className="text-sm text-slate-600 dark:text-slate-400">
               更改邮箱后需要重新验证新邮箱地址
             </p>
-          </form>
+            {changeEmailError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-200">{changeEmailError}</p>
+              </div>
+            )}
+          </div>
         }
       />
 
@@ -559,9 +582,11 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
       <ConfirmDialog
         isOpen={showDeleteAccount}
         onClose={() => {
-          setShowDeleteAccount(false);
-          setConfirmPassword('');
-          setError('');
+          if (!actionLoading) {
+            setShowDeleteAccount(false);
+            setConfirmPassword('');
+            setDeleteAccountError('');
+          }
         }}
         title="删除账号"
         confirmText="确认删除"
@@ -589,6 +614,11 @@ export default function VerifyEmailPage({ embedded = false }: VerifyEmailPagePro
                 required
               />
             </div>
+            {deleteAccountError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-200">{deleteAccountError}</p>
+              </div>
+            )}
           </div>
         }
       />
