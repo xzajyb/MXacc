@@ -144,14 +144,14 @@ module.exports = async function handler(req, res) {
     }
 
     // 生成token
-    const token = generateToken(user._id, rememberMe ? '48h' : '24h')
+    const token = generateToken(user._id, rememberMe ? '3d' : '18h')
 
     // 返回成功响应（无论邮箱是否验证都允许登录）
     res.status(200).json({
       success: true,
       message: '登录成功',
       token,
-      expiresIn: rememberMe ? '48h' : '24h',
+      expiresIn: rememberMe ? '3d' : '18h',
       needsEmailVerification: !user.isEmailVerified, // 提示前端是否需要验证
       user: {
         id: user._id,

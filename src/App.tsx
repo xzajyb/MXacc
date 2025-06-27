@@ -34,7 +34,7 @@ function App() {
             梦锡工作室
           </div>
           <div className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-            MXAcc 账号管理系统
+          梦锡工作室账号管理系统
           </div>
         </motion.div>
       </div>

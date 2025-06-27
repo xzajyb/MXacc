@@ -21,13 +21,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuthStatus = async () => {
     const token = localStorage.getItem('token')
+    console.log('🔍 检查认证状态，token存在:', !!token) // 调试日志
+    
     setTokenState(token)
     if (!token) {
+      console.log('❌ 没有找到token，设置为未登录状态')
       setLoading(false)
       return
     }
 
     try {
+      console.log('🚀 开始验证token...')
       // 调用API验证token并获取用户信息
       const response = await fetch('/api/user/profile', {
         headers: {
@@ -35,27 +39,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       })
 
+      console.log('📡 API响应状态:', response.status)
+
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
         setIsAuthenticated(true)
-        console.log('用户状态恢复成功:', data.user) // 调试日志
+        console.log('✅ 用户状态恢复成功:', data.user.username, data.user.email)
       } else {
-        // Token无效，清除本地存储
-        console.log('Token验证失败，状态码:', response.status) // 调试日志
-        localStorage.removeItem('token')
-        setTokenState(null)
-        setIsAuthenticated(false)
-        setUser(null)
+        const errorData = await response.json().catch(() => ({ message: '未知错误' }))
+        console.log('❌ Token验证失败，状态码:', response.status, '错误信息:', errorData.message)
+        
+        // 只有在401 (Unauthorized) 时才清除token，其他错误保留token
+        if (response.status === 401) {
+          console.log('🗑️ Token无效，清除本地存储')
+          localStorage.removeItem('token')
+          setTokenState(null)
+          setIsAuthenticated(false)
+          setUser(null)
+        } else {
+          console.log('⚠️ 服务器错误，保留token以便稍后重试')
+          // 服务器错误或网络问题，不清除token
+        }
       }
     } catch (error) {
-      console.error('检查认证状态失败:', error)
-      localStorage.removeItem('token')
-      setTokenState(null)
-      setIsAuthenticated(false)
-      setUser(null)
+      console.error('🚨 网络错误或API调用失败:', error)
+      // 网络错误不清除token，保留登录状态
+      console.log('⚠️ 网络错误，保留token以便稍后重试')
     } finally {
       setLoading(false)
+      console.log('🏁 认证状态检查完成')
     }
   }
 
@@ -63,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       setError(null)
+      console.log('🔐 开始登录流程，记住我:', rememberMe)
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -73,19 +87,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       const data = await response.json()
+      console.log('📡 登录API响应:', { status: response.status, success: data.success, expiresIn: data.expiresIn })
 
       if (response.ok) {
+        console.log('✅ 登录成功，保存token到localStorage')
         localStorage.setItem('token', data.token)
         setTokenState(data.token)
         setUser(data.user)
         setIsAuthenticated(true)
         
+        console.log('🏠 跳转到Dashboard')
         // 登录成功直接跳转到Dashboard，不管邮箱是否验证
         navigate('/dashboard')
       } else {
+        console.log('❌ 登录失败:', data.message)
         setError(data.message || '登录失败')
       }
     } catch (error) {
+      console.error('🚨 登录过程中发生网络错误:', error)
       setError('网络错误，请稍后重试')
     } finally {
       setLoading(false)
@@ -126,10 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
+    console.log('🚪 用户登出')
     localStorage.removeItem('token')
     setTokenState(null)
     setUser(null)
     setIsAuthenticated(false)
+    setError(null)
     navigate('/login')
   }
 
@@ -275,6 +296,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) return
 
     try {
+      console.log('🔄 刷新用户信息...')
       const response = await fetch('/api/user/profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -284,9 +306,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
+        console.log('✅ 用户信息刷新成功')
+      } else if (response.status === 401) {
+        console.log('❌ Token已失效，自动登出')
+        logout()
       }
     } catch (error) {
-      console.error('刷新用户信息失败:', error)
+      console.error('🚨 刷新用户信息失败:', error)
+    }
+  }
+
+  // 检查token是否即将过期的工具函数
+  const checkTokenExpiry = () => {
+    const token = localStorage.getItem('token')
+    if (!token) return false
+
+    try {
+      // 简单的JWT解析（仅用于检查过期时间）
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const currentTime = Date.now() / 1000
+      const timeUntilExpiry = payload.exp - currentTime
+      
+      console.log('⏰ Token还有', Math.round(timeUntilExpiry / 3600), '小时过期')
+      
+      // 如果少于1小时就过期，返回true
+      return timeUntilExpiry < 3600
+    } catch (error) {
+      console.error('解析token失败:', error)
+      return true
     }
   }
 
@@ -304,6 +351,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifyEmail,
     changeEmail,
     deleteAccount,
+    checkTokenExpiry,
   }
 
   return (

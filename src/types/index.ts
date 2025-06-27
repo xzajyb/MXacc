@@ -105,7 +105,7 @@ export interface AuthContextType {
   loading: boolean
   error: string | null
   token: string | null
-  login: (emailOrUsername: string, password: string) => Promise<void>
+  login: (emailOrUsername: string, password: string, rememberMe?: boolean) => Promise<void>
   register: (username: string, email: string, password: string) => Promise<void>
   logout: () => void
   refreshUser: () => Promise<void>
@@ -113,4 +113,5 @@ export interface AuthContextType {
   verifyEmail: (verificationCode: string) => Promise<{success: boolean, message: string}>
   changeEmail: (newEmail: string, confirmPassword: string) => Promise<{success: boolean, message: string}>
   deleteAccount: (confirmPassword: string) => Promise<{success: boolean, message: string}>
+  checkTokenExpiry: () => boolean
 } 
