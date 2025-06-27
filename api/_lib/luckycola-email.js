@@ -160,232 +160,86 @@ const sendWelcomeEmail = async (email, username) => {
     <html>
     <head>
       <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>欢迎加入 MXacc</title>
+      <title>欢迎加入梦锡工作室</title>
       <style>
-        body { 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Helvetica, Arial, sans-serif; 
-          margin: 0; 
-          padding: 40px 20px; 
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); 
-          line-height: 1.6;
-          color: #334155;
-        }
-        .container { 
-          max-width: 500px; 
-          margin: 0 auto; 
-          background: white; 
-          border-radius: 16px; 
-          overflow: hidden; 
-          box-shadow: 0 20px 40px rgba(0,0,0,0.08); 
-          border: 1px solid #e2e8f0;
-        }
-        .header { 
-          padding: 48px 32px 32px; 
-          text-align: center; 
-          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-          border-bottom: 1px solid #f1f5f9;
-        }
-        .logo-icon {
-          width: 64px;
-          height: 64px;
-          margin: 0 auto 24px;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
-        }
-        .welcome-title { 
-          font-size: 24px; 
-          font-weight: 600; 
-          color: #1e293b; 
-          margin: 0 0 8px; 
-          letter-spacing: -0.025em;
-        }
-        .welcome-subtitle { 
-          color: #64748b; 
-          font-size: 16px; 
-          margin: 0;
-          font-weight: 400;
-        }
-        .content { 
-          padding: 32px; 
-        }
-        .welcome-message {
-          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          border: 1px solid #bae6fd;
-          border-radius: 12px;
-          padding: 24px;
-          text-align: center;
-          margin-bottom: 32px;
-        }
-        .welcome-text {
-          color: #0f172a;
-          font-size: 16px;
-          margin: 0;
-          font-weight: 500;
-        }
-        .features { 
-          margin: 32px 0; 
-        }
-        .feature-item { 
-          display: flex; 
-          align-items: flex-start; 
-          margin-bottom: 24px; 
-          padding: 0;
-        }
-        .feature-icon { 
-          width: 40px; 
-          height: 40px; 
-          background: #f1f5f9;
-          border-radius: 10px; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          margin-right: 16px; 
-          flex-shrink: 0;
-          border: 1px solid #e2e8f0;
-        }
-        .feature-text { 
-          flex: 1; 
-          padding-top: 2px;
-        }
-        .feature-title { 
-          font-size: 15px; 
-          font-weight: 600; 
-          color: #1e293b; 
-          margin: 0 0 4px; 
-        }
-        .feature-desc { 
-          font-size: 14px; 
-          color: #64748b; 
-          margin: 0;
-          font-weight: 400;
-        }
-        .cta-section {
-          text-align: center;
-          margin: 40px 0 32px;
-          padding: 24px;
-          background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
-          border-radius: 12px;
-          border: 1px solid #e4e4e7;
-        }
-        .cta-button { 
-          display: inline-block; 
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          color: white; 
-          padding: 14px 32px; 
-          text-decoration: none; 
-          border-radius: 10px; 
-          font-weight: 600; 
-          font-size: 15px;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-          transition: all 0.2s ease;
-          border: 1px solid #2563eb;
-        }
-        .cta-button:hover { 
-          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-          transform: translateY(-1px);
-          box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-        }
-        .footer { 
-          background: #f8fafc; 
-          padding: 24px 32px; 
-          text-align: center; 
-          border-top: 1px solid #f1f5f9; 
-        }
-        .footer-text { 
-          color: #64748b; 
-          font-size: 13px; 
-          margin: 0; 
-          line-height: 1.5;
-        }
-        @media (max-width: 600px) {
-          body { padding: 20px 10px; }
-          .container { margin: 0 10px; }
-          .header { padding: 32px 24px 24px; }
-          .content { padding: 24px; }
-          .welcome-title { font-size: 22px; }
-        }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px; }
+        .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 30px; text-align: center; }
+        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
+        .logo-icon { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold; }
+        .subtitle { color: #e1f5ff; font-size: 18px; font-weight: bold; margin: 10px 0 0 0; }
+        .sub-subtitle { color: #b3e5ff; margin: 5px 0 0 0; font-size: 14px; }
+        .content { padding: 40px 30px; }
+        .welcome-section { text-align: center; margin-bottom: 20px; }
+        .welcome-icon { display: inline-block; width: 20px; height: 20px; background: #4facfe; border-radius: 3px; margin-right: 8px; }
+        .welcome-title { color: #333; margin-bottom: 20px; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .welcome-text { color: #666; line-height: 1.6; font-size: 16px; margin-bottom: 20px; }
+        .features-box { background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4facfe; }
+        .features-title { color: #1565c0; margin: 0 0 15px 0; font-size: 16px; display: flex; align-items: center; }
+        .features-title-icon { width: 16px; height: 16px; background: #1565c0; border-radius: 3px; margin-right: 8px; }
+        .features-list { color: #333; line-height: 1.8; margin: 0; padding-left: 20px; }
+        .features-list li { margin-bottom: 5px; }
+        .cta-section { text-align: center; margin: 30px 0; }
+        .cta-button { background: #4facfe; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; }
+        .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
+        .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
+          <div class="logo">
+            <div class="logo-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            欢迎加入
           </div>
-          <h1 class="welcome-title">欢迎加入 MXacc</h1>
-          <p class="welcome-subtitle">您的账户已成功创建</p>
+          <div class="subtitle">梦锡工作室</div>
+          <div class="sub-subtitle">MXacc 梦锡账号管理系统</div>
         </div>
         
         <div class="content">
-          <div class="welcome-message">
-            <p class="welcome-text">
-              您好 ${username}，感谢您选择梦锡工作室的服务！
-            </p>
+          <div class="welcome-section">
+            <h2 class="welcome-title">
+              <div class="welcome-icon"></div>
+              欢迎您的加入！
+            </h2>
+            <div class="welcome-text">尊敬的 <strong>${username}</strong>，</div>
+            <div class="welcome-text">欢迎您加入梦锡工作室大家庭！您的账号已成功创建。</div>
           </div>
           
-          <div class="features">
-            <div class="feature-item">
-              <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <circle cx="12" cy="16" r="1"></circle>
-                  <path d="m7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-              </div>
-              <div class="feature-text">
-                <div class="feature-title">安全保障</div>
-                <div class="feature-desc">企业级加密技术，确保您的数据安全</div>
-              </div>
-            </div>
-            
-            <div class="feature-item">
-              <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"></polyline>
-                </svg>
-              </div>
-              <div class="feature-text">
-                <div class="feature-title">高效便捷</div>
-                <div class="feature-desc">简化工作流程，提升您的使用效率</div>
-              </div>
-            </div>
-            
-            <div class="feature-item">
-              <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7z"></path>
-                  <path d="M9 12l2 2 4-4"></path>
-                </svg>
-              </div>
-              <div class="feature-text">
-                <div class="feature-title">可靠服务</div>
-                <div class="feature-desc">7x24小时稳定运行，随时为您服务</div>
-              </div>
-            </div>
+          <div class="features-box">
+            <h3 class="features-title">
+              <div class="features-title-icon"></div>
+              您可以使用以下功能：
+            </h3>
+            <ul class="features-list">
+              <li>个人资料管理</li>
+              <li>安全设置配置</li>
+              <li>登录历史查看</li>
+              <li>账户安全中心</li>
+            </ul>
           </div>
-          
+
           <div class="cta-section">
             <a href="${process.env.FRONTEND_URL || 'https://mxacc.mxos.top'}/dashboard" class="cta-button">
-              开始使用
+              立即体验
             </a>
-            <p style="color: #64748b; font-size: 13px; margin: 16px 0 0; line-height: 1.5;">
-              点击上方按钮即可访问您的个人仪表板
-            </p>
           </div>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">
+            此邮件由 <strong>梦锡工作室官方</strong> 发送<br>
+            感谢您对我们的信任与支持
+          </p>
         </div>
         
         <div class="footer">
           <p class="footer-text">
-            如有疑问请联系客服 QQ: 915435295<br>
-            © ${new Date().getFullYear()} 梦锡工作室 · 专业可靠的技术服务
+            此邮件由系统自动发送，请勿回复。如有疑问请联系我们QQ:915435295<br>
+            © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
           </p>
         </div>
       </div>
