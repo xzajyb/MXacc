@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('🚀 开始验证token...')
       // 调用API验证token并获取用户信息
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/user/user-profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -297,7 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log('🔄 刷新用户信息...')
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/user/user-profile', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

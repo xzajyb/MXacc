@@ -175,28 +175,15 @@ async function handleSendVerification(user, users, res) {
     }
   )
 
-  // 通过邮件服务发送验证邮件（带fallback）
+  // 发送验证邮件
   try {
-    console.log('📧 通过邮件服务发送验证邮件到:', user.email)
-    
-    // 使用fallback邮件发送
-    const { sendEmailWithFallback } = require('../_lib/email-fallback')
-    
-    const emailResult = await sendEmailWithFallback('verification', user.email, {
-      code: verificationCode,
-      username: user.username
-    })
-    
-    console.log(`✅ 验证邮件发送成功 (方式: ${emailResult.method})`)
+    console.log('📧 开始发送验证邮件到:', user.email)
+    const emailResult = await sendVerificationEmail(user.email, verificationCode, user.username)
+    console.log('✅ 验证邮件发送结果:', emailResult)
     
     res.status(200).json({ 
       message: '验证邮件已发送，请检查您的邮箱',
       expiresAt: expiresAt,
-      emailSent: {
-        method: emailResult.method,
-        success: true,
-        timestamp: new Date().toISOString()
-      },
       sendInfo: {
         sendCount: emailSendInfo.sendCount,
         remainingAttempts: Math.max(0, 3 - emailSendInfo.sendCount),
@@ -205,7 +192,7 @@ async function handleSendVerification(user, users, res) {
       }
     })
   } catch (emailError) {
-    console.error('❌ 邮件服务调用失败:', emailError)
+    console.error('❌ 发送邮件失败:', emailError)
     
     // 邮件发送失败，回滚计数器
     emailSendInfo.sendCount -= 1
@@ -259,32 +246,33 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
     }
   )
 
-  // 通过邮件服务发送欢迎邮件（带fallback）
+  // 发送欢迎邮件
   let welcomeEmailSent = false
   let welcomeEmailError = null
-  let welcomeEmailMethod = null
   
   try {
-    console.log('📧 通过邮件服务发送欢迎邮件到:', user.email, '用户名:', user.username)
+    console.log('📧 开始发送欢迎邮件到:', user.email, '用户名:', user.username)
     
-    // 使用fallback邮件发送
-    const { sendEmailWithFallback } = require('../_lib/email-fallback')
+    // 确保邮件模块已正确导入
+    if (!sendWelcomeEmail) {
+      throw new Error('欢迎邮件功能未正确初始化')
+    }
     
-    const welcomeResult = await sendEmailWithFallback('welcome', user.email, {
-      username: user.username
-    })
+    const welcomeResult = await sendWelcomeEmail(user.email, user.username)
+    console.log('✅ 欢迎邮件发送结果:', welcomeResult)
     
-    console.log(`✅ 欢迎邮件发送成功 (方式: ${welcomeResult.method})`)
+    if (welcomeResult && welcomeResult.success) {
     welcomeEmailSent = true
-    welcomeEmailMethod = welcomeResult.method
+    } else {
+      welcomeEmailError = welcomeResult?.error || '邮件服务返回失败状态'
+    }
   } catch (error) {
-    console.error('❌ 欢迎邮件发送失败:', error)
+    console.error('❌ 发送欢迎邮件失败:', error)
     welcomeEmailError = error.message || '未知错误'
   }
 
   // 构建响应消息
   let message = '邮箱验证成功！'
-  
   if (welcomeEmailSent) {
     message += '已发送欢迎邮件。'
   } else {
@@ -294,12 +282,7 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
 
   res.status(200).json({ 
     message: message,
-    welcomeEmail: {
-      sent: welcomeEmailSent,
-      method: welcomeEmailMethod,
-      timestamp: welcomeEmailSent ? new Date().toISOString() : null,
-      ...(welcomeEmailError && { error: welcomeEmailError })
-    },
+    welcomeEmailSent: welcomeEmailSent,
     ...(welcomeEmailError && process.env.NODE_ENV === 'development' && { 
       welcomeEmailError: welcomeEmailError 
     }),

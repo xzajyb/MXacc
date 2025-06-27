@@ -426,21 +426,9 @@ module.exports = async function handler(req, res) {
       const result = await users.insertOne(newUser)
       const token = generateToken(result.insertedId)
 
-      // 通过邮件服务发送欢迎邮件（异步，不阻塞响应）
-      fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.BASE_URL || 'http://localhost:3000'}/api/services/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          type: 'welcome',
-          to: email,
-          data: {
-            username: username
-          }
-        })
-      }).catch(error => {
-        console.error('欢迎邮件服务调用失败:', error)
+      // 发送欢迎邮件（异步，不阻塞响应）
+      sendWelcomeEmail(email, username).catch(error => {
+        console.error('发送欢迎邮件失败:', error)
       })
 
       console.log('✅ 用户注册成功:', username)
@@ -504,43 +492,19 @@ module.exports = async function handler(req, res) {
         }
       )
 
-      // 通过邮件服务发送密码重置邮件
+      // 发送邮件
       try {
-        console.log('📧 通过邮件服务发送密码重置邮件...')
+        console.log('📧 发送邮件...')
+        await sendPasswordResetEmail(email, verificationCode, user.username)
         
-        // 调用邮件服务API
-        const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                       process.env.BASE_URL || 'http://localhost:3000'
-        
-        const emailServiceResponse = await fetch(`${baseUrl}/api/services/email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            type: 'password_reset',
-            to: email,
-            data: {
-              code: verificationCode,
-              username: user.username
-            }
-          })
-        })
-
-        const emailResult = await emailServiceResponse.json()
-        
-        if (!emailResult.success) {
-          throw new Error(emailResult.message || '邮件服务调用失败')
-        }
-        
-        console.log('✅ 密码重置邮件已提交到发送队列')
+        console.log('✅ 密码重置邮件发送成功')
         
         return res.status(200).json({
           success: true,
           message: '验证码已发送到您的邮箱，请查收'
         })
       } catch (emailError) {
-        console.error('❌ 邮件服务调用失败:', emailError)
+        console.error('❌ 邮件发送失败:', emailError)
         return res.status(500).json({
           success: false,
           message: '邮件发送失败，请稍后重试',
@@ -695,35 +659,9 @@ module.exports = async function handler(req, res) {
 
       console.log('✅ 密码重置完成:', user.email)
 
-      // 通过邮件服务发送安全通知邮件（异步，不阻塞响应）
-      const deviceInfo = getDeviceInfo(userAgent)
-      const timestamp = new Date().toLocaleString('zh-CN', {
-        timeZone: 'Asia/Shanghai',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
-
-      fetch(`${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.BASE_URL || 'http://localhost:3000'}/api/services/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          type: 'password_reset_notification',
-          to: email,
-          data: {
-            username: user.username,
-            timestamp: timestamp,
-            ip: clientIP,
-            deviceInfo: deviceInfo
-          }
-        })
-      }).catch(error => {
-        console.error('密码重置安全通知邮件服务调用失败:', error)
+      // 发送安全通知邮件（异步，不阻塞响应）
+      sendPasswordResetNotification(email, user.username, clientIP, userAgent).catch(error => {
+        console.error('发送密码重置安全通知失败:', error)
       })
 
       return res.status(200).json({
