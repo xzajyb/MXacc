@@ -175,11 +175,36 @@ async function handleSendVerification(user, users, res) {
     }
   )
 
-  // 发送验证邮件
+  // 通过邮件服务发送验证邮件
   try {
-    console.log('📧 开始发送验证邮件到:', user.email)
-    const emailResult = await sendVerificationEmail(user.email, verificationCode, user.username)
-    console.log('✅ 验证邮件发送结果:', emailResult)
+    console.log('📧 通过邮件服务发送验证邮件到:', user.email)
+    
+    // 调用邮件服务API
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                   process.env.BASE_URL || 'http://localhost:3000'
+    
+    const emailServiceResponse = await fetch(`${baseUrl}/api/services/email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'verification',
+        to: user.email,
+        data: {
+          code: verificationCode,
+          username: user.username
+        }
+      })
+    })
+
+    const emailResult = await emailServiceResponse.json()
+    
+    if (!emailResult.success) {
+      throw new Error(emailResult.message || '邮件服务调用失败')
+    }
+    
+    console.log('✅ 验证邮件已提交到发送队列')
     
     res.status(200).json({ 
       message: '验证邮件已发送，请检查您的邮箱',
@@ -192,7 +217,7 @@ async function handleSendVerification(user, users, res) {
       }
     })
   } catch (emailError) {
-    console.error('❌ 发送邮件失败:', emailError)
+    console.error('❌ 邮件服务调用失败:', emailError)
     
     // 邮件发送失败，回滚计数器
     emailSendInfo.sendCount -= 1
@@ -246,28 +271,41 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
     }
   )
 
-  // 发送欢迎邮件
+  // 通过邮件服务发送欢迎邮件
   let welcomeEmailSent = false
   let welcomeEmailError = null
   
   try {
-    console.log('📧 开始发送欢迎邮件到:', user.email, '用户名:', user.username)
+    console.log('📧 通过邮件服务发送欢迎邮件到:', user.email, '用户名:', user.username)
     
-    // 确保邮件模块已正确导入
-    if (!sendWelcomeEmail) {
-      throw new Error('欢迎邮件功能未正确初始化')
-    }
+    // 调用邮件服务API发送欢迎邮件
+    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                   process.env.BASE_URL || 'http://localhost:3000'
     
-    const welcomeResult = await sendWelcomeEmail(user.email, user.username)
-    console.log('✅ 欢迎邮件发送结果:', welcomeResult)
+    const welcomeEmailResponse = await fetch(`${baseUrl}/api/services/email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'welcome',
+        to: user.email,
+        data: {
+          username: user.username
+        }
+      })
+    })
+
+    const welcomeResult = await welcomeEmailResponse.json()
+    console.log('✅ 欢迎邮件服务响应:', welcomeResult)
     
     if (welcomeResult && welcomeResult.success) {
       welcomeEmailSent = true
     } else {
-      welcomeEmailError = welcomeResult?.error || '邮件服务返回失败状态'
+      welcomeEmailError = welcomeResult?.message || '邮件服务返回失败状态'
     }
   } catch (error) {
-    console.error('❌ 发送欢迎邮件失败:', error)
+    console.error('❌ 欢迎邮件服务调用失败:', error)
     welcomeEmailError = error.message || '未知错误'
   }
 
