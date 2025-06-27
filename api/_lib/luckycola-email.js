@@ -162,83 +162,79 @@ const sendWelcomeEmail = async (email, username) => {
       <meta charset="utf-8">
       <title>欢迎加入梦锡工作室</title>
       <style>
-        body { font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
-        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; margin-bottom: 20px; }
-        .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 30px; text-align: center; }
-        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
-        .logo-icon { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-weight: bold; }
-        .subtitle { color: #e1f5ff; font-size: 18px; font-weight: bold; margin: 10px 0 0 0; }
-        .sub-subtitle { color: #b3e5ff; margin: 5px 0 0 0; font-size: 14px; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }
+        .logo-section { display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
+        .logo-img { width: 40px; height: 40px; margin-right: 12px; }
+        .logo { color: white; font-size: 28px; font-weight: bold; margin: 0; }
+        .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; margin: 0; }
         .content { padding: 40px 30px; }
-        .welcome-section { text-align: center; margin-bottom: 20px; }
-        .welcome-icon { display: inline-block; width: 20px; height: 20px; background: #4facfe; border-radius: 3px; margin-right: 8px; }
-        .welcome-title { color: #333; margin-bottom: 20px; font-size: 20px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        .welcome-text { color: #666; line-height: 1.6; font-size: 16px; margin-bottom: 20px; }
-        .features-box { background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4facfe; }
-        .features-title { color: #1565c0; margin: 0 0 15px 0; font-size: 16px; display: flex; align-items: center; }
-        .features-title-icon { width: 16px; height: 16px; background: #1565c0; border-radius: 3px; margin-right: 8px; }
-        .features-list { color: #333; line-height: 1.8; margin: 0; padding-left: 20px; }
-        .features-list li { margin-bottom: 5px; }
-        .cta-section { text-align: center; margin: 30px 0; }
-        .cta-button { background: #4facfe; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; }
+        .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
+        .celebration { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center; }
+        .celebration-icon { display: inline-block; width: 48px; height: 48px; background: #10b981; border-radius: 50%; color: white; line-height: 48px; font-size: 24px; margin-bottom: 10px; }
+        .welcome-title { font-size: 20px; color: #1f2937; margin: 0; font-weight: bold; }
+        .welcome-message { color: #4b5563; line-height: 1.6; margin: 25px 0; }
+        .features { background: #f0f9ff; border-left: 4px solid #10b981; padding: 20px; margin: 25px 0; border-radius: 4px; }
+        .features-title { color: #065f46; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
+        .features-list { color: #047857; margin: 0; padding-left: 20px; }
+        .cta-button { background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; text-align: center; margin: 25px 0; }
         .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
         .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
+        .icon { display: inline-block; width: 16px; height: 16px; margin-right: 8px; }
+        .shield-icon { background: #065f46; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">
-            <div class="logo-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            欢迎加入
+          <div class="logo-section">
+            <img src="https://mxacc.mxos.top/logo.svg" alt="MXacc Logo" class="logo-img">
+            <div class="logo">梦锡账号</div>
           </div>
           <div class="subtitle">梦锡工作室</div>
-          <div class="sub-subtitle">MXacc 梦锡账号管理系统</div>
         </div>
         
         <div class="content">
-          <div class="welcome-section">
-            <h2 class="welcome-title">
-              <div class="welcome-icon"></div>
-              欢迎您的加入！
-            </h2>
-            <div class="welcome-text">尊敬的 <strong>${username}</strong>，</div>
-            <div class="welcome-text">欢迎您加入梦锡工作室大家庭！您的账号已成功创建。</div>
+          <div class="greeting">
+            您好 ${username}！
           </div>
           
-          <div class="features-box">
-            <h3 class="features-title">
-              <div class="features-title-icon"></div>
-              您可以使用以下功能：
-            </h3>
+          <div class="celebration">
+            <div class="celebration-icon">✓</div>
+            <div class="welcome-title">欢迎加入梦锡工作室！</div>
+          </div>
+          
+          <p class="welcome-message">
+            恭喜您成功注册梦锡账号！您的账户已经创建完成，现在可以开始使用我们的服务。
+          </p>
+          
+          <div class="features">
+            <div class="features-title">
+              <span class="icon shield-icon"></span>您可以使用以下功能
+            </div>
             <ul class="features-list">
-              <li>个人资料管理</li>
-              <li>安全设置配置</li>
-              <li>登录历史查看</li>
-              <li>账户安全中心</li>
+              <li>个人资料管理和设置</li>
+              <li>账户安全中心配置</li>
+              <li>登录历史记录查看</li>
+              <li>多系统统一身份认证</li>
             </ul>
           </div>
-
-          <div class="cta-section">
+          
+          <div style="text-align: center;">
             <a href="${process.env.FRONTEND_URL || 'https://mxacc.mxos.top'}/dashboard" class="cta-button">
               立即体验
             </a>
           </div>
           
-          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-          <p style="color: #999; font-size: 14px; margin: 0; text-align: center;">
-            此邮件由 <strong>梦锡工作室官方</strong> 发送<br>
-            感谢您对我们的信任与支持
+          <p class="welcome-message">
+            如果您有任何问题或需要帮助，请随时联系我们。感谢您选择梦锡账号！
           </p>
         </div>
         
         <div class="footer">
           <p class="footer-text">
-            此邮件由系统自动发送，请勿回复。如有疑问请联系我们QQ:915435295<br>
+            此邮件由系统自动发送，请勿回复,如有疑问请联系我们QQ:915435295<br>
             © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
           </p>
         </div>
