@@ -160,240 +160,232 @@ const sendWelcomeEmail = async (email, username) => {
     <html>
     <head>
       <meta charset="utf-8">
-      <title>欢迎加入梦锡工作室</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>欢迎加入 MXacc</title>
       <style>
         body { 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Helvetica, Arial, sans-serif; 
           margin: 0; 
-          padding: 0; 
-          background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+          padding: 40px 20px; 
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); 
           line-height: 1.6;
+          color: #334155;
         }
         .container { 
-          max-width: 600px; 
-          margin: 40px auto; 
+          max-width: 500px; 
+          margin: 0 auto; 
           background: white; 
-          border-radius: 16px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-          overflow: hidden;
+          border-radius: 16px; 
+          overflow: hidden; 
+          box-shadow: 0 20px 40px rgba(0,0,0,0.08); 
+          border: 1px solid #e2e8f0;
         }
         .header { 
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-          padding: 48px 32px; 
+          padding: 48px 32px 32px; 
           text-align: center; 
-          position: relative;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border-bottom: 1px solid #f1f5f9;
         }
-        .header::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="stars" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23stars)"/></svg>');
-          opacity: 0.3;
-        }
-        .logo { 
-          color: white; 
-          font-size: 32px; 
-          font-weight: 700; 
-          margin-bottom: 8px;
-          position: relative;
-          z-index: 1;
-        }
-        .subtitle { 
-          color: rgba(255,255,255,0.9); 
-          font-size: 16px;
-          position: relative;
-          z-index: 1;
-        }
-        .content { 
-          padding: 48px 32px; 
-        }
-        .welcome-section {
-          text-align: center;
-          margin-bottom: 40px;
-        }
-        .welcome-icon {
-          width: 80px;
-          height: 80px;
+        .logo-icon {
+          width: 64px;
+          height: 64px;
           margin: 0 auto 24px;
-          background: linear-gradient(135deg, #667eea, #764ba2);
-          border-radius: 50%;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
         }
         .welcome-title { 
-          font-size: 28px; 
-          color: #1a202c; 
-          margin: 0 0 16px 0; 
-          font-weight: 700;
+          font-size: 24px; 
+          font-weight: 600; 
+          color: #1e293b; 
+          margin: 0 0 8px; 
+          letter-spacing: -0.025em;
         }
-        .welcome-desc {
-          color: #4a5568; 
+        .welcome-subtitle { 
+          color: #64748b; 
+          font-size: 16px; 
+          margin: 0;
+          font-weight: 400;
+        }
+        .content { 
+          padding: 32px; 
+        }
+        .welcome-message {
+          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+          border: 1px solid #bae6fd;
+          border-radius: 12px;
+          padding: 24px;
+          text-align: center;
+          margin-bottom: 32px;
+        }
+        .welcome-text {
+          color: #0f172a;
           font-size: 16px;
           margin: 0;
-          max-width: 480px;
-          margin: 0 auto;
+          font-weight: 500;
         }
         .features { 
-          margin: 48px 0; 
+          margin: 32px 0; 
         }
         .feature-item { 
           display: flex; 
           align-items: flex-start; 
-          margin: 24px 0; 
-          padding: 24px; 
-          background: #f7fafc; 
-          border-radius: 12px;
-          border-left: 4px solid #667eea;
-          transition: all 0.3s ease;
+          margin-bottom: 24px; 
+          padding: 0;
         }
         .feature-icon { 
-          width: 48px; 
-          height: 48px; 
-          background: linear-gradient(135deg, #667eea, #764ba2); 
-          border-radius: 12px; 
+          width: 40px; 
+          height: 40px; 
+          background: #f1f5f9;
+          border-radius: 10px; 
           display: flex; 
           align-items: center; 
           justify-content: center; 
-          margin-right: 20px;
+          margin-right: 16px; 
           flex-shrink: 0;
-          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+          border: 1px solid #e2e8f0;
         }
         .feature-text { 
           flex: 1; 
+          padding-top: 2px;
         }
         .feature-title { 
+          font-size: 15px; 
           font-weight: 600; 
-          color: #1a202c; 
-          margin: 0 0 8px 0;
-          font-size: 18px;
+          color: #1e293b; 
+          margin: 0 0 4px; 
         }
         .feature-desc { 
-          color: #4a5568; 
-          font-size: 14px;
+          font-size: 14px; 
+          color: #64748b; 
           margin: 0;
+          font-weight: 400;
         }
         .cta-section {
           text-align: center;
-          margin: 48px 0;
+          margin: 40px 0 32px;
+          padding: 24px;
+          background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
+          border-radius: 12px;
+          border: 1px solid #e4e4e7;
         }
         .cta-button { 
-          background: linear-gradient(135deg, #667eea, #764ba2); 
-          color: white; 
-          padding: 16px 32px; 
-          text-decoration: none; 
-          border-radius: 12px; 
           display: inline-block; 
-          font-weight: 600;
-          font-size: 16px;
-          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-          transition: all 0.3s ease;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white; 
+          padding: 14px 32px; 
+          text-decoration: none; 
+          border-radius: 10px; 
+          font-weight: 600; 
+          font-size: 15px;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+          transition: all 0.2s ease;
+          border: 1px solid #2563eb;
         }
-        .cta-button:hover {
-          box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
-          transform: translateY(-2px);
+        .cta-button:hover { 
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
         }
         .footer { 
           background: #f8fafc; 
-          padding: 32px; 
+          padding: 24px 32px; 
           text-align: center; 
-          border-top: 1px solid #e2e8f0;
+          border-top: 1px solid #f1f5f9; 
         }
         .footer-text { 
-          color: #718096; 
-          font-size: 14px; 
-          margin: 0;
-          line-height: 1.6;
+          color: #64748b; 
+          font-size: 13px; 
+          margin: 0; 
+          line-height: 1.5;
         }
-        .divider {
-          height: 1px;
-          background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
-          margin: 32px 0;
+        @media (max-width: 600px) {
+          body { padding: 20px 10px; }
+          .container { margin: 0 10px; }
+          .header { padding: 32px 24px 24px; }
+          .content { padding: 24px; }
+          .welcome-title { font-size: 22px; }
         }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">MXacc</div>
-          <div class="subtitle">梦锡工作室账号系统</div>
+          <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <h1 class="welcome-title">欢迎加入 MXacc</h1>
+          <p class="welcome-subtitle">您的账户已成功创建</p>
         </div>
         
         <div class="content">
-          <div class="welcome-section">
-            <div class="welcome-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22,4 12,14.01 9,11.01"/>
-              </svg>
-            </div>
-            <h1 class="welcome-title">欢迎加入梦锡工作室，${username}！</h1>
-            <p class="welcome-desc">
-              恭喜您成功注册梦锡账号！您的账户已准备就绪，现在可以享受我们提供的各种便捷服务。
+          <div class="welcome-message">
+            <p class="welcome-text">
+              您好 ${username}，感谢您选择梦锡工作室的服务！
             </p>
           </div>
           
           <div class="features">
             <div class="feature-item">
               <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <circle cx="12" cy="16" r="1"></circle>
+                  <path d="m7 11V7a5 5 0 0 1 10 0v4"></path>
                 </svg>
               </div>
               <div class="feature-text">
-                <div class="feature-title">安全可靠</div>
-                <div class="feature-desc">采用企业级加密技术和多重安全验证，全方位保护您的账户和数据安全</div>
+                <div class="feature-title">安全保障</div>
+                <div class="feature-desc">企业级加密技术，确保您的数据安全</div>
               </div>
             </div>
             
             <div class="feature-item">
               <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"></polyline>
                 </svg>
               </div>
               <div class="feature-text">
                 <div class="feature-title">高效便捷</div>
-                <div class="feature-desc">一个账号畅通无阻，快速登录多个系统，简化您的数字生活体验</div>
+                <div class="feature-desc">简化工作流程，提升您的使用效率</div>
               </div>
             </div>
             
             <div class="feature-item">
               <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7z"></path>
+                  <path d="M9 12l2 2 4-4"></path>
                 </svg>
               </div>
               <div class="feature-text">
-                <div class="feature-title">现代设计</div>
-                <div class="feature-desc">精心打造的现代化界面设计，简洁优雅，为您带来愉悦的使用体验</div>
+                <div class="feature-title">可靠服务</div>
+                <div class="feature-desc">7x24小时稳定运行，随时为您服务</div>
               </div>
             </div>
           </div>
           
-          <div class="divider"></div>
-          
           <div class="cta-section">
             <a href="${process.env.FRONTEND_URL || 'https://mxacc.mxos.top'}/dashboard" class="cta-button">
-              立即开始使用
+              开始使用
             </a>
+            <p style="color: #64748b; font-size: 13px; margin: 16px 0 0; line-height: 1.5;">
+              点击上方按钮即可访问您的个人仪表板
+            </p>
           </div>
-          
-          <p style="color: #718096; font-size: 14px; text-align: center; margin: 32px 0 0 0;">
-            如果您有任何问题或建议，请随时联系我们。感谢您选择 MXacc 梦锡账号系统！
-          </p>
         </div>
         
         <div class="footer">
           <p class="footer-text">
-            此邮件由系统自动发送，请勿回复<br>
-            如有疑问请联系我们 QQ: 915435295<br>
-            © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
+            如有疑问请联系客服 QQ: 915435295<br>
+            © ${new Date().getFullYear()} 梦锡工作室 · 专业可靠的技术服务
           </p>
         </div>
       </div>
