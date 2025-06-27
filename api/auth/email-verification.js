@@ -175,36 +175,19 @@ async function handleSendVerification(user, users, res) {
     }
   )
 
-  // 通过邮件服务发送验证邮件
+  // 通过邮件服务发送验证邮件（带fallback）
   try {
     console.log('📧 通过邮件服务发送验证邮件到:', user.email)
     
-    // 调用邮件服务API
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                   process.env.BASE_URL || 'http://localhost:3000'
+    // 使用fallback邮件发送
+    const { sendEmailWithFallback } = require('../_lib/email-fallback')
     
-    const emailServiceResponse = await fetch(`${baseUrl}/api/services/email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        type: 'verification',
-        to: user.email,
-        data: {
-          code: verificationCode,
-          username: user.username
-        }
-      })
+    const emailResult = await sendEmailWithFallback('verification', user.email, {
+      code: verificationCode,
+      username: user.username
     })
-
-    const emailResult = await emailServiceResponse.json()
     
-    if (!emailResult.success) {
-      throw new Error(emailResult.message || '邮件服务调用失败')
-    }
-    
-    console.log('✅ 验证邮件已提交到发送队列')
+    console.log(`✅ 验证邮件发送成功 (方式: ${emailResult.method})`)
     
     res.status(200).json({ 
       message: '验证邮件已发送，请检查您的邮箱',
@@ -271,41 +254,24 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
     }
   )
 
-  // 通过邮件服务发送欢迎邮件
+  // 通过邮件服务发送欢迎邮件（带fallback）
   let welcomeEmailSent = false
   let welcomeEmailError = null
   
   try {
     console.log('📧 通过邮件服务发送欢迎邮件到:', user.email, '用户名:', user.username)
     
-    // 调用邮件服务API发送欢迎邮件
-    const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                   process.env.BASE_URL || 'http://localhost:3000'
+    // 使用fallback邮件发送
+    const { sendEmailWithFallback } = require('../_lib/email-fallback')
     
-    const welcomeEmailResponse = await fetch(`${baseUrl}/api/services/email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        type: 'welcome',
-        to: user.email,
-        data: {
-          username: user.username
-        }
-      })
+    const welcomeResult = await sendEmailWithFallback('welcome', user.email, {
+      username: user.username
     })
-
-    const welcomeResult = await welcomeEmailResponse.json()
-    console.log('✅ 欢迎邮件服务响应:', welcomeResult)
     
-    if (welcomeResult && welcomeResult.success) {
-      welcomeEmailSent = true
-    } else {
-      welcomeEmailError = welcomeResult?.message || '邮件服务返回失败状态'
-    }
+    console.log(`✅ 欢迎邮件发送成功 (方式: ${welcomeResult.method})`)
+    welcomeEmailSent = true
   } catch (error) {
-    console.error('❌ 欢迎邮件服务调用失败:', error)
+    console.error('❌ 欢迎邮件发送失败:', error)
     welcomeEmailError = error.message || '未知错误'
   }
 

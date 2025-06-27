@@ -802,7 +802,7 @@ async function processQueue() {
 }
 
 // API 处理函数
-export default async function handler(req, res) {
+async function handler(req, res) {
   // CORS 设置
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -876,10 +876,11 @@ export default async function handler(req, res) {
   }
 }
 
+// 导出处理函数（Vercel需要默认导出）
+module.exports = handler
+
 // 导出邮件类型常量和工具函数
-module.exports = {
-  EMAIL_TYPES,
-  generateVerificationCode,
-  addToQueue,
-  processQueue
-} 
+module.exports.EMAIL_TYPES = EMAIL_TYPES
+module.exports.generateVerificationCode = generateVerificationCode
+module.exports.addToQueue = addToQueue
+module.exports.processQueue = processQueue 

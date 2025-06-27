@@ -192,7 +192,7 @@ fetch('/api/services/email', {
 })
 ```
 
-### 5. 安全警报
+### 6. 安全警报
 
 ```javascript
 // 发送安全警报
@@ -211,7 +211,7 @@ fetch('/api/services/email', {
 })
 ```
 
-### 6. 管理员通知
+### 7. 管理员通知
 
 ```javascript
 // 发送管理员通知

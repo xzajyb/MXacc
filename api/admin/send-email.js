@@ -163,7 +163,7 @@ const EMAIL_TEMPLATES = {
             维护通知
           </h1>
           <p style="color: #fff3e0; margin: 10px 0 0 0; font-size: 16px;">梦锡工作室技术团队</p>
-        </div>
+              </div>
         <div style="background: white; padding: 40px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           <h2 style="color: #333; margin-bottom: 20px; display: flex; align-items: center;">
             <span style="color: #ffa726; font-size: 18px; margin-right: 8px; font-weight: bold;">i</span>
@@ -175,7 +175,7 @@ const EMAIL_TEMPLATES = {
               ${data.content || '我们将进行系统维护，期间可能影响服务使用。'}
             </div>
           </div>
-          
+
           <div style="text-align: center; margin: 30px 0;">
             <a href="${process.env.CLIENT_URL || 'https://mxacc.mxos.top'}" style="background: #ffa726; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">了解详情</a>
           </div>

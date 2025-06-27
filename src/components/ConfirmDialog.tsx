@@ -121,9 +121,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                   <div>{customContent}</div>
                 ) : (
                   message && (
-                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                      {message}
-                    </p>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {message}
+                </p>
                   )
                 )}
               </div>

@@ -53,10 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 只有在401 (Unauthorized) 时才清除token，其他错误保留token
         if (response.status === 401) {
           console.log('🗑️ Token无效，清除本地存储')
-          localStorage.removeItem('token')
-          setTokenState(null)
-          setIsAuthenticated(false)
-          setUser(null)
+        localStorage.removeItem('token')
+        setTokenState(null)
+        setIsAuthenticated(false)
+        setUser(null)
         } else {
           console.log('⚠️ 服务器错误，保留token以便稍后重试')
           // 服务器错误或网络问题，不清除token
