@@ -73,88 +73,19 @@ const sendVerificationEmail = async (email, code, username = '') => {
         .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; }
         .content { padding: 40px 30px; }
         .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
-        .code-container { 
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
-          border: 2px solid #3b82f6; 
-          border-radius: 16px; 
-          padding: 35px; 
-          text-align: center; 
-          margin: 30px 0;
-          box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
-          position: relative;
-          overflow: hidden;
-        }
-        .code-container::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, #3b82f6, #1d4ed8, #1e40af, #3b82f6);
-          background-size: 200% 100%;
-          animation: shimmer 2s linear infinite;
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .code { 
-          font-size: 36px; 
-          font-weight: 900; 
-          color: #1d4ed8; 
-          letter-spacing: 12px; 
-          font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-          text-shadow: 0 2px 4px rgba(29, 78, 216, 0.2);
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          position: relative;
-        }
-        .code-label { 
-          color: #1e40af; 
-          margin-bottom: 20px; 
-          font-size: 16px; 
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
+        .code-container { background: #f8fafc; border: 2px dashed #3b82f6; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
+        .code { font-size: 32px; font-weight: bold; color: #3b82f6; letter-spacing: 8px; font-family: 'Courier New', monospace; }
+        .code-label { color: #6b7280; margin-bottom: 15px; font-size: 14px; }
         .instructions { color: #4b5563; line-height: 1.6; margin: 25px 0; }
-        .warning { 
-          background: linear-gradient(135deg, #fef3cd 0%, #fde68a 100%); 
-          border: 1px solid #f59e0b; 
-          border-left: 4px solid #d97706; 
-          padding: 20px; 
-          margin: 25px 0; 
-          border-radius: 12px;
-          box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
-        }
-        .warning-text { 
-          color: #92400e; 
-          margin: 0; 
-          display: flex;
-          align-items: center;
-          font-weight: 500;
-        }
-        .warning-icon {
-          margin-right: 8px;
-          color: #d97706;
-          flex-shrink: 0;
-        }
+        .warning { background: #fef3cd; border-left: 4px solid #f59e0b; padding: 15px; margin: 25px 0; border-radius: 4px; }
+        .warning-text { color: #92400e; margin: 0; }
         .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
         .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
         .security-tips { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; }
         .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
         .security-list { color: #047857; margin: 0; padding-left: 20px; }
-        .security-tips { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 12px; padding: 20px; margin: 25px 0; }
-        .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
-        .security-list { color: #047857; margin: 0; padding-left: 20px; }
-        .security-icon {
-          margin-right: 8px;
-          color: #10b981;
-          flex-shrink: 0;
-        }
+        .icon { display: inline-block; width: 16px; height: 16px; margin-right: 8px; }
+        .shield-icon { background: #065f46; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
       </style>
     </head>
     <body>
@@ -184,27 +115,18 @@ const sendVerificationEmail = async (email, code, username = '') => {
           
           <div class="warning">
             <p class="warning-text">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="warning-icon">
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-                <path d="M12 9v4"></path>
-                <path d="m12 17 .01 0"></path>
-              </svg>
-              <span><strong>安全提醒：</strong>请勿将此验证码告诉任何人，梦锡工作人员不会主动向您索要验证码。</span>
+              <strong>安全提醒：</strong>请勿将此验证码告诉任何人，梦锡工作人员不会主动向您索要验证码。
             </p>
           </div>
           
           <div class="security-tips">
             <div class="security-title">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="security-icon">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                <path d="m9 12 2 2 4-4"></path>
-              </svg>
-              安全小贴士
+              <span class="icon shield-icon"></span>安全小贴士
             </div>
             <ul class="security-list">
-              <li>📱 定期更新您的账户密码</li>
-              <li>🚫 不要在公共设备上保存登录信息</li>
-              <li>⚠️ 发现异常活动请及时联系我们</li>
+              <li>定期更新您的账户密码</li>
+              <li>不要在公共设备上保存登录信息</li>
+              <li>发现异常活动请及时联系我们</li>
             </ul>
           </div>
         </div>
@@ -240,99 +162,157 @@ const sendWelcomeEmail = async (email, username) => {
       <meta charset="utf-8">
       <title>欢迎加入梦锡工作室</title>
       <style>
-        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
-        .container { max-width: 600px; margin: 0 auto; background: white; }
-        .header { background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 40px 30px; text-align: center; }
-        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; }
-        .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; }
-        .content { padding: 40px 30px; }
-        .welcome-title { font-size: 24px; color: #1f2937; margin-bottom: 20px; text-align: center; }
-        .features { margin: 30px 0; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; 
+          margin: 0; 
+          padding: 0; 
+          background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+          line-height: 1.6;
+        }
+        .container { 
+          max-width: 600px; 
+          margin: 40px auto; 
+          background: white; 
+          border-radius: 16px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+        }
+        .header { 
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+          padding: 48px 32px; 
+          text-align: center; 
+          position: relative;
+        }
+        .header::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="stars" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23stars)"/></svg>');
+          opacity: 0.3;
+        }
+        .logo { 
+          color: white; 
+          font-size: 32px; 
+          font-weight: 700; 
+          margin-bottom: 8px;
+          position: relative;
+          z-index: 1;
+        }
+        .subtitle { 
+          color: rgba(255,255,255,0.9); 
+          font-size: 16px;
+          position: relative;
+          z-index: 1;
+        }
+        .content { 
+          padding: 48px 32px; 
+        }
+        .welcome-section {
+          text-align: center;
+          margin-bottom: 40px;
+        }
+        .welcome-icon {
+          width: 80px;
+          height: 80px;
+          margin: 0 auto 24px;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }
+        .welcome-title { 
+          font-size: 28px; 
+          color: #1a202c; 
+          margin: 0 0 16px 0; 
+          font-weight: 700;
+        }
+        .welcome-desc {
+          color: #4a5568; 
+          font-size: 16px;
+          margin: 0;
+          max-width: 480px;
+          margin: 0 auto;
+        }
+        .features { 
+          margin: 48px 0; 
+        }
         .feature-item { 
           display: flex; 
-          align-items: center; 
-          margin: 20px 0; 
-          padding: 20px; 
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); 
-          border: 1px solid #e2e8f0;
+          align-items: flex-start; 
+          margin: 24px 0; 
+          padding: 24px; 
+          background: #f7fafc; 
           border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          border-left: 4px solid #667eea;
           transition: all 0.3s ease;
         }
         .feature-icon { 
           width: 48px; 
           height: 48px; 
-          background: linear-gradient(135deg, #dbeafe, #bfdbfe); 
-          border: 2px solid #3b82f6;
+          background: linear-gradient(135deg, #667eea, #764ba2); 
           border-radius: 12px; 
           display: flex; 
           align-items: center; 
           justify-content: center; 
-          margin-right: 15px; 
+          margin-right: 20px;
           flex-shrink: 0;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
-        .feature-icon svg {
-          color: #1d4ed8;
-          filter: drop-shadow(0 1px 2px rgba(59, 130, 246, 0.2));
+        .feature-text { 
+          flex: 1; 
         }
-        .feature-text { flex: 1; }
-        .feature-title { font-weight: bold; color: #1f2937; margin-bottom: 5px; }
-        .feature-desc { color: #6b7280; font-size: 14px; }
+        .feature-title { 
+          font-weight: 600; 
+          color: #1a202c; 
+          margin: 0 0 8px 0;
+          font-size: 18px;
+        }
+        .feature-desc { 
+          color: #4a5568; 
+          font-size: 14px;
+          margin: 0;
+        }
+        .cta-section {
+          text-align: center;
+          margin: 48px 0;
+        }
         .cta-button { 
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+          background: linear-gradient(135deg, #667eea, #764ba2); 
           color: white; 
           padding: 16px 32px; 
           text-decoration: none; 
           border-radius: 12px; 
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 600; 
+          display: inline-block; 
+          font-weight: 600;
           font-size: 16px;
-          text-align: center; 
-          margin: 25px 0;
-          box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
           transition: all 0.3s ease;
-          transform: translateY(0);
         }
         .cta-button:hover {
-          background: linear-gradient(135deg, #1d4ed8, #1e40af);
-          box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4);
+          box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
           transform: translateY(-2px);
         }
-        .cta-button svg {
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        .footer { 
+          background: #f8fafc; 
+          padding: 32px; 
+          text-align: center; 
+          border-top: 1px solid #e2e8f0;
         }
-        .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
-        .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
-        .celebration { 
-          background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); 
-          border: 2px solid #10b981; 
-          border-radius: 16px; 
-          padding: 30px; 
-          margin: 25px 0; 
-          text-align: center;
-          box-shadow: 0 8px 32px rgba(16, 185, 129, 0.15);
+        .footer-text { 
+          color: #718096; 
+          font-size: 14px; 
+          margin: 0;
+          line-height: 1.6;
         }
-        .celebration-icon { 
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 80px; 
-          height: 80px; 
-          background: linear-gradient(135deg, #ffffff, #f0fdf4); 
-          border: 3px solid #10b981;
-          border-radius: 50%; 
-          margin: 0 auto 15px;
-          box-shadow: 0 6px 24px rgba(16, 185, 129, 0.25);
-          animation: celebrateIcon 2s ease-in-out infinite;
-        }
-        @keyframes celebrateIcon {
-          0%, 100% { transform: scale(1) rotate(0deg); }
-          25% { transform: scale(1.05) rotate(5deg); }
-          75% { transform: scale(1.05) rotate(-5deg); }
+        .divider {
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+          margin: 32px 0;
         }
       </style>
     </head>
@@ -344,94 +324,76 @@ const sendWelcomeEmail = async (email, username) => {
         </div>
         
         <div class="content">
-          <div class="celebration">
-            <div class="celebration-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22,4 12,14.01 9,11.01"></polyline>
+          <div class="welcome-section">
+            <div class="welcome-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22,4 12,14.01 9,11.01"/>
               </svg>
             </div>
             <h1 class="welcome-title">欢迎加入梦锡工作室，${username}！</h1>
-            <p style="color: #10b981; font-weight: 600; margin: 10px 0 0 0;">邮箱验证成功</p>
-          </div>
-          
-          <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 16px; padding: 24px; margin: 30px 0; border: 1px solid #0ea5e9;">
-            <p style="color: #1e40af; line-height: 1.6; text-align: center; margin: 0; font-size: 16px;">
-              🎉 恭喜您成功注册梦锡账号！现在您可以享受我们提供的各种便捷服务。
+            <p class="welcome-desc">
+              恭喜您成功注册梦锡账号！您的账户已准备就绪，现在可以享受我们提供的各种便捷服务。
             </p>
           </div>
           
           <div class="features">
             <div class="feature-item">
               <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <circle cx="12" cy="16" r="1"></circle>
-                  <path d="m7 11 V7a5 5 0 0 1 10 0v4"></path>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
               </div>
               <div class="feature-text">
                 <div class="feature-title">安全可靠</div>
-                <div class="feature-desc">企业级安全防护，保障您的账户安全</div>
+                <div class="feature-desc">采用企业级加密技术和多重安全验证，全方位保护您的账户和数据安全</div>
               </div>
             </div>
             
             <div class="feature-item">
               <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"></polygon>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
                 </svg>
               </div>
               <div class="feature-text">
                 <div class="feature-title">高效便捷</div>
-                <div class="feature-desc">一键登录多个系统，提升使用效率</div>
+                <div class="feature-desc">一个账号畅通无阻，快速登录多个系统，简化您的数字生活体验</div>
               </div>
             </div>
             
             <div class="feature-item">
               <div class="feature-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="13.5" cy="6.5" r=".5"></circle>
-                  <circle cx="17.5" cy="10.5" r=".5"></circle>
-                  <circle cx="8.5" cy="7.5" r=".5"></circle>
-                  <circle cx="6.5" cy="12.5" r=".5"></circle>
-                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                 </svg>
               </div>
               <div class="feature-text">
                 <div class="feature-title">现代设计</div>
-                <div class="feature-desc">简洁美观的界面，带来愉悦的使用体验</div>
+                <div class="feature-desc">精心打造的现代化界面设计，简洁优雅，为您带来愉悦的使用体验</div>
               </div>
             </div>
           </div>
           
-          <div style="text-align: center; margin: 40px 0;">
+          <div class="divider"></div>
+          
+          <div class="cta-section">
             <a href="${process.env.FRONTEND_URL || 'https://mxacc.mxos.top'}/dashboard" class="cta-button">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
-                <path d="M3 3h18v18H3z"></path>
-                <path d="M9 9h6v6H9z"></path>
-                <path d="M3 9h18"></path>
-                <path d="M9 21V9"></path>
-              </svg>
-              立即体验
+              立即开始使用
             </a>
           </div>
           
-          <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 30px 0; border-left: 4px solid #10b981;">
-            <p style="color: #374151; font-size: 14px; margin: 0; line-height: 1.5;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle; color: #10b981;">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="m9 12 2 2 4-4"></path>
-              </svg>
-              如果您有任何问题或建议，请随时联系我们。感谢您选择 MXacc！
-            </p>
-          </div>
+          <p style="color: #718096; font-size: 14px; text-align: center; margin: 32px 0 0 0;">
+            如果您有任何问题或建议，请随时联系我们。感谢您选择 MXacc 梦锡账号系统！
+          </p>
         </div>
         
         <div class="footer">
           <p class="footer-text">
-            此邮件由系统自动发送，请勿回复,如有疑问请联系我们QQ:915435295<br>
-            © ${new Date().getFullYear()} 梦锡工作室MXOS. 保留所有权利
+            此邮件由系统自动发送，请勿回复<br>
+            如有疑问请联系我们 QQ: 915435295<br>
+            © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
           </p>
         </div>
       </div>
