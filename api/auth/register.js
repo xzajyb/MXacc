@@ -41,7 +41,7 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
         .container { max-width: 600px; margin: 0 auto; background: white; }
         .header { background: linear-gradient(135deg, #ef4444, #dc2626); padding: 40px 30px; text-align: center; }
-        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
         .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; }
         .content { padding: 40px 30px; }
         .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
@@ -54,14 +54,23 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
         .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
         .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
         .security-tips { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin: 25px 0; }
-        .security-title { color: #7f1d1d; font-weight: bold; margin-bottom: 10px; }
+        .security-title { color: #7f1d1d; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
         .security-list { color: #991b1b; margin: 0; padding-left: 20px; }
+        .icon { display: inline-block; width: 16px; height: 16px; margin-right: 8px; }
+        .header-icon { width: 24px; height: 24px; margin-right: 10px; }
+        
+        /* SVG 图标样式 */
+        .lock-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v2m-6 6h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .shield-icon { background: #7f1d1d; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">🔐 密码重置</div>
+          <div class="logo">
+            <span class="header-icon lock-icon"></span>
+            密码重置
+          </div>
           <div class="subtitle">梦锡工作室</div>
         </div>
         
@@ -90,7 +99,10 @@ const sendPasswordResetEmail = async (email, code, username = '') => {
           </div>
           
           <div class="security-tips">
-            <div class="security-title">🛡️ 安全建议</div>
+            <div class="security-title">
+              <span class="icon shield-icon"></span>
+              安全建议
+            </div>
             <ul class="security-list">
               <li>使用强密码，包含数字、字母和特殊字符</li>
               <li>不要在多个网站使用相同密码</li>
@@ -185,7 +197,7 @@ const sendPasswordResetNotification = async (email, username, ip, userAgent) => 
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
         .container { max-width: 600px; margin: 0 auto; background: white; }
         .header { background: linear-gradient(135deg, #f59e0b, #d97706); padding: 40px 30px; text-align: center; }
-        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
         .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; }
         .content { padding: 40px 30px; }
         .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
@@ -198,17 +210,28 @@ const sendPasswordResetNotification = async (email, username, ip, userAgent) => 
         .info-table th { background-color: #f9fafb; font-weight: bold; color: #374151; width: 120px; }
         .info-table td { color: #6b7280; }
         .security-tips { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; }
-        .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; }
+        .security-title { color: #065f46; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
         .security-list { color: #047857; margin: 0; padding-left: 20px; }
         .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
         .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
         .action-button { background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 20px 0; }
+        .icon { display: inline-block; width: 16px; height: 16px; margin-right: 8px; }
+        .header-icon { width: 24px; height: 24px; margin-right: 10px; }
+        .alert-svg { width: 48px; height: 48px; margin-bottom: 15px; }
+        
+        /* SVG 图标样式 */
+        .notification-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 17h5l-5 5-5-5h5V3h0z M5 5a2 2 0 012-2h3m0 0a2 2 0 012 2v1m-4-1h4m-4 0v1m4-1v1M9 8h6'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .shield-large-icon { background: #f59e0b; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .security-small-icon { background: #065f46; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v2m-6 6h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">🔐 安全通知</div>
+          <div class="logo">
+            <span class="header-icon notification-icon"></span>
+            安全通知
+          </div>
           <div class="subtitle">梦锡工作室</div>
         </div>
         
@@ -218,7 +241,7 @@ const sendPasswordResetNotification = async (email, username, ip, userAgent) => 
           </div>
           
           <div class="alert-box">
-            <div class="alert-icon">🛡️</div>
+            <div class="alert-svg shield-large-icon"></div>
             <div class="alert-title">您的账户密码已成功重置</div>
             <div class="alert-desc">如果这不是您本人的操作，请立即联系我们的客服团队</div>
           </div>
@@ -257,7 +280,10 @@ const sendPasswordResetNotification = async (email, username, ip, userAgent) => 
           </div>
           
           <div class="security-tips">
-            <div class="security-title">🔒 安全建议</div>
+            <div class="security-title">
+              <span class="icon security-small-icon"></span>
+              安全建议
+            </div>
             <ul class="security-list">
               <li>如果您没有进行此操作，请立即联系客服</li>
               <li>定期检查您的登录历史记录</li>

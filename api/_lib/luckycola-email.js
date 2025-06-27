@@ -165,32 +165,53 @@ const sendWelcomeEmail = async (email, username) => {
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
         .container { max-width: 600px; margin: 0 auto; background: white; }
         .header { background: linear-gradient(135deg, #10b981, #059669); padding: 40px 30px; text-align: center; }
-        .logo-section { display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
-        .logo-img { width: 40px; height: 40px; margin-right: 12px; }
-        .logo { color: white; font-size: 28px; font-weight: bold; margin: 0; }
-        .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; margin: 0; }
+        .logo { color: white; font-size: 28px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
+        .subtitle { color: rgba(255,255,255,0.9); font-size: 16px; }
         .content { padding: 40px 30px; }
         .greeting { font-size: 18px; color: #1f2937; margin-bottom: 20px; }
-        .celebration { background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; padding: 20px; margin: 25px 0; text-align: center; }
-        .celebration-icon { display: inline-block; width: 48px; height: 48px; background: #10b981; border-radius: 50%; color: white; line-height: 48px; font-size: 24px; margin-bottom: 10px; }
-        .welcome-title { font-size: 20px; color: #1f2937; margin: 0; font-weight: bold; }
-        .welcome-message { color: #4b5563; line-height: 1.6; margin: 25px 0; }
-        .features { background: #f0f9ff; border-left: 4px solid #10b981; padding: 20px; margin: 25px 0; border-radius: 4px; }
-        .features-title { color: #065f46; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
-        .features-list { color: #047857; margin: 0; padding-left: 20px; }
-        .cta-button { background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; text-align: center; margin: 25px 0; }
+        .welcome-container { background: #ecfdf5; border: 2px solid #10b981; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
+        .welcome-icon { width: 48px; height: 48px; margin: 0 auto 15px; }
+        .welcome-title { font-size: 24px; font-weight: bold; color: #065f46; margin-bottom: 10px; }
+        .welcome-desc { color: #6b7280; font-size: 14px; }
+        .instructions { color: #4b5563; line-height: 1.6; margin: 25px 0; }
+        .features-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin: 25px 0; }
+        .features-title { color: #374151; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; font-size: 16px; }
+        .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .feature-item { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .feature-icon { width: 32px; height: 32px; background: #3b82f6; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; position: relative; }
+        .feature-title { font-weight: bold; color: #1f2937; margin-bottom: 4px; font-size: 13px; }
+        .feature-desc { color: #6b7280; font-size: 12px; line-height: 1.4; }
+        .cta-section { text-align: center; margin: 30px 0; }
+        .cta-button { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-flex; align-items: center; font-weight: bold; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3); transition: transform 0.2s; }
+        .cta-button:hover { transform: translateY(-1px); }
+        .tips-section { background: #fef3cd; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 25px 0; }
+        .tips-title { color: #92400e; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
+        .tips-list { color: #d97706; margin: 0; padding-left: 20px; }
         .footer { background: #f9fafb; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e7eb; }
         .footer-text { color: #6b7280; font-size: 14px; margin: 0; }
         .icon { display: inline-block; width: 16px; height: 16px; margin-right: 8px; }
-        .shield-icon { background: #065f46; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .header-icon { width: 24px; height: 24px; margin-right: 10px; }
+        .cta-icon { width: 20px; height: 20px; margin-right: 8px; }
+        .feature-svg { width: 20px; height: 20px; }
+        
+        /* SVG 图标样式 */
+        .celebration-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .rocket-icon { background: #10b981; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 15v-3m0 0V9m0 3h3m-3 0H9m11 3a9 9 0 11-18 0 9 9 0 0118 0z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .sparkle-icon { background: #10b981; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .shield-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .bolt-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M13 10V3L4 14h7v7l9-11h-7z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .palette-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .cog-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .target-icon { background: white; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
+        .warning-icon { background: #f59e0b; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z'/%3E%3C/svg%3E") no-repeat center; mask-size: cover; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo-section">
-            <img src="https://mxacc.mxos.top/logo.svg" alt="MXacc Logo" class="logo-img">
-            <div class="logo">梦锡账号</div>
+          <div class="logo">
+            <span class="header-icon celebration-icon"></span>
+            欢迎加入
           </div>
           <div class="subtitle">梦锡工作室</div>
         </div>
@@ -200,41 +221,82 @@ const sendWelcomeEmail = async (email, username) => {
             您好 ${username}！
           </div>
           
-          <div class="celebration">
-            <div class="celebration-icon">✓</div>
-            <div class="welcome-title">欢迎加入梦锡工作室！</div>
-          </div>
-          
-          <p class="welcome-message">
-            恭喜您成功注册梦锡账号！您的账户已经创建完成，现在可以开始使用我们的服务。
+          <p class="instructions">
+            恭喜您成功注册梦锡账号！我们很高兴您加入梦锡工作室的大家庭。您的账户已激活，现在可以享受我们提供的各种专业服务。
           </p>
           
-          <div class="features">
-            <div class="features-title">
-              <span class="icon shield-icon"></span>您可以使用以下功能
-            </div>
-            <ul class="features-list">
-              <li>个人资料管理和设置</li>
-              <li>账户安全中心配置</li>
-              <li>登录历史记录查看</li>
-              <li>多系统统一身份认证</li>
-            </ul>
+          <div class="welcome-container">
+            <div class="welcome-icon rocket-icon"></div>
+            <div class="welcome-title">注册成功，开启精彩之旅！</div>
+            <div class="welcome-desc">您现在可以使用梦锡账号登录各种服务平台</div>
           </div>
           
-          <div style="text-align: center;">
+          <div class="features-section">
+            <div class="features-title">
+              <span class="icon sparkle-icon"></span>为您提供的核心功能
+            </div>
+            <div class="features-grid">
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <span class="feature-svg shield-icon"></span>
+                </div>
+                <div class="feature-title">安全防护</div>
+                <div class="feature-desc">企业级加密技术，多重身份验证保障</div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <span class="feature-svg bolt-icon"></span>
+                </div>
+                <div class="feature-title">高效管理</div>
+                <div class="feature-desc">统一账号体系，一键登录所有服务</div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <span class="feature-svg palette-icon"></span>
+                </div>
+                <div class="feature-title">现代界面</div>
+                <div class="feature-desc">精美设计，支持深色模式和国际化</div>
+              </div>
+              
+              <div class="feature-item">
+                <div class="feature-icon">
+                  <span class="feature-svg cog-icon"></span>
+                </div>
+                <div class="feature-title">个性定制</div>
+                <div class="feature-desc">丰富的设置选项，打造专属体验</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="cta-section">
             <a href="${process.env.FRONTEND_URL || 'https://mxacc.mxos.top'}/dashboard" class="cta-button">
-              立即体验
+              <span class="cta-icon target-icon"></span>
+              立即开始体验
             </a>
           </div>
           
-          <p class="welcome-message">
-            如果您有任何问题或需要帮助，请随时联系我们。感谢您选择梦锡账号！
+          <p class="instructions">
+            如果您在使用过程中遇到任何问题，我们的技术团队随时为您提供支持。
           </p>
+          
+          <div class="tips-section">
+            <div class="tips-title">
+              <span class="icon warning-icon"></span>使用小贴士
+            </div>
+            <ul class="tips-list">
+              <li>建议启用两步验证以提高账户安全性</li>
+              <li>定期更新密码并避免在多个平台使用相同密码</li>
+              <li>个人资料中可以上传头像和自定义昵称</li>
+              <li>关注我们的更新通知获取最新功能信息</li>
+            </ul>
+          </div>
         </div>
         
         <div class="footer">
           <p class="footer-text">
-            此邮件由系统自动发送，请勿回复,如有疑问请联系我们QQ:915435295<br>
+            此邮件由系统自动发送，请勿回复。如有疑问请联系我们QQ:915435295<br>
             © ${new Date().getFullYear()} 梦锡工作室. 保留所有权利
           </p>
         </div>
