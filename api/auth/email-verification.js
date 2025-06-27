@@ -192,6 +192,11 @@ async function handleSendVerification(user, users, res) {
     res.status(200).json({ 
       message: '验证邮件已发送，请检查您的邮箱',
       expiresAt: expiresAt,
+      emailSent: {
+        method: emailResult.method,
+        success: true,
+        timestamp: new Date().toISOString()
+      },
       sendInfo: {
         sendCount: emailSendInfo.sendCount,
         remainingAttempts: Math.max(0, 3 - emailSendInfo.sendCount),
@@ -257,6 +262,7 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
   // 通过邮件服务发送欢迎邮件（带fallback）
   let welcomeEmailSent = false
   let welcomeEmailError = null
+  let welcomeEmailMethod = null
   
   try {
     console.log('📧 通过邮件服务发送欢迎邮件到:', user.email, '用户名:', user.username)
@@ -270,6 +276,7 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
     
     console.log(`✅ 欢迎邮件发送成功 (方式: ${welcomeResult.method})`)
     welcomeEmailSent = true
+    welcomeEmailMethod = welcomeResult.method
   } catch (error) {
     console.error('❌ 欢迎邮件发送失败:', error)
     welcomeEmailError = error.message || '未知错误'
@@ -277,6 +284,7 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
 
   // 构建响应消息
   let message = '邮箱验证成功！'
+  
   if (welcomeEmailSent) {
     message += '已发送欢迎邮件。'
   } else {
@@ -286,7 +294,12 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
 
   res.status(200).json({ 
     message: message,
-    welcomeEmailSent: welcomeEmailSent,
+    welcomeEmail: {
+      sent: welcomeEmailSent,
+      method: welcomeEmailMethod,
+      timestamp: welcomeEmailSent ? new Date().toISOString() : null,
+      ...(welcomeEmailError && { error: welcomeEmailError })
+    },
     ...(welcomeEmailError && process.env.NODE_ENV === 'development' && { 
       welcomeEmailError: welcomeEmailError 
     }),
