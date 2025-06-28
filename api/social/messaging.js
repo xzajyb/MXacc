@@ -56,10 +56,9 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    console.log('=== Social Users API ===')
+    console.log('=== Social Messaging API ===')
     console.log('Method:', req.method)
-    console.log('Query:', req.query)
-    console.log('Body:', req.body)
+    console.log('URL:', req.url)
 
     // 连接数据库
     const client = await clientPromise
@@ -67,6 +66,8 @@ module.exports = async function handler(req, res) {
     const users = db.collection('users')
     const follows = db.collection('follows')
     const posts = db.collection('posts')
+    const messages = db.collection('messages')
+    const conversations = db.collection('conversations')
 
     // 验证用户身份
     const decoded = verifyToken(req.headers.authorization)
@@ -76,11 +77,12 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ success: false, message: '用户不存在' })
     }
 
+    // GET: 获取数据
     if (req.method === 'GET') {
-      const { action, userId, search, page = 1, limit = 20 } = req.query
+      const { action, page = 1, limit = 20, search, userId, conversationId } = req.query
 
-      if (action === 'search') {
-        // 搜索用户
+      // 搜索用户
+      if (action === 'search-users') {
         if (!search || search.trim().length === 0) {
           return res.status(400).json({ 
             success: false, 
@@ -97,20 +99,18 @@ module.exports = async function handler(req, res) {
             { 'profile.nickname': searchRegex },
             { email: searchRegex }
           ],
-          _id: { $ne: new ObjectId(decoded.userId) } // 排除自己
+          _id: { $ne: new ObjectId(decoded.userId) }
         })
           .skip(skip)
           .limit(parseInt(limit))
           .toArray()
 
-        // 检查关注状态
-        const usersWithFollowStatus = await Promise.all(userList.map(async (user) => {
-          const isFollowing = await follows.findOne({
-            followerId: new ObjectId(decoded.userId),
-            followingId: user._id
-          })
-
-          const [followersCount, followingCount, postsCount] = await Promise.all([
+        const usersWithStatus = await Promise.all(userList.map(async (user) => {
+          const [isFollowing, followersCount, followingCount, postsCount] = await Promise.all([
+            follows.findOne({
+              followerId: new ObjectId(decoded.userId),
+              followingId: user._id
+            }),
             follows.countDocuments({ followingId: user._id }),
             follows.countDocuments({ followerId: user._id }),
             posts.countDocuments({ authorId: user._id })
@@ -143,7 +143,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           success: true,
           data: {
-            users: usersWithFollowStatus,
+            users: usersWithStatus,
             pagination: {
               page: parseInt(page),
               limit: parseInt(limit),
@@ -154,8 +154,15 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      if (action === 'profile' && userId) {
-        // 获取用户详情
+      // 获取用户详情
+      if (action === 'user-profile') {
+        if (!userId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '用户ID不能为空' 
+          })
+        }
+
         const user = await getUserById(users, userId)
         
         if (!user) {
@@ -194,8 +201,15 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      if (action === 'followers' && userId) {
-        // 获取关注者列表
+      // 获取关注者列表
+      if (action === 'followers') {
+        if (!userId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '用户ID不能为空' 
+          })
+        }
+
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const followersList = await follows.find({ 
@@ -239,8 +253,15 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      if (action === 'following' && userId) {
-        // 获取关注列表
+      // 获取关注列表
+      if (action === 'following') {
+        if (!userId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '用户ID不能为空' 
+          })
+        }
+
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const followingList = await follows.find({ 
@@ -284,17 +305,164 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      // 获取会话列表
+      if (action === 'conversations') {
+        const skip = (parseInt(page) - 1) * parseInt(limit)
+        
+        const conversationsList = await conversations.find({
+          participants: new ObjectId(decoded.userId)
+        })
+          .sort({ lastMessageAt: -1 })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .toArray()
+
+        const conversationsWithDetails = await Promise.all(conversationsList.map(async (conversation) => {
+          // 获取对方用户信息
+          const otherUserId = conversation.participants.find(id => id.toString() !== decoded.userId)
+          const otherUser = await getUserById(users, otherUserId)
+          
+          // 获取最后一条消息
+          const lastMessage = await messages.findOne(
+            { conversationId: conversation._id },
+            { sort: { createdAt: -1 } }
+          )
+
+          // 获取未读消息数
+          const unreadCount = await messages.countDocuments({
+            conversationId: conversation._id,
+            senderId: { $ne: new ObjectId(decoded.userId) },
+            readAt: { $exists: false }
+          })
+
+          return {
+            id: conversation._id,
+            otherUser: {
+              id: otherUser._id,
+              username: otherUser.username,
+              nickname: otherUser.profile?.nickname || otherUser.username,
+              avatar: otherUser.profile?.avatar
+            },
+            lastMessage: lastMessage ? {
+              content: lastMessage.content,
+              senderId: lastMessage.senderId,
+              createdAt: lastMessage.createdAt
+            } : null,
+            unreadCount,
+            lastMessageAt: conversation.lastMessageAt,
+            createdAt: conversation.createdAt
+          }
+        }))
+
+        const total = await conversations.countDocuments({
+          participants: new ObjectId(decoded.userId)
+        })
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            conversations: conversationsWithDetails,
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total,
+              pages: Math.ceil(total / parseInt(limit))
+            }
+          }
+        })
+      }
+
+      // 获取消息列表
+      if (action === 'messages') {
+        if (!conversationId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '会话ID不能为空' 
+          })
+        }
+
+        // 验证用户是否为该会话的参与者
+        const conversation = await conversations.findOne({
+          _id: new ObjectId(conversationId),
+          participants: new ObjectId(decoded.userId)
+        })
+
+        if (!conversation) {
+          return res.status(403).json({ 
+            success: false, 
+            message: '无权访问此会话' 
+          })
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit)
+        
+        const messagesList = await messages.find({
+          conversationId: new ObjectId(conversationId)
+        })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .toArray()
+
+        const messagesWithSenders = await Promise.all(messagesList.map(async (message) => {
+          const sender = await getUserById(users, message.senderId)
+          return {
+            id: message._id,
+            content: message.content,
+            sender: {
+              id: sender._id,
+              username: sender.username,
+              nickname: sender.profile?.nickname || sender.username,
+              avatar: sender.profile?.avatar
+            },
+            isOwnMessage: message.senderId.toString() === decoded.userId,
+            readAt: message.readAt,
+            createdAt: message.createdAt
+          }
+        }))
+
+        // 标记消息为已读
+        await messages.updateMany(
+          {
+            conversationId: new ObjectId(conversationId),
+            senderId: { $ne: new ObjectId(decoded.userId) },
+            readAt: { $exists: false }
+          },
+          {
+            $set: { readAt: new Date() }
+          }
+        )
+
+        const total = await messages.countDocuments({
+          conversationId: new ObjectId(conversationId)
+        })
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            messages: messagesWithSenders.reverse(), // 按时间正序返回
+            pagination: {
+              page: parseInt(page),
+              limit: parseInt(limit),
+              total,
+              pages: Math.ceil(total / parseInt(limit))
+            }
+          }
+        })
+      }
+
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
       })
     }
 
+    // POST: 创建和操作
     if (req.method === 'POST') {
-      const { action, userId } = req.body
+      const { action, userId, content, receiverId } = req.body
 
+      // 关注用户
       if (action === 'follow') {
-        // 关注用户
         if (!userId) {
           return res.status(400).json({ 
             success: false, 
@@ -309,7 +477,6 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        // 检查目标用户是否存在
         const targetUser = await getUserById(users, userId)
         if (!targetUser) {
           return res.status(404).json({ 
@@ -318,7 +485,6 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        // 检查是否已经关注
         const existingFollow = await follows.findOne({
           followerId: new ObjectId(decoded.userId),
           followingId: new ObjectId(userId)
@@ -331,7 +497,6 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        // 创建关注关系
         await follows.insertOne({
           followerId: new ObjectId(decoded.userId),
           followingId: new ObjectId(userId),
@@ -349,8 +514,8 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      // 取消关注
       if (action === 'unfollow') {
-        // 取消关注
         if (!userId) {
           return res.status(400).json({ 
             success: false, 
@@ -381,6 +546,108 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      // 发送私信
+      if (action === 'send-message') {
+        if (!receiverId || !content) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '接收者ID和消息内容不能为空' 
+          })
+        }
+
+        if (content.trim().length === 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '消息内容不能为空' 
+          })
+        }
+
+        if (content.length > 1000) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '消息内容不能超过1000个字符' 
+          })
+        }
+
+        if (receiverId === decoded.userId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '不能给自己发送消息' 
+          })
+        }
+
+        // 验证接收者是否存在
+        const receiver = await getUserById(users, receiverId)
+        if (!receiver) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '接收者不存在' 
+          })
+        }
+
+        // 查找或创建会话
+        let conversation = await conversations.findOne({
+          participants: { 
+            $all: [
+              new ObjectId(decoded.userId), 
+              new ObjectId(receiverId)
+            ],
+            $size: 2
+          }
+        })
+
+        if (!conversation) {
+          // 创建新会话
+          const conversationResult = await conversations.insertOne({
+            participants: [
+              new ObjectId(decoded.userId),
+              new ObjectId(receiverId)
+            ],
+            createdAt: new Date(),
+            lastMessageAt: new Date()
+          })
+          conversation = { _id: conversationResult.insertedId }
+        }
+
+        // 创建消息
+        const newMessage = {
+          conversationId: conversation._id,
+          senderId: new ObjectId(decoded.userId),
+          content: content.trim(),
+          createdAt: new Date()
+        }
+
+        const messageResult = await messages.insertOne(newMessage)
+
+        // 更新会话的最后消息时间
+        await conversations.updateOne(
+          { _id: conversation._id },
+          { 
+            $set: { lastMessageAt: new Date() }
+          }
+        )
+
+        const sender = await getUserById(users, decoded.userId)
+
+        return res.status(201).json({
+          success: true,
+          message: '消息发送成功',
+          data: {
+            id: messageResult.insertedId,
+            content: newMessage.content,
+            conversationId: conversation._id,
+            sender: {
+              id: sender._id,
+              username: sender.username,
+              nickname: sender.profile?.nickname || sender.username,
+              avatar: sender.profile?.avatar
+            },
+            isOwnMessage: true,
+            createdAt: newMessage.createdAt
+          }
+        })
+      }
+
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
@@ -393,7 +660,7 @@ module.exports = async function handler(req, res) {
     })
 
   } catch (error) {
-    console.error('Social Users API Error:', error)
+    console.error('Social Messaging API Error:', error)
     return res.status(500).json({
       success: false,
       message: error.message || '服务器内部错误'
