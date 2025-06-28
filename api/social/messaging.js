@@ -355,26 +355,6 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        // 获取目标用户信息和隐私设置
-        const targetUser = await getUserById(users, userId)
-        if (!targetUser) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '用户不存在' 
-          })
-        }
-
-        // 检查隐私设置 - 如果不是本人且设置了不显示粉丝列表
-        const isOwnProfile = targetUser._id.toString() === decoded.userId
-        const showFollowers = targetUser.settings?.privacy?.showFollowers ?? true
-        
-        if (!isOwnProfile && !showFollowers) {
-          return res.status(403).json({ 
-            success: false, 
-            message: '该用户已设置粉丝列表为私密' 
-          })
-        }
-
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const followersList = await follows.find({ 
@@ -397,7 +377,6 @@ module.exports = async function handler(req, res) {
             nickname: user.profile?.nickname || user.username,
             avatar: user.profile?.avatar,
             bio: user.profile?.bio,
-            role: user.role || 'user',  // 添加角色信息用于管理员标识
             isFollowing: !!isFollowing,
             followedAt: follow.createdAt
           }
@@ -428,26 +407,6 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        // 获取目标用户信息和隐私设置
-        const targetUser = await getUserById(users, userId)
-        if (!targetUser) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '用户不存在' 
-          })
-        }
-
-        // 检查隐私设置 - 如果不是本人且设置了不显示关注列表
-        const isOwnProfile = targetUser._id.toString() === decoded.userId
-        const showFollowing = targetUser.settings?.privacy?.showFollowing ?? true
-        
-        if (!isOwnProfile && !showFollowing) {
-          return res.status(403).json({ 
-            success: false, 
-            message: '该用户已设置关注列表为私密' 
-          })
-        }
-
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const followingList = await follows.find({ 
@@ -470,7 +429,6 @@ module.exports = async function handler(req, res) {
             nickname: user.profile?.nickname || user.username,
             avatar: user.profile?.avatar,
             bio: user.profile?.bio,
-            role: user.role || 'user',  // 添加角色信息用于管理员标识
             isFollowing: !!isFollowing,
             followedAt: follow.createdAt
           }
@@ -789,6 +747,59 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
+      })
+    }
+
+    // DELETE: 删除操作
+    if (req.method === 'DELETE') {
+      const { action, messageId } = req.body
+
+      // 撤回消息
+      if (action === 'recall-message') {
+        if (!messageId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '消息ID不能为空' 
+          })
+        }
+
+        // 查找消息
+        const message = await messages.findOne({
+          _id: new ObjectId(messageId),
+          senderId: new ObjectId(decoded.userId)
+        })
+
+        if (!message) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '消息不存在或无权限撤回' 
+          })
+        }
+
+        // 检查消息是否在3分钟内
+        const now = new Date()
+        const messageTime = new Date(message.createdAt)
+        const diffInMinutes = (now - messageTime) / (1000 * 60)
+
+        if (diffInMinutes > 3) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '只能撤回3分钟内发送的消息' 
+          })
+        }
+
+        // 删除消息
+        await messages.deleteOne({ _id: new ObjectId(messageId) })
+
+        return res.status(200).json({
+          success: true,
+          message: '消息撤回成功'
+        })
+      }
+
+      return res.status(400).json({ 
+        success: false, 
+        message: '不支持的删除操作' 
       })
     }
 
