@@ -750,6 +750,112 @@ module.exports = async function handler(req, res) {
       })
     }
 
+    // DELETE: 删除操作
+    if (req.method === 'DELETE') {
+      const { action, messageId } = req.body
+
+      // 撤回消息
+      if (action === 'recall-message') {
+        if (!messageId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '消息ID不能为空' 
+          })
+        }
+
+        // 查找消息
+        const message = await messages.findOne({
+          _id: new ObjectId(messageId),
+          senderId: new ObjectId(decoded.userId)
+        })
+
+        if (!message) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '消息不存在或无权限撤回' 
+          })
+        }
+
+        // 检查消息是否在3分钟内
+        const now = new Date()
+        const messageTime = new Date(message.createdAt)
+        const diffInMinutes = (now - messageTime) / (1000 * 60)
+
+        if (diffInMinutes > 3) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '只能撤回3分钟内发送的消息' 
+          })
+        }
+
+        // 删除消息
+        await messages.deleteOne({ _id: new ObjectId(messageId) })
+
+        return res.status(200).json({
+          success: true,
+          message: '消息撤回成功'
+        })
+      }
+
+      return res.status(400).json({ 
+        success: false, 
+        message: '不支持的删除操作' 
+      })
+    }
+
+    // DELETE: 删除操作
+    if (req.method === 'DELETE') {
+      const { action, messageId } = req.body
+
+      // 撤回消息
+      if (action === 'recall-message') {
+        if (!messageId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '消息ID不能为空' 
+          })
+        }
+
+        // 查找消息
+        const message = await messages.findOne({
+          _id: new ObjectId(messageId),
+          senderId: new ObjectId(decoded.userId)
+        })
+
+        if (!message) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '消息不存在或无权限撤回' 
+          })
+        }
+
+        // 检查消息是否在3分钟内
+        const now = new Date()
+        const messageTime = new Date(message.createdAt)
+        const diffInMinutes = (now - messageTime) / (1000 * 60)
+
+        if (diffInMinutes > 3) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '只能撤回3分钟内发送的消息' 
+          })
+        }
+
+        // 删除消息
+        await messages.deleteOne({ _id: new ObjectId(messageId) })
+
+        return res.status(200).json({
+          success: true,
+          message: '消息撤回成功'
+        })
+      }
+
+      return res.status(400).json({ 
+        success: false, 
+        message: '不支持的删除操作' 
+      })
+    }
+
     return res.status(405).json({ 
       success: false, 
       message: '方法不允许' 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, User } from 'lucide-react'
+import { X, Send, User, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 
@@ -218,19 +219,35 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     }
   }, [selectedConversation])
 
-  // 格式化时间
+  // 格式化时间 - 智能显示
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    const diffInMinutes = (now.getTime() - date.getTime()) / (1000 * 60)
+    const diffInHours = diffInMinutes / 60
+    const diffInDays = diffInHours / 24
+    const diffInYears = diffInDays / 365
     
+    // 24小时内显示时间
     if (diffInHours < 24) {
       return date.toLocaleTimeString('zh-CN', { 
         hour: '2-digit', 
         minute: '2-digit' 
       })
-    } else {
+    }
+    // 一年内显示月日和时间
+    else if (diffInYears < 1) {
       return date.toLocaleDateString('zh-CN', { 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+    // 超过一年显示年月日和时间
+    else {
+      return date.toLocaleDateString('zh-CN', { 
+        year: 'numeric',
         month: '2-digit', 
         day: '2-digit',
         hour: '2-digit',
@@ -239,200 +256,303 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     }
   }
 
+  // 检查消息是否可以撤回（3分钟内）
+  const canRecallMessage = (createdAt: string, senderId: string) => {
+    if (senderId !== user?.id) return false
+    const messageTime = new Date(createdAt).getTime()
+    const now = new Date().getTime()
+    const diffInMinutes = (now - messageTime) / (1000 * 60)
+    return diffInMinutes <= 3
+  }
+
+  // 撤回消息
+  const recallMessage = async (messageId: string) => {
+    try {
+      const response = await fetch('/api/social/messaging', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'recall-message',
+          messageId
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        showSuccess('消息已撤回')
+        // 刷新消息列表
+        if (targetUser) {
+          await fetchMessages(undefined, targetUser.id)
+        } else if (selectedConversation) {
+          await fetchMessages(selectedConversation.id)
+        }
+      } else {
+        showError(data.message || '撤回失败')
+      }
+    } catch (error) {
+      console.error('撤回消息失败:', error)
+      showError('撤回失败')
+    }
+  }
+
+  // 获取日期分隔符
+  const getDateSeparator = (dateString: string) => {
+    const date = new Date(dateString)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    if (date.toDateString() === today.toDateString()) {
+      return '今天'
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return '昨天'
+    } else {
+      const diffInYears = (today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 365)
+      if (diffInYears < 1) {
+        return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })
+      } else {
+        return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+      }
+    }
+  }
+
+  // 检查是否需要显示日期分隔符
+  const shouldShowDateSeparator = (currentMessage: Message, previousMessage: Message | null) => {
+    if (!previousMessage) return true
+    
+    const currentDate = new Date(currentMessage.createdAt).toDateString()
+    const previousDate = new Date(previousMessage.createdAt).toDateString()
+    
+    return currentDate !== previousDate
+  }
+
   const showConversationsList = !targetUser // 只有不是通过主页私信时才显示会话列表
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 z-[10000] flex items-center justify-center p-4"
-          onClick={onClose}
-        >
+    <>
+      {isOpen && createPortal(
+        <AnimatePresence>
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[600px] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={onClose}
           >
-            {/* 标题栏 */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {targetUser ? `与 ${targetUser.nickname} 的对话` : '私信'}
-              </h3>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl h-[600px] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 标题栏 */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {targetUser ? `与 ${targetUser.nickname} 的对话` : '私信'}
+                </h3>
+                <button
+                  onClick={onClose}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="flex h-[544px]">
-              {/* 左侧会话列表 */}
-              {showConversationsList && (
-                <div className="w-1/3 border-r border-gray-200 dark:border-gray-600 overflow-y-auto">
-                  {loading ? (
-                    <div className="p-4 text-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">加载中...</p>
-                    </div>
-                  ) : conversations.length === 0 ? (
-                    <div className="p-4 text-center">
-                      <User className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500 dark:text-gray-400">暂无会话</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-gray-200 dark:divide-gray-600">
-                      {conversations.map((conv) => (
-                        <div
-                          key={conv.id}
-                          className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                            selectedConversation?.id === conv.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                          }`}
-                          onClick={() => setSelectedConversation(conv)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
-                              {conv.otherUser.avatar ? (
-                                <img src={conv.otherUser.avatar} alt={conv.otherUser.nickname} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                  <span className="text-white font-bold text-sm">{conv.otherUser.nickname.charAt(0).toUpperCase()}</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-medium text-gray-900 dark:text-white truncate text-sm">{conv.otherUser.nickname}</h4>
-                                {conv.unreadCount > 0 && (
-                                  <div className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                                    {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+              <div className="flex h-[544px]">
+                {/* 左侧会话列表 */}
+                {showConversationsList && (
+                  <div className="w-1/3 border-r border-gray-200 dark:border-gray-600 overflow-y-auto">
+                    {loading ? (
+                      <div className="p-4 text-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">加载中...</p>
+                      </div>
+                    ) : conversations.length === 0 ? (
+                      <div className="p-4 text-center">
+                        <User className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500 dark:text-gray-400">暂无会话</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-200 dark:divide-gray-600">
+                        {conversations.map((conv) => (
+                          <div
+                            key={conv.id}
+                            className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                              selectedConversation?.id === conv.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                            }`}
+                            onClick={() => setSelectedConversation(conv)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
+                                {conv.otherUser.avatar ? (
+                                  <img src={conv.otherUser.avatar} alt={conv.otherUser.nickname} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                    <span className="text-white font-bold text-sm">{conv.otherUser.nickname.charAt(0).toUpperCase()}</span>
                                   </div>
                                 )}
                               </div>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                {conv.lastMessage ? conv.lastMessage.content : '开始新对话'}
-                              </p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-medium text-gray-900 dark:text-white truncate text-sm">{conv.otherUser.nickname}</h4>
+                                  {conv.unreadCount > 0 && (
+                                    <div className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                      {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  {conv.lastMessage ? conv.lastMessage.content : '开始新对话'}
+                                </p>
+                              </div>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 右侧消息区域 */}
+                <div className={`${showConversationsList ? 'w-2/3' : 'w-full'} flex flex-col`}>
+                  {(targetUser || selectedConversation) ? (
+                    <>
+                      {/* 消息头部 */}
+                      <div className="p-4 border-b border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+                            {(targetUser?.avatar || selectedConversation?.otherUser.avatar) ? (
+                              <img 
+                                src={targetUser?.avatar || selectedConversation?.otherUser.avatar} 
+                                alt={targetUser?.nickname || selectedConversation?.otherUser.nickname} 
+                                className="w-full h-full object-cover" 
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                <span className="text-white font-bold text-xs">
+                                  {(targetUser?.nickname || selectedConversation?.otherUser.nickname || '').charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">
+                            {targetUser?.nickname || selectedConversation?.otherUser.nickname}
+                          </h4>
                         </div>
-                      ))}
+                      </div>
+
+                      {/* 消息列表 */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {messages.length === 0 ? (
+                          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                            <p>暂无消息，开始聊天吧～</p>
+                          </div>
+                        ) : (
+                          messages.map((message, index) => {
+                            const previousMessage = index > 0 ? messages[index - 1] : null
+                            const showDateSep = shouldShowDateSeparator(message, previousMessage)
+                            
+                            return (
+                              <div key={message.id}>
+                                {/* 日期分隔符 */}
+                                {showDateSep && (
+                                  <div className="flex justify-center my-4">
+                                    <div className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs px-3 py-1 rounded-full">
+                                      {getDateSeparator(message.createdAt)}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* 消息内容 */}
+                                <div className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                                  <div className="relative group">
+                                    <div
+                                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                                        message.senderId === user?.id
+                                          ? 'bg-blue-600 text-white'
+                                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                                      }`}
+                                    >
+                                      <p className="text-sm">{message.content}</p>
+                                      <p className={`text-xs mt-1 ${
+                                        message.senderId === user?.id
+                                          ? 'text-blue-100'
+                                          : 'text-gray-500 dark:text-gray-400'
+                                      }`}>
+                                        {formatTime(message.createdAt)}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* 撤回按钮 */}
+                                    {canRecallMessage(message.createdAt, message.senderId) && (
+                                      <button
+                                        onClick={() => recallMessage(message.id)}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                        title="撤回消息"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                        <div ref={messagesEndRef} />
+                      </div>
+
+                      {/* 消息输入框 */}
+                      <div className="p-4 border-t border-gray-200 dark:border-gray-600">
+                        <div className="flex space-x-3">
+                          <input
+                            type="text"
+                            placeholder="输入消息..."
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !sendingMessage) {
+                                sendMessage()
+                              }
+                            }}
+                            disabled={sendingMessage}
+                          />
+                          <button
+                            onClick={sendMessage}
+                            disabled={!newMessage.trim() || sendingMessage}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {sendingMessage ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            ) : (
+                              <Send className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center text-gray-500 dark:text-gray-400">
+                        <User className="w-16 h-16 mx-auto mb-4" />
+                        <p>选择一个会话开始聊天</p>
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* 右侧消息区域 */}
-              <div className={`${showConversationsList ? 'w-2/3' : 'w-full'} flex flex-col`}>
-                {(targetUser || selectedConversation) ? (
-                  <>
-                    {/* 消息头部 */}
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-600">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
-                          {(targetUser?.avatar || selectedConversation?.otherUser.avatar) ? (
-                            <img 
-                              src={targetUser?.avatar || selectedConversation?.otherUser.avatar} 
-                              alt={targetUser?.nickname || selectedConversation?.otherUser.nickname} 
-                              className="w-full h-full object-cover" 
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                              <span className="text-white font-bold text-xs">
-                                {(targetUser?.nickname || selectedConversation?.otherUser.nickname || '').charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <h4 className="font-medium text-gray-900 dark:text-white">
-                          {targetUser?.nickname || selectedConversation?.otherUser.nickname}
-                        </h4>
-                      </div>
-                    </div>
-
-                    {/* 消息列表 */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                      {messages.length === 0 ? (
-                        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                          <p>暂无消息，开始聊天吧～</p>
-                        </div>
-                      ) : (
-                        messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                                message.senderId === user?.id
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                              }`}
-                            >
-                              <p className="text-sm">{message.content}</p>
-                              <p className={`text-xs mt-1 ${
-                                message.senderId === user?.id
-                                  ? 'text-blue-100'
-                                  : 'text-gray-500 dark:text-gray-400'
-                              }`}>
-                                {formatTime(message.createdAt)}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                      <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* 消息输入框 */}
-                    <div className="p-4 border-t border-gray-200 dark:border-gray-600">
-                      <div className="flex space-x-3">
-                        <input
-                          type="text"
-                          placeholder="输入消息..."
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !sendingMessage) {
-                              sendMessage()
-                            }
-                          }}
-                          disabled={sendingMessage}
-                        />
-                        <button
-                          onClick={sendMessage}
-                          disabled={!newMessage.trim() || sendingMessage}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {sendingMessage ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          ) : (
-                            <Send className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center text-gray-500 dark:text-gray-400">
-                      <User className="w-16 h-16 mx-auto mb-4" />
-                      <p>选择一个会话开始聊天</p>
-                    </div>
-                  </div>
-                )}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        </AnimatePresence>,
+        document.body
       )}
-    </AnimatePresence>
+    </>
   )
 }
 

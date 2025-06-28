@@ -20,7 +20,8 @@ import {
   User as UserIcon,
   MapPin,
   Calendar,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -133,6 +134,18 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const [showImageModal, setShowImageModal] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState('')
   
+  // 搜索加载状态
+  const [searchLoading, setSearchLoading] = useState(false)
+  
+  // 私信列表加载状态
+  const [conversationsLoading, setConversationsLoading] = useState(false)
+  
+  // 邮箱验证状态检查
+  const isEmailVerified = user?.isEmailVerified || false
+  
+  // 检查社交功能可用性
+  const isSocialFeatureEnabled = isEmailVerified
+  
   // 获取帖子列表
   const fetchPosts = async (type: 'feed' | 'following' = 'feed') => {
     try {
@@ -162,6 +175,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const handleCreatePost = async () => {
     if (!newPostContent.trim()) {
       showError('请输入帖子内容')
+      return
+    }
+
+    if (!isSocialFeatureEnabled) {
+      showError('请先验证邮箱后再使用社交功能')
       return
     }
 
@@ -204,6 +222,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
   // 点赞/取消点赞帖子
   const handleLike = async (postId: string) => {
+    if (!isSocialFeatureEnabled) {
+      showError('请先验证邮箱后再使用社交功能')
+      return
+    }
+
     try {
       const token = localStorage.getItem('token')
       const response = await fetch('/api/social/content', {
@@ -237,6 +260,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
   // 点赞/取消点赞评论
   const handleCommentLike = async (commentId: string, postId: string) => {
+    if (!isSocialFeatureEnabled) {
+      showError('请先验证邮箱后再使用社交功能')
+      return
+    }
+
     try {
       const token = localStorage.getItem('token')
       const response = await fetch('/api/social/content', {
@@ -399,7 +427,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       return
     }
 
+    if (!isSocialFeatureEnabled) {
+      showError('请先验证邮箱后再使用社交功能')
+      return
+    }
+
     try {
+      setSearchLoading(true)
       const token = localStorage.getItem('token')
       const response = await fetch(`/api/social/messaging?action=search-users&search=${encodeURIComponent(searchQuery.trim())}`, {
         headers: {
@@ -414,6 +448,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     } catch (error) {
       console.error('搜索用户失败:', error)
       showError('搜索失败')
+    } finally {
+      setSearchLoading(false)
     }
   }
 
@@ -664,7 +700,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
   // 获取会话列表
   const fetchConversations = async () => {
+    if (!isSocialFeatureEnabled) {
+      showError('请先验证邮箱后再使用社交功能')
+      return
+    }
+
     try {
+      setConversationsLoading(true)
       const token = localStorage.getItem('token')
       const response = await fetch('/api/social/messaging?action=conversations', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -679,6 +721,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       }
     } catch (error) {
       console.error('获取会话列表失败:', error)
+    } finally {
+      setConversationsLoading(false)
     }
   }
 
@@ -769,10 +813,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
             <button
               onClick={() => setShowSearch(!showSearch)}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                showSearch
+                !isSocialFeatureEnabled 
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : showSearch
                   ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               }`}
+              disabled={!isSocialFeatureEnabled}
+              title={!isSocialFeatureEnabled ? '请先验证邮箱后使用社交功能' : ''}
             >
               <Search className="w-4 h-4 inline mr-2" />
               发现用户
@@ -780,30 +828,42 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
             <button
               onClick={() => handleGoToProfile()}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'profile'
+                !isSocialFeatureEnabled 
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : activeTab === 'profile'
                   ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               }`}
+              disabled={!isSocialFeatureEnabled}
+              title={!isSocialFeatureEnabled ? '请先验证邮箱后使用社交功能' : ''}
             >
               <UserIcon className="w-4 h-4 inline mr-2" />
               我的主页
             </button>
             <button
               onClick={() => {
+                if (!isSocialFeatureEnabled) {
+                  showError('请先验证邮箱后再使用社交功能')
+                  return
+                }
                 setActiveTab('messages')
                 if (conversations.length === 0) {
                   fetchConversations()
                 }
               }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
-                activeTab === 'messages'
+                !isSocialFeatureEnabled 
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : activeTab === 'messages'
                   ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-400'
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               }`}
+              disabled={!isSocialFeatureEnabled}
+              title={!isSocialFeatureEnabled ? '请先验证邮箱后使用社交功能' : ''}
             >
               <MessageCircle className="w-4 h-4 inline mr-2" />
               私信
-              {unreadCount > 0 && (
+              {unreadCount > 0 && isSocialFeatureEnabled && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
@@ -833,7 +893,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                   </div>
                   
                   {/* 搜索结果 */}
-                  {searchResults.length > 0 && (
+                  {searchLoading ? (
+                    <div className="mt-4 text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                      <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">搜索中...</p>
+                    </div>
+                  ) : searchResults.length > 0 ? (
                     <div className="mt-4 space-y-3">
                       {searchResults.map((searchUser) => (
                         <div key={searchUser.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -886,7 +951,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                         </div>
                       ))}
                     </div>
-                  )}
+                  ) : searchQuery.trim() && !searchLoading ? (
+                    <div className="mt-4 text-center py-4">
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">没有找到相关用户</p>
+                    </div>
+                  ) : null}
                 </div>
               </motion.div>
             )}
@@ -894,75 +963,91 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
         </div>
 
         {/* 发布帖子 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <div className="flex space-x-4">
-            <div 
-              className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 cursor-pointer"
-              onClick={() => handleGoToProfile()}
-            >
-              {user?.profile?.avatar ? (
-                <img src={user.profile.avatar} alt={user.username} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                  <span className="text-white font-bold">{user?.username?.charAt(0).toUpperCase()}</span>
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <textarea
-                placeholder="分享你的想法..."
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={3}
-                maxLength={1000}
-              />
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex space-x-2">
-                  <label className="p-2 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer">
-                    <ImageIcon className="w-5 h-5" />
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageSelect}
-                    />
-                  </label>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {newPostContent.length}/1000
-                  </span>
-                  <button
-                    onClick={handleCreatePost}
-                    disabled={!newPostContent.trim() || isPosting}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-                  >
-                    {isPosting ? '发布中...' : '发布'}
-                  </button>
-                </div>
-              </div>
-              
-              {/* 图片预览 */}
-              {imagePreviewUrls.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {imagePreviewUrls.map((url, index) => (
-                    <div key={index} className="relative aspect-square">
-                      <img src={url} alt={`预览 ${index + 1}`} className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => openImageModal(url)} />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {!isSocialFeatureEnabled && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              <p className="text-yellow-800 dark:text-yellow-200">
+                请先验证邮箱后再使用社交功能。
+                <a href="/settings" className="text-yellow-600 dark:text-yellow-400 underline hover:text-yellow-700 dark:hover:text-yellow-300 ml-1">
+                  前往设置
+                </a>
+              </p>
             </div>
           </div>
-        </div>
+        )}
+        
+        {isSocialFeatureEnabled && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div className="flex space-x-4">
+              <div 
+                className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 cursor-pointer"
+                onClick={() => handleGoToProfile()}
+              >
+                {user?.profile?.avatar ? (
+                  <img src={user.profile.avatar} alt={user.username} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <span className="text-white font-bold">{user?.username?.charAt(0).toUpperCase()}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <textarea
+                  placeholder="分享你的想法..."
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={3}
+                  maxLength={1000}
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <div className="flex space-x-2">
+                    <label className="p-2 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer">
+                      <ImageIcon className="w-5 h-5" />
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageSelect}
+                      />
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {newPostContent.length}/1000
+                    </span>
+                    <button
+                      onClick={handleCreatePost}
+                      disabled={!newPostContent.trim() || isPosting}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                    >
+                      {isPosting ? '发布中...' : '发布'}
+                    </button>
+                  </div>
+                </div>
+                
+                {/* 图片预览 */}
+                {imagePreviewUrls.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {imagePreviewUrls.map((url, index) => (
+                      <div key={index} className="relative aspect-square">
+                        <img src={url} alt={`预览 ${index + 1}`} className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => openImageModal(url)} />
+                        <button
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 帖子列表 */}
         <div className="space-y-6">
@@ -970,7 +1055,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
             // 私信内容
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">我的私信</h3>
-              {conversations.length === 0 ? (
+              {conversationsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">加载私信列表...</p>
+                </div>
+              ) : conversations.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500 dark:text-gray-400">暂无私信</p>
