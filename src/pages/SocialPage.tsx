@@ -1019,10 +1019,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         {isSocialFeatureEnabled && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div className="flex space-x-4">
-              <div 
-                className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 cursor-pointer"
-                onClick={() => handleGoToProfile()}
-              >
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
                 {user?.profile?.avatar ? (
                   <img src={user.profile.avatar} alt={user.username} className="w-full h-full object-cover" />
                 ) : (
@@ -1032,49 +1029,55 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                 )}
               </div>
               <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
-                  {/* 管理员标签 */}
-                  {user?.role === 'admin' && (
-                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                      <Shield className="w-3 h-3 mr-1" />
-                      管理员
-                    </div>
-                  )}
-                </div>
-                <p className="text-gray-500 dark:text-gray-400">@{user?.username}</p>
+                <textarea
+                  placeholder="有什么想分享的吗？"
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={3}
+                />
                 
-                {user?.profile?.bio && (
-                  <p className="text-gray-700 dark:text-gray-300 mt-2">{user.profile.bio}</p>
+                {/* 图片预览 */}
+                {imagePreviewUrls.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 gap-2 max-w-md">
+                    {imagePreviewUrls.map((image, index) => (
+                      <div key={index} className="relative aspect-square w-full max-w-32">
+                        <img
+                          src={image}
+                          alt={`预览 ${index + 1}`}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
 
-                <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
-                  {user?.profile?.location && (
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>{user.profile.location}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>加入于 {user?.createdAt ? formatDate(user.createdAt, 'date') : '未知'}</span>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-center space-x-3">
+                    <label className="cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors">
+                      <ImageIcon className="w-5 h-5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
-                </div>
-
-                {/* 统计信息 */}
-                <div className="flex space-x-6 mt-4">
-                  <div className="text-center">
-                    <div className="font-bold text-gray-900 dark:text-white">{myPosts.length}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">帖子</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold text-gray-900 dark:text-white">{myProfile?.followersCount || 0}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">粉丝</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold text-gray-900 dark:text-white">{myProfile?.followingCount || 0}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">关注</div>
-                  </div>
+                  <button
+                    onClick={handleCreatePost}
+                    disabled={!newPostContent.trim() && imagePreviewUrls.length === 0}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    发布
+                  </button>
                 </div>
               </div>
             </div>
