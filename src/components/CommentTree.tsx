@@ -100,11 +100,20 @@ const CommentTree: React.FC<CommentTreeProps> = ({
         nickname: comment.author.nickname
       }
     })
-    setReplyContent(`@${comment.author.nickname} `)
+    
+    // 如果是二级评论，显示被回复人的名字
+    if (comment.level === 2) {
+      setReplyContent(`@${comment.author.nickname} `)
+    } else {
+      // 一级评论的回复不需要@
+      setReplyContent('')
+    }
+    
     setTimeout(() => {
       replyInputRef.current?.focus()
       // 将光标移到末尾
-      const len = replyContent.length
+      const currentContent = comment.level === 2 ? `@${comment.author.nickname} ` : ''
+      const len = currentContent.length
       replyInputRef.current?.setSelectionRange(len, len)
     }, 100)
   }
@@ -152,13 +161,7 @@ const CommentTree: React.FC<CommentTreeProps> = ({
         exit={{ opacity: 0, y: -10 }}
         className="relative"
       >
-        {/* 简化连接线 - 只有一条 */}
-        {comment.level > 1 && (
-          <div 
-            className="absolute top-6 w-3 h-0.5 bg-gray-300 dark:bg-gray-500"
-            style={{ left: `${Math.min(comment.level - 1, maxDepth - 1) * 24 + 17}px` }}
-          />
-        )}
+
 
         <div 
           className="flex space-x-3 py-2"
@@ -253,7 +256,7 @@ const CommentTree: React.FC<CommentTreeProps> = ({
               {/* 评论文本 */}
               <div className="text-gray-900 dark:text-white text-sm">
                 {comment.replyTo && (
-                  <span className="text-blue-600 dark:text-blue-400 mr-1">
+                  <span className="text-blue-600 dark:text-blue-400 font-medium mr-1">
                     @{comment.replyTo.nickname}
                   </span>
                 )}
@@ -273,15 +276,13 @@ const CommentTree: React.FC<CommentTreeProps> = ({
                 {comment.likesCount > 0 && <span>{comment.likesCount}</span>}
               </button>
               
-              {comment.level < maxDepth && (
-                <button
-                  onClick={() => startReply(comment)}
-                  className="flex items-center space-x-1 transition-colors hover:text-blue-600"
-                >
-                  <Reply className="w-3 h-3" />
-                  <span>回复</span>
-                </button>
-              )}
+              <button
+                onClick={() => startReply(comment)}
+                className="flex items-center space-x-1 transition-colors hover:text-blue-600"
+              >
+                <Reply className="w-3 h-3" />
+                <span>回复</span>
+              </button>
               
               <button className="flex items-center space-x-1 transition-colors hover:text-green-600">
                 <Share className="w-3 h-3" />

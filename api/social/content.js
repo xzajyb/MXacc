@@ -123,7 +123,7 @@ module.exports = async function handler(req, res) {
           const [author, likesCount, commentsCount, isLiked] = await Promise.all([
             getUserById(users, post.authorId),
             likes.countDocuments({ targetId: post._id, type: 'post' }),
-            comments.countDocuments({ postId: post._id, parentId: { $exists: false } }),
+            comments.countDocuments({ postId: post._id }), // 统计所有评论，包括子评论
             likes.findOne({ 
               targetId: post._id, 
               userId: new ObjectId(decoded.userId), 
@@ -401,13 +401,31 @@ module.exports = async function handler(req, res) {
 
         // 如果有parentId，说明是二级评论
         if (parentId) {
+          // 检查父评论是否存在
+          const parentComment = await comments.findOne({ _id: new ObjectId(parentId) })
+          if (!parentComment) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '父评论不存在' 
+            })
+          }
+
+          // 限制为二级评论：如果父评论已经有父评论，则不允许再回复
+          if (parentComment.parentId) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '只支持二级评论，不能回复二级评论' 
+            })
+          }
+
           newComment.parentId = new ObjectId(parentId)
           
           // 如果指定了回复目标用户
           if (replyTo && replyTo.userId && replyTo.username) {
             newComment.replyTo = {
               userId: new ObjectId(replyTo.userId),
-              username: replyTo.username
+              username: replyTo.username,
+              nickname: replyTo.nickname || replyTo.username
             }
           }
         }
@@ -415,10 +433,9 @@ module.exports = async function handler(req, res) {
         const result = await comments.insertOne(newComment)
         const author = await getUserById(users, decoded.userId)
 
-        // 更新评论计数
+        // 更新评论计数 - 统计该帖子的所有评论
         const commentsCount = await comments.countDocuments({ 
-          postId: new ObjectId(postId),
-          parentId: parentId ? new ObjectId(parentId) : { $exists: false }
+          postId: new ObjectId(postId)
         })
 
         return res.status(201).json({

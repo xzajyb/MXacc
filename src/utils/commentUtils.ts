@@ -44,19 +44,19 @@ export function buildCommentTree(flatComments: FlatComment[]): TreeComment[] {
     commentMap.set(comment.id, treeComment)
   })
 
-  // 构建树状结构
+  // 构建二级评论结构
   flatComments.forEach(comment => {
     const treeComment = commentMap.get(comment.id)!
     
     if (comment.parentId) {
-      // 有父评论，添加到父评论的children中
+      // 有父评论，添加到父评论的children中（只支持二级评论）
       const parentComment = commentMap.get(comment.parentId)
-      if (parentComment) {
+      if (parentComment && parentComment.level === 1) {
         parentComment.children.push(treeComment)
-        // 设置层级
-        treeComment.level = parentComment.level + 1
+        // 设置为二级评论
+        treeComment.level = 2
       } else {
-        // 父评论不存在，作为根评论处理
+        // 父评论不存在或不是一级评论，作为根评论处理
         rootComments.push(treeComment)
       }
     } else {
@@ -65,15 +65,17 @@ export function buildCommentTree(flatComments: FlatComment[]): TreeComment[] {
     }
   })
 
-  // 递归设置正确的层级和排序
+  // 设置二级评论的层级和排序
   function setLevelsAndSort(comments: TreeComment[], level: number = 1) {
     comments.forEach(comment => {
       comment.level = level
       // 按时间排序子评论
       comment.children.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      // 递归处理子评论
-      if (comment.children.length > 0) {
-        setLevelsAndSort(comment.children, level + 1)
+      // 只处理二级评论，设置为level 2
+      if (comment.children.length > 0 && level === 1) {
+        comment.children.forEach(child => {
+          child.level = 2
+        })
       }
     })
   }
@@ -214,4 +216,28 @@ export function getCommentTreeStats(comments: TreeComment[]): {
     maxDepth,
     rootComments: comments.length
   }
+}
+
+/**
+ * 统计要删除的评论数量（包括子评论）
+ * @param comments 树状评论数组
+ * @param commentId 要删除的评论ID
+ * @returns 要删除的评论总数
+ */
+export function countDeletedComments(comments: TreeComment[], commentId: string): number {
+  function findAndCount(commentList: TreeComment[]): number {
+    for (const comment of commentList) {
+      if (comment.id === commentId) {
+        // 找到目标评论，计算它及其所有子评论的数量
+        return getCommentTreeStats([comment]).totalComments
+      }
+      if (comment.children.length > 0) {
+        const result = findAndCount(comment.children)
+        if (result > 0) return result
+      }
+    }
+    return 0
+  }
+
+  return findAndCount(comments)
 } 

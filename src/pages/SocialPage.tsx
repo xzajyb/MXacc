@@ -363,12 +363,21 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
             [postId]: removeCommentFromTree(prev[postId] || [], commentId)
           }))
           
-          // 更新帖子的评论计数
-          setPosts(prev => prev.map(post => 
-            post.id === postId 
-              ? { ...post, commentsCount: Math.max(0, post.commentsCount - 1) }
-              : post
-          ))
+          // 重新获取准确的评论计数（因为删除评论可能包含子评论）
+          const countResponse = await fetch(`/api/social/content?action=comments&postId=${postId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          
+          if (countResponse.ok) {
+            const countData = await countResponse.json()
+            const newCommentsCount = countData.data.stats.totalComments
+            
+            setPosts(prev => prev.map(post => 
+              post.id === postId 
+                ? { ...post, commentsCount: newCommentsCount }
+                : post
+            ))
+          }
         }
         showSuccess('评论删除成功')
       } else {
@@ -405,15 +414,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
           setPosts(prev => prev.filter(post => post.id !== id))
           showSuccess('帖子删除成功')
         } else {
-          setComments(prev => ({
-            ...prev,
-            [postId!]: prev[postId!]?.filter(comment => comment.id !== id) || []
-          }))
-          setPosts(prev => prev.map(post => 
-            post.id === postId 
-              ? { ...post, commentsCount: Math.max(0, post.commentsCount - 1) }
-              : post
-          ))
+          // 删除评论 - 这个函数已被新的handleCommentDelete替代
+          // 但为了兼容性保留简单逻辑
           showSuccess('评论删除成功')
         }
       } else {
@@ -524,13 +526,49 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     }
   }
 
-  // 处理树状评论的回复
+  // 处理二级评论的回复
   const handleCommentReply = async (parentId: string, content: string, replyTo?: { id: string; username: string; nickname: string }) => {
     // 找到当前正在显示评论的帖子ID
     const postId = Object.keys(showComments).find(id => showComments[id])
     if (!postId) {
       showError('无法找到对应的帖子')
       return
+    }
+
+    // 检查是否是回复二级评论
+    const currentComments = comments[postId] || []
+    let targetParentId = parentId
+    let finalReplyTo = replyTo
+
+    // 查找被回复的评论
+    const findComment = (commentList: TreeComment[], commentId: string): TreeComment | null => {
+      for (const comment of commentList) {
+        if (comment.id === commentId) return comment
+        if (comment.children.length > 0) {
+          const found = findComment(comment.children, commentId)
+          if (found) return found
+        }
+      }
+      return null
+    }
+
+    const targetComment = findComment(currentComments, parentId)
+    
+    // 如果回复的是二级评论，改为回复其父评论，但在内容中显示被回复人
+    if (targetComment && targetComment.level === 2) {
+      // 找到父评论ID
+      for (const rootComment of currentComments) {
+        const childFound = rootComment.children.find(child => child.id === parentId)
+        if (childFound) {
+          targetParentId = rootComment.id
+          finalReplyTo = {
+            id: targetComment.author.id,
+            username: targetComment.author.username,
+            nickname: targetComment.author.nickname
+          }
+          break
+        }
+      }
     }
 
     try {
@@ -545,11 +583,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
           action: 'create-comment',
           postId,
           content: content.trim(),
-          parentId,
-          replyTo: replyTo ? {
-            userId: replyTo.id,
-            username: replyTo.username,
-            nickname: replyTo.nickname
+          parentId: targetParentId,
+          replyTo: finalReplyTo ? {
+            userId: finalReplyTo.id,
+            username: finalReplyTo.username,
+            nickname: finalReplyTo.nickname
           } : undefined
         })
       })
@@ -561,13 +599,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         // 添加到树状结构中
         setComments(prev => ({
           ...prev,
-          [postId]: addReplyToTree(prev[postId] || [], parentId, newComment)
+          [postId]: addReplyToTree(prev[postId] || [], targetParentId, newComment)
         }))
         
-        // 更新帖子的评论计数
+        // 更新帖子的评论计数 - 使用后端返回的准确计数
         setPosts(prev => prev.map(post => 
           post.id === postId 
-            ? { ...post, commentsCount: post.commentsCount + 1 }
+            ? { ...post, commentsCount: data.data.commentsCount }
             : post
         ))
         
