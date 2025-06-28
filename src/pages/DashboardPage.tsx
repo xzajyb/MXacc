@@ -20,7 +20,8 @@ import {
   Clock,
   Sun,
   Moon,
-  Monitor
+  Monitor,
+  Crown
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -30,8 +31,9 @@ import SettingsPage from './SettingsPage'
 import SecurityPage from './SecurityPage'
 import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
+import SocialPage from './SocialPage'
 
-type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email'
+type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
@@ -63,6 +65,12 @@ const DashboardPage: React.FC = () => {
       description: t.profile.description
     },
     {
+      id: 'social',
+      label: t.navigation.social,
+      icon: Users,
+      description: t.social.description
+    },
+    {
       id: 'settings',
       label: t.navigation.settings,
       icon: Settings,
@@ -77,7 +85,7 @@ const DashboardPage: React.FC = () => {
     ...(user?.role === 'admin' ? [{
       id: 'admin',
       label: t.navigation.admin,
-      icon: Users,
+      icon: Crown,
       description: t.admin.systemStats
     }] : []),
     ...(!user?.isEmailVerified ? [{
@@ -94,7 +102,7 @@ const DashboardPage: React.FC = () => {
 
   const handleNavClick = (viewId: ActiveView) => {
     // 如果邮箱未验证，除了验证邮箱和个人资料，其他功能都禁用
-    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home') {
+    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social') {
       showWarning('请先验证邮箱后再使用此功能')
       return
     }
@@ -166,6 +174,8 @@ const DashboardPage: React.FC = () => {
       switch (activeView) {
         case 'profile':
           return <ProfilePage embedded={true} />
+        case 'social':
+          return <SocialPage embedded={true} />
         case 'settings':
           return !user?.isEmailVerified ? (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
