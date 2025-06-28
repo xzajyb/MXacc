@@ -42,6 +42,12 @@ async function getUserById(users, userId) {
   return user
 }
 
+// 生成对话ID（确保两个用户之间只有一个对话）
+function generateConversationId(userId1, userId2) {
+  const sortedIds = [userId1, userId2].sort()
+  return `conv_${sortedIds[0]}_${sortedIds[1]}`
+}
+
 module.exports = async function handler(req, res) {
   // 设置CORS头部
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -77,7 +83,7 @@ module.exports = async function handler(req, res) {
       const { action, conversationId, page = 1, limit = 20 } = req.query
 
       if (action === 'conversations') {
-        // 获取对话列表
+        // 获取当前用户的对话列表
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const conversationList = await conversations.find({
@@ -88,30 +94,32 @@ module.exports = async function handler(req, res) {
           .limit(parseInt(limit))
           .toArray()
 
-        const conversationsWithInfo = await Promise.all(conversationList.map(async (conversation) => {
+        // 获取对话详情
+        const conversationsWithDetails = await Promise.all(conversationList.map(async (conv) => {
           // 获取对方用户信息
-          const otherUserId = conversation.participants.find(id => id.toString() !== decoded.userId)
+          const otherUserId = conv.participants.find(id => id.toString() !== decoded.userId)
           const otherUser = await getUserById(users, otherUserId)
           
           // 获取未读消息数
           const unreadCount = await messages.countDocuments({
-            conversationId: conversation._id,
+            conversationId: conv._id,
             senderId: { $ne: new ObjectId(decoded.userId) },
             readAt: { $exists: false }
           })
 
           return {
-            id: conversation._id,
+            id: conv._id,
+            conversationId: conv.conversationId,
             otherUser: {
               id: otherUser._id,
               username: otherUser.username,
               nickname: otherUser.profile?.nickname || otherUser.username,
               avatar: otherUser.profile?.avatar
             },
-            lastMessage: conversation.lastMessage,
-            lastMessageAt: conversation.lastMessageAt,
+            lastMessage: conv.lastMessage,
+            lastMessageAt: conv.lastMessageAt,
             unreadCount,
-            createdAt: conversation.createdAt
+            createdAt: conv.createdAt
           }
         }))
 
@@ -122,7 +130,7 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           success: true,
           data: {
-            conversations: conversationsWithInfo,
+            conversations: conversationsWithDetails,
             pagination: {
               page: parseInt(page),
               limit: parseInt(limit),
@@ -134,19 +142,19 @@ module.exports = async function handler(req, res) {
       }
 
       if (action === 'messages' && conversationId) {
-        // 获取对话消息列表
+        // 获取对话中的消息列表
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
-        // 验证用户是否有权限访问此对话
+        // 验证用户是否属于该对话
         const conversation = await conversations.findOne({
           _id: new ObjectId(conversationId),
           participants: new ObjectId(decoded.userId)
         })
 
         if (!conversation) {
-          return res.status(403).json({ 
-            success: false, 
-            message: '没有权限访问此对话' 
+          return res.status(403).json({
+            success: false,
+            message: '无权访问此对话'
           })
         }
 
@@ -158,20 +166,22 @@ module.exports = async function handler(req, res) {
           .limit(parseInt(limit))
           .toArray()
 
-        const messagesWithSenders = await Promise.all(messageList.map(async (message) => {
-          const sender = await getUserById(users, message.senderId)
+        // 获取消息发送者信息
+        const messagesWithSenders = await Promise.all(messageList.map(async (msg) => {
+          const sender = await getUserById(users, msg.senderId)
           return {
-            id: message._id,
-            content: message.content,
-            messageType: message.messageType || 'text',
+            id: msg._id,
+            content: msg.content,
+            messageType: msg.messageType || 'text',
             sender: {
               id: sender._id,
               username: sender.username,
               nickname: sender.profile?.nickname || sender.username,
               avatar: sender.profile?.avatar
             },
-            readAt: message.readAt,
-            createdAt: message.createdAt
+            isOwn: msg.senderId.toString() === decoded.userId,
+            readAt: msg.readAt,
+            createdAt: msg.createdAt
           }
         }))
 
@@ -193,122 +203,110 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      if (action === 'unread-count') {
-        // 获取未读消息总数
-        const unreadCount = await messages.countDocuments({
-          senderId: { $ne: new ObjectId(decoded.userId) },
-          readAt: { $exists: false },
-          conversationId: { 
-            $in: await conversations.find({
-              participants: new ObjectId(decoded.userId)
-            }).map(c => c._id).toArray()
-          }
-        })
-
-        return res.status(200).json({
-          success: true,
-          data: { unreadCount }
-        })
-      }
-
-      return res.status(400).json({ 
-        success: false, 
-        message: '不支持的操作' 
+      return res.status(400).json({
+        success: false,
+        message: '不支持的操作'
       })
     }
 
     if (req.method === 'POST') {
-      const { action, recipientId, content, conversationId } = req.body
+      const { action, receiverId, content, messageType = 'text' } = req.body
 
       if (action === 'send') {
         // 发送私信
-        if (!recipientId || !content) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '收件人ID和消息内容不能为空' 
+        if (!receiverId || !content) {
+          return res.status(400).json({
+            success: false,
+            message: '接收者ID和消息内容不能为空'
           })
         }
 
         if (content.trim().length === 0) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '消息内容不能为空' 
+          return res.status(400).json({
+            success: false,
+            message: '消息内容不能为空'
           })
         }
 
         if (content.length > 1000) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '消息内容不能超过1000个字符' 
+          return res.status(400).json({
+            success: false,
+            message: '消息内容不能超过1000个字符'
           })
         }
 
-        if (recipientId === decoded.userId) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '不能给自己发送私信' 
+        if (receiverId === decoded.userId) {
+          return res.status(400).json({
+            success: false,
+            message: '不能给自己发送消息'
           })
         }
 
-        // 检查收件人是否存在
-        const recipient = await getUserById(users, recipientId)
-        if (!recipient) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '收件人不存在' 
+        // 检查接收者是否存在
+        const receiver = await getUserById(users, receiverId)
+        if (!receiver) {
+          return res.status(404).json({
+            success: false,
+            message: '接收者不存在'
           })
         }
 
+        // 生成对话ID
+        const convId = generateConversationId(decoded.userId, receiverId)
+        
         // 查找或创建对话
         let conversation = await conversations.findOne({
-          participants: { 
-            $all: [new ObjectId(decoded.userId), new ObjectId(recipientId)],
-            $size: 2
-          }
+          conversationId: convId
         })
 
         if (!conversation) {
           // 创建新对话
-          const result = await conversations.insertOne({
-            participants: [new ObjectId(decoded.userId), new ObjectId(recipientId)],
-            createdAt: new Date(),
+          const newConversation = {
+            conversationId: convId,
+            participants: [new ObjectId(decoded.userId), new ObjectId(receiverId)],
+            lastMessage: content.trim(),
             lastMessageAt: new Date(),
-            lastMessage: content.substring(0, 100) + (content.length > 100 ? '...' : '')
-          })
-          conversation = { _id: result.insertedId }
-        } else {
-          // 更新现有对话
-          await conversations.updateOne(
-            { _id: conversation._id },
-            {
-              $set: {
-                lastMessageAt: new Date(),
-                lastMessage: content.substring(0, 100) + (content.length > 100 ? '...' : '')
-              }
-            }
-          )
+            createdAt: new Date()
+          }
+          
+          const convResult = await conversations.insertOne(newConversation)
+          conversation = { _id: convResult.insertedId, ...newConversation }
         }
 
         // 创建消息
         const newMessage = {
           conversationId: conversation._id,
           senderId: new ObjectId(decoded.userId),
-          recipientId: new ObjectId(recipientId),
+          receiverId: new ObjectId(receiverId),
           content: content.trim(),
-          messageType: 'text',
+          messageType,
           createdAt: new Date()
         }
 
-        const messageResult = await messages.insertOne(newMessage)
+        const msgResult = await messages.insertOne(newMessage)
+
+        // 更新对话最后消息
+        await conversations.updateOne(
+          { _id: conversation._id },
+          {
+            $set: {
+              lastMessage: content.trim(),
+              lastMessageAt: new Date()
+            }
+          }
+        )
+
+        // 获取发送者信息
         const sender = await getUserById(users, decoded.userId)
 
         return res.status(201).json({
           success: true,
-          message: '私信发送成功',
+          message: '消息发送成功',
           data: {
-            messageId: messageResult.insertedId,
+            messageId: msgResult.insertedId,
             conversationId: conversation._id,
             content: newMessage.content,
+            messageType: newMessage.messageType,
             sender: {
               id: sender._id,
               username: sender.username,
@@ -320,29 +318,38 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      return res.status(400).json({
+        success: false,
+        message: '不支持的操作'
+      })
+    }
+
+    if (req.method === 'PUT') {
+      const { action, conversationId } = req.body
+
       if (action === 'mark-read') {
-        // 标记消息已读
+        // 标记对话中的消息为已读
         if (!conversationId) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '对话ID不能为空' 
+          return res.status(400).json({
+            success: false,
+            message: '对话ID不能为空'
           })
         }
 
-        // 验证用户是否有权限访问此对话
+        // 验证用户是否属于该对话
         const conversation = await conversations.findOne({
           _id: new ObjectId(conversationId),
           participants: new ObjectId(decoded.userId)
         })
 
         if (!conversation) {
-          return res.status(403).json({ 
-            success: false, 
-            message: '没有权限访问此对话' 
+          return res.status(403).json({
+            success: false,
+            message: '无权访问此对话'
           })
         }
 
-        // 标记所有未读消息为已读
+        // 标记对方发送的未读消息为已读
         const result = await messages.updateMany(
           {
             conversationId: new ObjectId(conversationId),
@@ -361,9 +368,9 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      return res.status(400).json({ 
-        success: false, 
-        message: '不支持的操作' 
+      return res.status(400).json({
+        success: false,
+        message: '不支持的操作'
       })
     }
 
@@ -375,16 +382,17 @@ module.exports = async function handler(req, res) {
         const message = await messages.findOne({ _id: new ObjectId(messageId) })
         
         if (!message) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '消息不存在' 
+          return res.status(404).json({
+            success: false,
+            message: '消息不存在'
           })
         }
 
+        // 只有消息发送者或管理员可以删除消息
         if (message.senderId.toString() !== decoded.userId && currentUser.role !== 'admin') {
-          return res.status(403).json({ 
-            success: false, 
-            message: '没有权限删除此消息' 
+          return res.status(403).json({
+            success: false,
+            message: '没有权限删除此消息'
           })
         }
 
@@ -397,33 +405,24 @@ module.exports = async function handler(req, res) {
       }
 
       if (conversationId) {
-        // 删除整个对话（仅删除当前用户的参与记录）
+        // 删除整个对话
         const conversation = await conversations.findOne({
           _id: new ObjectId(conversationId),
           participants: new ObjectId(decoded.userId)
         })
 
         if (!conversation) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '对话不存在' 
+          return res.status(403).json({
+            success: false,
+            message: '无权删除此对话'
           })
         }
 
-        // 从参与者列表中移除当前用户
-        await conversations.updateOne(
-          { _id: new ObjectId(conversationId) },
-          { $pull: { participants: new ObjectId(decoded.userId) } }
-        )
-
-        // 如果没有参与者了，删除整个对话和相关消息
-        const updatedConversation = await conversations.findOne({ _id: new ObjectId(conversationId) })
-        if (updatedConversation.participants.length === 0) {
-          await Promise.all([
-            conversations.deleteOne({ _id: new ObjectId(conversationId) }),
-            messages.deleteMany({ conversationId: new ObjectId(conversationId) })
-          ])
-        }
+        // 删除对话和所有相关消息
+        await Promise.all([
+          conversations.deleteOne({ _id: new ObjectId(conversationId) }),
+          messages.deleteMany({ conversationId: new ObjectId(conversationId) })
+        ])
 
         return res.status(200).json({
           success: true,
@@ -431,15 +430,15 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      return res.status(400).json({ 
-        success: false, 
-        message: '消息ID或对话ID不能为空' 
+      return res.status(400).json({
+        success: false,
+        message: '缺少必要参数'
       })
     }
 
-    return res.status(405).json({ 
-      success: false, 
-      message: '方法不允许' 
+    return res.status(405).json({
+      success: false,
+      message: '方法不允许'
     })
 
   } catch (error) {

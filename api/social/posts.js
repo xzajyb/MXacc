@@ -272,8 +272,62 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      if (action === 'like-comment') {
+        // 点赞/取消点赞评论
+        const { commentId } = req.body
+        
+        if (!commentId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '评论ID不能为空' 
+          })
+        }
+
+        const existingLike = await likes.findOne({
+          commentId: new ObjectId(commentId),
+          userId: new ObjectId(decoded.userId),
+          type: 'comment-like'
+        })
+
+        if (existingLike) {
+          // 取消点赞
+          await likes.deleteOne({ _id: existingLike._id })
+          const likesCount = await likes.countDocuments({ 
+            commentId: new ObjectId(commentId), 
+            type: 'comment-like' 
+          })
+          
+          return res.status(200).json({
+            success: true,
+            message: '取消点赞评论成功',
+            data: { isLiked: false, likesCount }
+          })
+        } else {
+          // 添加点赞
+          await likes.insertOne({
+            commentId: new ObjectId(commentId),
+            userId: new ObjectId(decoded.userId),
+            type: 'comment-like',
+            createdAt: new Date()
+          })
+          
+          const likesCount = await likes.countDocuments({ 
+            commentId: new ObjectId(commentId), 
+            type: 'comment-like' 
+          })
+          
+          return res.status(200).json({
+            success: true,
+            message: '点赞评论成功',
+            data: { isLiked: true, likesCount }
+          })
+        }
+      }
+
       if (action === 'comment') {
-        // 添加评论
+        // 添加评论或回复
+        const { parentCommentId } = req.body
+        
         if (!postId || !commentContent) {
           return res.status(400).json({ 
             success: false, 
@@ -299,6 +353,7 @@ module.exports = async function handler(req, res) {
           postId: new ObjectId(postId),
           authorId: new ObjectId(decoded.userId),
           content: commentContent.trim(),
+          parentCommentId: parentCommentId ? new ObjectId(parentCommentId) : null, // 支持二级评论
           createdAt: new Date(),
           updatedAt: new Date()
         }
@@ -311,18 +366,21 @@ module.exports = async function handler(req, res) {
 
         return res.status(201).json({
           success: true,
-          message: '评论发布成功',
+          message: parentCommentId ? '回复发布成功' : '评论发布成功',
           data: {
             comment: {
               id: result.insertedId,
               content: newComment.content,
+              parentCommentId: newComment.parentCommentId,
               author: {
                 id: author._id,
                 username: author.username,
                 nickname: author.profile?.nickname || author.username,
                 avatar: author.profile?.avatar
               },
-              createdAt: newComment.createdAt
+              createdAt: newComment.createdAt,
+              likesCount: 0,
+              isLiked: false
             },
             commentsCount
           }
@@ -356,11 +414,14 @@ module.exports = async function handler(req, res) {
       }
 
       if (post.authorId.toString() !== decoded.userId && currentUser.role !== 'admin') {
+        console.log('❌ 权限不足 - 用户ID:', decoded.userId, '帖子作者ID:', post.authorId.toString(), '用户角色:', currentUser.role)
         return res.status(403).json({ 
           success: false, 
           message: '没有权限删除此帖子' 
         })
       }
+
+      console.log('✅ 权限验证通过，开始删除帖子和相关数据...')
 
       // 删除帖子及相关数据
       await Promise.all([

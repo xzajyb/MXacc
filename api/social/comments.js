@@ -56,14 +56,12 @@ module.exports = async function handler(req, res) {
     console.log('=== Social Comments API ===')
     console.log('Method:', req.method)
     console.log('Query:', req.query)
-    console.log('Body:', req.body)
 
     // 连接数据库
     const client = await clientPromise
     const db = client.db('mxacc')
     const comments = db.collection('comments')
     const users = db.collection('users')
-    const likes = db.collection('likes')
 
     // 验证用户身份
     const decoded = verifyToken(req.headers.authorization)
@@ -82,30 +80,33 @@ module.exports = async function handler(req, res) {
       
       // 获取评论列表
       const commentList = await comments.find({ 
-        postId: new ObjectId(postId),
-        parentId: { $exists: false } // 只获取顶级评论
+        postId: new ObjectId(postId) 
       })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .toArray()
 
-      // 获取评论作者信息和统计数据
+      // 获取评论作者信息
       const commentsWithAuthors = await Promise.all(commentList.map(async (comment) => {
-        const [author, likesCount, repliesCount, isLiked] = await Promise.all([
+        const [author, likesCount, isLiked, repliesCount] = await Promise.all([
           getUserById(users, comment.authorId),
-          likes.countDocuments({ commentId: comment._id, type: 'comment_like' }),
-          comments.countDocuments({ parentId: comment._id }),
-          likes.findOne({ 
+          db.collection('likes').countDocuments({ 
             commentId: comment._id, 
-            userId: new ObjectId(decoded.userId), 
-            type: 'comment_like' 
-          })
+            type: 'comment-like' 
+          }),
+          db.collection('likes').findOne({
+            commentId: comment._id,
+            userId: new ObjectId(decoded.userId),
+            type: 'comment-like'
+          }),
+          comments.countDocuments({ parentCommentId: comment._id })
         ])
-        
+
         return {
           id: comment._id,
           content: comment.content,
+          parentCommentId: comment.parentCommentId,
           author: {
             id: author._id,
             username: author.username,
@@ -113,22 +114,32 @@ module.exports = async function handler(req, res) {
             avatar: author.profile?.avatar
           },
           likesCount,
-          repliesCount,
           isLiked: !!isLiked,
+          repliesCount,
           createdAt: comment.createdAt,
           updatedAt: comment.updatedAt
         }
       }))
 
+      // 按层级结构组织评论（一级评论和二级回复）
+      const topLevelComments = commentsWithAuthors.filter(c => !c.parentCommentId)
+      const replies = commentsWithAuthors.filter(c => c.parentCommentId)
+
+      // 为每个一级评论添加其回复
+      const structuredComments = topLevelComments.map(comment => ({
+        ...comment,
+        replies: replies.filter(r => r.parentCommentId && r.parentCommentId.toString() === comment.id.toString())
+      }))
+
       const total = await comments.countDocuments({ 
         postId: new ObjectId(postId),
-        parentId: { $exists: false }
+        parentCommentId: null // 只统计一级评论数量
       })
 
       return res.status(200).json({
         success: true,
         data: {
-          comments: commentsWithAuthors,
+          comments: structuredComments,
           pagination: {
             page: parseInt(page),
             limit: parseInt(limit),
@@ -136,134 +147,6 @@ module.exports = async function handler(req, res) {
             pages: Math.ceil(total / parseInt(limit))
           }
         }
-      })
-    }
-
-    if (req.method === 'POST') {
-      const { action, commentId, postId, content, parentId } = req.body
-
-      if (action === 'like') {
-        // 点赞/取消点赞评论
-        if (!commentId) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '评论ID不能为空' 
-          })
-        }
-
-        const existingLike = await likes.findOne({
-          commentId: new ObjectId(commentId),
-          userId: new ObjectId(decoded.userId),
-          type: 'comment_like'
-        })
-
-        if (existingLike) {
-          // 取消点赞
-          await likes.deleteOne({ _id: existingLike._id })
-          const likesCount = await likes.countDocuments({ 
-            commentId: new ObjectId(commentId), 
-            type: 'comment_like' 
-          })
-          
-          return res.status(200).json({
-            success: true,
-            message: '取消点赞成功',
-            data: { isLiked: false, likesCount }
-          })
-        } else {
-          // 添加点赞
-          await likes.insertOne({
-            commentId: new ObjectId(commentId),
-            userId: new ObjectId(decoded.userId),
-            type: 'comment_like',
-            createdAt: new Date()
-          })
-          
-          const likesCount = await likes.countDocuments({ 
-            commentId: new ObjectId(commentId), 
-            type: 'comment_like' 
-          })
-          
-          return res.status(200).json({
-            success: true,
-            message: '点赞成功',
-            data: { isLiked: true, likesCount }
-          })
-        }
-      }
-
-      if (action === 'reply') {
-        // 创建回复（二级评论）
-        if (!parentId || !content) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '父评论ID和回复内容不能为空' 
-          })
-        }
-
-        if (content.trim().length === 0) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '回复内容不能为空' 
-          })
-        }
-
-        if (content.length > 300) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '回复内容不能超过300个字符' 
-          })
-        }
-
-        // 检查父评论是否存在
-        const parentComment = await comments.findOne({ _id: new ObjectId(parentId) })
-        if (!parentComment) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '父评论不存在' 
-          })
-        }
-
-        const newReply = {
-          postId: parentComment.postId,
-          parentId: new ObjectId(parentId),
-          authorId: new ObjectId(decoded.userId),
-          content: content.trim(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-
-        const result = await comments.insertOne(newReply)
-        const author = await getUserById(users, decoded.userId)
-        const repliesCount = await comments.countDocuments({ 
-          parentId: new ObjectId(parentId) 
-        })
-
-        return res.status(201).json({
-          success: true,
-          message: '回复发布成功',
-          data: {
-            reply: {
-              id: result.insertedId,
-              content: newReply.content,
-              author: {
-                id: author._id,
-                username: author.username,
-                nickname: author.profile?.nickname || author.username,
-                avatar: author.profile?.avatar
-              },
-              likesCount: 0,
-              isLiked: false,
-              createdAt: newReply.createdAt
-            },
-            repliesCount
-          }
-        })
-      }
-
-      return res.status(400).json({ 
-        success: false, 
-        message: '不支持的操作' 
       })
     }
 
@@ -296,12 +179,8 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      // 删除评论及其回复和点赞
-      await Promise.all([
-        comments.deleteOne({ _id: new ObjectId(commentId) }),
-        comments.deleteMany({ parentId: new ObjectId(commentId) }), // 删除所有回复
-        likes.deleteMany({ commentId: new ObjectId(commentId) }) // 删除所有点赞
-      ])
+      // 删除评论
+      await comments.deleteOne({ _id: new ObjectId(commentId) })
 
       return res.status(200).json({
         success: true,
