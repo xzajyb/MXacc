@@ -43,7 +43,6 @@ interface LanguageResources {
     settings: string
     security: string
     admin: string
-    social: string
   }
   dashboard: {
     title: string
@@ -131,57 +130,6 @@ interface LanguageResources {
     activeUsers: string
     emailsSent: string
   }
-  social: {
-    title: string
-    description: string
-    friends: string
-    friendsDesc: string
-    messages: string
-    messagesDesc: string
-    posts: string
-    postsDesc: string
-    activities: string
-    activitiesDesc: string
-    findFriends: string
-    sendMessage: string
-    createPost: string
-    viewProfile: string
-    addFriend: string
-    removeFriend: string
-    acceptRequest: string
-    rejectRequest: string
-    pendingRequests: string
-    sentRequests: string
-    friendsList: string
-    noFriends: string
-    noMessages: string
-    noPosts: string
-    searchPlaceholder: string
-    messageContent: string
-    postContent: string
-    postPlaceholder: string
-    messagePlaceholder: string
-    sendPost: string
-    reply: string
-    like: string
-    share: string
-    comment: string
-    online: string
-    offline: string
-    lastSeen: string
-    mutual: string
-    mutualFriends: string
-    newPost: string
-    newMessage: string
-    friendRequest: string
-    activity: string
-    notifications: string
-    markAsRead: string
-    deletePost: string
-    editPost: string
-    reportUser: string
-    blockUser: string
-  }
   errors: {
     networkError: string
     unauthorized: string
@@ -233,8 +181,7 @@ const languageResources: Record<Language, LanguageResources> = {
       profile: '个人资料',
       settings: '系统设置',
       security: '安全中心',
-      admin: '管理员',
-      social: '社交中心'
+      admin: '管理员'
     },
     dashboard: {
       title: '仪表板',
@@ -322,57 +269,6 @@ const languageResources: Record<Language, LanguageResources> = {
       activeUsers: '活跃用户',
       emailsSent: '已发送邮件'
     },
-    social: {
-      title: '社交中心',
-      description: '与好友互动，分享动态和消息',
-      friends: '好友管理',
-      friendsDesc: '查看和管理您的好友列表',
-      messages: '私信聊天',
-      messagesDesc: '与好友进行私密对话',
-      posts: '动态分享',
-      postsDesc: '发布和查看社交动态',
-      activities: '活动动态',
-      activitiesDesc: '查看好友的最新活动',
-      findFriends: '寻找好友',
-      sendMessage: '发送消息',
-      createPost: '发布动态',
-      viewProfile: '查看资料',
-      addFriend: '添加好友',
-      removeFriend: '删除好友',
-      acceptRequest: '接受请求',
-      rejectRequest: '拒绝请求',
-      pendingRequests: '待处理请求',
-      sentRequests: '已发送请求',
-      friendsList: '好友列表',
-      noFriends: '暂无好友，快去添加一些吧！',
-      noMessages: '暂无消息',
-      noPosts: '暂无动态',
-      searchPlaceholder: '搜索用户或内容...',
-      messageContent: '消息内容',
-      postContent: '动态内容',
-      postPlaceholder: '分享你的想法...',
-      messagePlaceholder: '输入消息...',
-      sendPost: '发布',
-      reply: '回复',
-      like: '点赞',
-      share: '分享',
-      comment: '评论',
-      online: '在线',
-      offline: '离线',
-      lastSeen: '最后在线',
-      mutual: '共同',
-      mutualFriends: '共同好友',
-      newPost: '新动态',
-      newMessage: '新消息',
-      friendRequest: '好友请求',
-      activity: '活动',
-      notifications: '通知',
-      markAsRead: '标为已读',
-      deletePost: '删除动态',
-      editPost: '编辑动态',
-      reportUser: '举报用户',
-      blockUser: '拉黑用户'
-    },
     errors: {
       networkError: '网络连接错误',
       unauthorized: '未授权访问',
@@ -421,8 +317,7 @@ const languageResources: Record<Language, LanguageResources> = {
       profile: '個人資料',
       settings: '系統設定',
       security: '安全中心',
-      admin: '管理員',
-      social: '社交中心'
+      admin: '管理員'
     },
     dashboard: {
       title: '儀表板',
@@ -510,57 +405,6 @@ const languageResources: Record<Language, LanguageResources> = {
       activeUsers: '活躍使用者',
       emailsSent: '已發送電子郵件'
     },
-    social: {
-      title: '社交中心',
-      description: '與好友互動，分享動態和訊息',
-      friends: '好友管理',
-      friendsDesc: '檢視和管理您的好友清單',
-      messages: '私訊聊天',
-      messagesDesc: '與好友進行私密對話',
-      posts: '動態分享',
-      postsDesc: '發布和檢視社交動態',
-      activities: '活動動態',
-      activitiesDesc: '檢視好友的最新活動',
-      findFriends: '尋找好友',
-      sendMessage: '發送訊息',
-      createPost: '發布動態',
-      viewProfile: '檢視資料',
-      addFriend: '添加好友',
-      removeFriend: '刪除好友',
-      acceptRequest: '接受請求',
-      rejectRequest: '拒絕請求',
-      pendingRequests: '待處理請求',
-      sentRequests: '已發送請求',
-      friendsList: '好友清單',
-      noFriends: '暫無好友，快去添加一些吧！',
-      noMessages: '暫無訊息',
-      noPosts: '暫無動態',
-      searchPlaceholder: '搜尋使用者或內容...',
-      messageContent: '訊息內容',
-      postContent: '動態內容',
-      postPlaceholder: '分享你的想法...',
-      messagePlaceholder: '輸入訊息...',
-      sendPost: '發布',
-      reply: '回復',
-      like: '按讚',
-      share: '分享',
-      comment: '評論',
-      online: '線上',
-      offline: '離線',
-      lastSeen: '最後在線',
-      mutual: '共同',
-      mutualFriends: '共同好友',
-      newPost: '新動態',
-      newMessage: '新訊息',
-      friendRequest: '好友請求',
-      activity: '活動',
-      notifications: '通知',
-      markAsRead: '標為已讀',
-      deletePost: '刪除動態',
-      editPost: '編輯動態',
-      reportUser: '舉報使用者',
-      blockUser: '封鎖使用者'
-    },
     errors: {
       networkError: '網路連線錯誤',
       unauthorized: '未授權存取',
@@ -609,8 +453,7 @@ const languageResources: Record<Language, LanguageResources> = {
       profile: 'Profile',
       settings: 'Settings',
       security: 'Security',
-      admin: 'Admin',
-      social: 'Social'
+      admin: 'Admin'
     },
     dashboard: {
       title: 'Dashboard',
@@ -698,57 +541,6 @@ const languageResources: Record<Language, LanguageResources> = {
       activeUsers: 'Active Users',
       emailsSent: 'Emails Sent'
     },
-    social: {
-      title: 'Social Hub',
-      description: 'Connect with friends, share updates and messages',
-      friends: 'Friends',
-      friendsDesc: 'View and manage your friends list',
-      messages: 'Messages',
-      messagesDesc: 'Private conversations with friends',
-      posts: 'Posts',
-      postsDesc: 'Share and view social updates',
-      activities: 'Activities',
-      activitiesDesc: 'See latest updates from friends',
-      findFriends: 'Find Friends',
-      sendMessage: 'Send Message',
-      createPost: 'Create Post',
-      viewProfile: 'View Profile',
-      addFriend: 'Add Friend',
-      removeFriend: 'Remove Friend',
-      acceptRequest: 'Accept Request',
-      rejectRequest: 'Reject Request',
-      pendingRequests: 'Pending Requests',
-      sentRequests: 'Sent Requests',
-      friendsList: 'Friends List',
-      noFriends: 'No friends yet, go add some!',
-      noMessages: 'No messages',
-      noPosts: 'No posts',
-      searchPlaceholder: 'Search users or content...',
-      messageContent: 'Message content',
-      postContent: 'Post content',
-      postPlaceholder: 'Share your thoughts...',
-      messagePlaceholder: 'Type a message...',
-      sendPost: 'Post',
-      reply: 'Reply',
-      like: 'Like',
-      share: 'Share',
-      comment: 'Comment',
-      online: 'Online',
-      offline: 'Offline',
-      lastSeen: 'Last seen',
-      mutual: 'Mutual',
-      mutualFriends: 'Mutual friends',
-      newPost: 'New Post',
-      newMessage: 'New Message',
-      friendRequest: 'Friend Request',
-      activity: 'Activity',
-      notifications: 'Notifications',
-      markAsRead: 'Mark as read',
-      deletePost: 'Delete Post',
-      editPost: 'Edit Post',
-      reportUser: 'Report User',
-      blockUser: 'Block User'
-    },
     errors: {
       networkError: 'Network connection error',
       unauthorized: 'Unauthorized access',
@@ -756,7 +548,7 @@ const languageResources: Record<Language, LanguageResources> = {
       serverError: 'Server error',
       validationError: 'Data validation failed',
       uploadError: 'Upload failed',
-      emailSendError: 'Email send failed'
+      emailSendError: 'Email sending failed'
     }
   },
   'ja-JP': {
@@ -797,8 +589,7 @@ const languageResources: Record<Language, LanguageResources> = {
       profile: 'プロフィール',
       settings: '設定',
       security: 'セキュリティ',
-      admin: '管理者',
-      social: 'ソーシャル'
+      admin: '管理者'
     },
     dashboard: {
       title: 'ダッシュボード',
@@ -886,65 +677,14 @@ const languageResources: Record<Language, LanguageResources> = {
       activeUsers: 'アクティブユーザー',
       emailsSent: '送信済みメール'
     },
-    social: {
-      title: 'ソーシャルハブ',
-      description: '友達と交流し、更新やメッセージを共有',
-      friends: 'フレンド',
-      friendsDesc: 'フレンドリストの表示と管理',
-      messages: 'メッセージ',
-      messagesDesc: '友達とのプライベート会話',
-      posts: '投稿',
-      postsDesc: 'ソーシャル更新の共有と表示',
-      activities: 'アクティビティ',
-      activitiesDesc: '友達の最新更新を確認',
-      findFriends: 'フレンドを探す',
-      sendMessage: 'メッセージ送信',
-      createPost: '投稿作成',
-      viewProfile: 'プロフィール表示',
-      addFriend: 'フレンド追加',
-      removeFriend: 'フレンド削除',
-      acceptRequest: 'リクエスト承認',
-      rejectRequest: 'リクエスト拒否',
-      pendingRequests: '保留中のリクエスト',
-      sentRequests: '送信済みリクエスト',
-      friendsList: 'フレンドリスト',
-      noFriends: 'まだフレンドがいません。追加しましょう！',
-      noMessages: 'メッセージがありません',
-      noPosts: '投稿がありません',
-      searchPlaceholder: 'ユーザーやコンテンツを検索...',
-      messageContent: 'メッセージ内容',
-      postContent: '投稿内容',
-      postPlaceholder: 'あなたの考えを共有...',
-      messagePlaceholder: 'メッセージを入力...',
-      sendPost: '投稿',
-      reply: '返信',
-      like: 'いいね',
-      share: 'シェア',
-      comment: 'コメント',
-      online: 'オンライン',
-      offline: 'オフライン',
-      lastSeen: '最後のアクセス',
-      mutual: '共通',
-      mutualFriends: '共通の友達',
-      newPost: '新しい投稿',
-      newMessage: '新しいメッセージ',
-      friendRequest: 'フレンドリクエスト',
-      activity: 'アクティビティ',
-      notifications: '通知',
-      markAsRead: '既読にする',
-      deletePost: '投稿削除',
-      editPost: '投稿編集',
-      reportUser: 'ユーザー報告',
-      blockUser: 'ユーザーブロック'
-    },
     errors: {
       networkError: 'ネットワーク接続エラー',
       unauthorized: '認証されていないアクセス',
       notFound: 'ページが見つかりません',
       serverError: 'サーバーエラー',
-      validationError: 'データ検証に失敗しました',
-      uploadError: 'アップロードに失敗しました',
-      emailSendError: 'メール送信に失敗しました'
+      validationError: 'データ検証に失敗',
+      uploadError: 'アップロードに失敗',
+      emailSendError: 'メール送信に失敗'
     }
   }
 }

@@ -21,7 +21,7 @@ import {
   Sun,
   Moon,
   Monitor,
-  Crown
+  MessageCircle
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -59,16 +59,16 @@ const DashboardPage: React.FC = () => {
       description: t.dashboard.stats
     },
     {
+      id: 'social',
+      label: '社交中心',
+      icon: MessageCircle,
+      description: '与朋友分享动态，发现有趣内容'
+    },
+    {
       id: 'profile',
       label: t.navigation.profile,
       icon: User,
       description: t.profile.description
-    },
-    {
-      id: 'social',
-      label: t.navigation.social,
-      icon: Users,
-      description: t.social.description
     },
     {
       id: 'settings',
@@ -85,7 +85,7 @@ const DashboardPage: React.FC = () => {
     ...(user?.role === 'admin' ? [{
       id: 'admin',
       label: t.navigation.admin,
-      icon: Crown,
+      icon: Users,
       description: t.admin.systemStats
     }] : []),
     ...(!user?.isEmailVerified ? [{
@@ -101,7 +101,7 @@ const DashboardPage: React.FC = () => {
   }
 
   const handleNavClick = (viewId: ActiveView) => {
-    // 如果邮箱未验证，除了验证邮箱和个人资料，其他功能都禁用
+    // 如果邮箱未验证，除了验证邮箱、个人资料和社交功能，其他功能都禁用
     if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social') {
       showWarning('请先验证邮箱后再使用此功能')
       return
@@ -172,10 +172,10 @@ const DashboardPage: React.FC = () => {
   const renderContent = () => {
     const content = (() => {
       switch (activeView) {
-        case 'profile':
-          return <ProfilePage embedded={true} />
         case 'social':
           return <SocialPage embedded={true} />
+        case 'profile':
+          return <ProfilePage embedded={true} />
         case 'settings':
           return !user?.isEmailVerified ? (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
@@ -291,7 +291,7 @@ const DashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {navigationItems.filter(item => item.id !== 'home').map((item) => {
                   const Icon = item.icon
-                  const isDisabled = !user?.isEmailVerified && item.id !== 'verify-email' && item.id !== 'profile'
+                  const isDisabled = !user?.isEmailVerified && item.id !== 'verify-email' && item.id !== 'profile' && item.id !== 'social'
                   return (
                     <motion.div
                       key={item.id}
@@ -308,11 +308,15 @@ const DashboardPage: React.FC = () => {
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                           isDisabled 
                             ? 'bg-gray-100 dark:bg-gray-700' 
+                            : item.id === 'social'
+                            ? 'bg-green-50 dark:bg-green-900/20'
                             : 'bg-blue-50 dark:bg-blue-900/20'
                         }`}>
                           <Icon className={`w-6 h-6 ${
                             isDisabled 
                               ? 'text-gray-400' 
+                              : item.id === 'social'
+                              ? 'text-green-600 dark:text-green-400'
                               : 'text-blue-600 dark:text-blue-400'
                           }`} />
                         </div>
