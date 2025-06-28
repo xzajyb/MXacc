@@ -25,6 +25,7 @@ import {
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { createPortal } from 'react-dom'
 
 interface Post {
   id: string
@@ -1417,14 +1418,20 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       />
 
       {/* 图片查看模态框 */}
-      <AnimatePresence>
-        {showImageModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
+      {showImageModal && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => setShowImageModal(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* 模态框头部 */}
@@ -1432,7 +1439,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">查看图片</h2>
                 <button
                   onClick={() => setShowImageModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 p-2"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -1447,9 +1454,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                 />
               </div>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   )
 }
