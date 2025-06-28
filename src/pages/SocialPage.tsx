@@ -1032,7 +1032,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                 )}
               </div>
               <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
+                <div className="flex items-center space-x-2">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
                   {/* 管理员标签 */}
                   {user?.role === 'admin' && (
@@ -1180,7 +1180,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
                     {/* 用户信息 */}
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
+                      <div className="flex items-center space-x-2">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
                         {/* 管理员标签 */}
                         {user?.role === 'admin' && (

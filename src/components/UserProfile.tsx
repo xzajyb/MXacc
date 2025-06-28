@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield } from 'lucide-react'
+import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield, Users, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -21,6 +21,10 @@ interface User {
   joinedAt: string
   isOwnProfile: boolean
   role?: string
+  privacySettings?: {
+    showFollowers?: boolean
+    showFollowing?: boolean
+  }
 }
 
 interface Post {
@@ -54,8 +58,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
   
   const [user, setUser] = useState<User | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
-  const [followers, setFollowers] = useState<any[]>([])
-  const [following, setFollowing] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [showMessaging, setShowMessaging] = useState(false)
   const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following'>('posts')
@@ -99,52 +101,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
       }
     } catch (error) {
       console.error('获取用户帖子失败:', error)
-    }
-  }
-
-  // 获取粉丝列表
-  const fetchFollowers = async () => {
-    if (!userId) return
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/messaging?action=followers&userId=${userId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setFollowers(data.data.followers || [])
-      } else {
-        console.error('获取粉丝列表失败:', response.status)
-        showError('无法查看此用户的粉丝列表')
-      }
-    } catch (error) {
-      console.error('获取粉丝列表失败:', error)
-      showError('获取粉丝列表失败')
-    }
-  }
-
-  // 获取关注列表
-  const fetchFollowing = async () => {
-    if (!userId) return
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/messaging?action=following&userId=${userId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setFollowing(data.data.following || [])
-      } else {
-        console.error('获取关注列表失败:', response.status)
-        showError('无法查看此用户的关注列表')
-      }
-    } catch (error) {
-      console.error('获取关注列表失败:', error)
-      showError('获取关注列表失败')
     }
   }
 
@@ -237,8 +193,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
     if (isOpen && userId) {
       fetchUser()
       fetchUserPosts()
-      fetchFollowers()
-      fetchFollowing()
     }
   }, [isOpen, userId])
 
@@ -285,7 +239,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
 
                   {/* 用户信息 */}
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
+                    <div className="flex items-center space-x-2">
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
                       {/* 管理员标签 */}
                       {user.role === 'admin' && (
@@ -316,27 +270,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
 
                     {/* 统计信息 */}
                     <div className="flex space-x-6 mt-4">
-                      <button
-                        onClick={() => setActiveTab('posts')}
-                        className="text-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
-                      >
+                      <div className="text-center">
                         <div className="font-bold text-gray-900 dark:text-white">{user.postsCount}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">帖子</div>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('followers')}
-                        className="text-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
-                      >
+                      </div>
+                      <div className="text-center">
                         <div className="font-bold text-gray-900 dark:text-white">{user.followersCount}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">粉丝</div>
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('following')}
-                        className="text-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors"
-                      >
+                      </div>
+                      <div className="text-center">
                         <div className="font-bold text-gray-900 dark:text-white">{user.followingCount}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">关注</div>
-                      </button>
+                      </div>
                     </div>
                   </div>
 
@@ -388,26 +333,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                   >
                     帖子 ({user.postsCount})
                   </button>
-                  <button
-                    onClick={() => setActiveTab('followers')}
-                    className={`py-3 border-b-2 transition-colors ${
-                      activeTab === 'followers'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    粉丝 ({user.followersCount})
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('following')}
-                    className={`py-3 border-b-2 transition-colors ${
-                      activeTab === 'following'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    关注 ({user.followingCount})
-                  </button>
                 </div>
               </div>
 
@@ -434,18 +359,18 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                   </div>
                                 )}
                               </div>
-                              <div>
-                                <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-2">
+                                <div>
                                   <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
-                                  {/* 管理员标签 */}
-                                  {post.author.role === 'admin' && (
-                                    <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                                      <Shield className="w-2.5 h-2.5 mr-1" />
-                                      管理员
-                                    </div>
-                                  )}
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                                {/* 管理员标签 */}
+                                {post.author.role === 'admin' && (
+                                  <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                    <Shield className="w-2.5 h-2.5 mr-1" />
+                                    管理员
+                                  </div>
+                                )}
                               </div>
                             </div>
                             {post.canDelete && (
@@ -494,82 +419,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                             <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
                               <MessageCircle className="w-4 h-4" />
                               <span>{post.commentsCount}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-                
-                {activeTab === 'followers' && (
-                  <div className="space-y-3">
-                    {followers.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-500 dark:text-gray-400">暂无粉丝</p>
-                      </div>
-                    ) : (
-                      followers.map((follower) => (
-                        <div key={follower.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
-                              {follower.avatar ? (
-                                <img src={follower.avatar} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
-                                  {follower.nickname.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium text-gray-900 dark:text-white">{follower.nickname}</p>
-                                {follower.role === 'admin' && (
-                                  <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                                    <Shield className="w-2.5 h-2.5 mr-1" />
-                                    管理员
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">@{follower.username}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-                
-                {activeTab === 'following' && (
-                  <div className="space-y-3">
-                    {following.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-500 dark:text-gray-400">暂未关注任何人</p>
-                      </div>
-                    ) : (
-                      following.map((followingUser) => (
-                        <div key={followingUser.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
-                              {followingUser.avatar ? (
-                                <img src={followingUser.avatar} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
-                                  {followingUser.nickname.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <div className="flex items-center space-x-2">
-                                <p className="font-medium text-gray-900 dark:text-white">{followingUser.nickname}</p>
-                                {followingUser.role === 'admin' && (
-                                  <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                                    <Shield className="w-2.5 h-2.5 mr-1" />
-                                    管理员
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">@{followingUser.username}</p>
                             </div>
                           </div>
                         </div>
