@@ -46,6 +46,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [messagesLoading, setMessagesLoading] = useState(false)
   const [sendingMessage, setSendingMessage] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -85,6 +86,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
 
   // 获取特定会话的消息
   const fetchMessages = async (conversationId?: string, otherUserId?: string) => {
+    setMessagesLoading(true)  // 开始加载
     try {
       let url = '/api/social/messaging'
       const params = new URLSearchParams()
@@ -117,6 +119,8 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       }
     } catch (error) {
       console.error('获取消息失败:', error)
+    } finally {
+      setMessagesLoading(false)  // 结束加载
     }
   }
 
@@ -448,7 +452,12 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
 
                       {/* 消息列表 */}
                       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        {messages.length === 0 ? (
+                        {messagesLoading ? (
+                          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                            <p className="mt-2">加载消息中...</p>
+                          </div>
+                        ) : messages.length === 0 ? (
                           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
                             <p>暂无消息，开始聊天吧～</p>
                           </div>

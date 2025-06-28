@@ -84,9 +84,10 @@ interface User {
 
 interface SocialPageProps {
   embedded?: boolean
+  onUnreadCountChange?: (count: number) => void
 }
 
-const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
+const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCountChange }) => {
   const { user } = useAuth()
   const { showSuccess, showError } = useToast()
   const { t, formatDate } = useLanguage()
@@ -146,6 +147,45 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   // 检查社交功能可用性
   const isSocialFeatureEnabled = isEmailVerified
   
+  // 当未读消息数量变化时，通知外部组件
+  useEffect(() => {
+    if (onUnreadCountChange) {
+      onUnreadCountChange(unreadCount)
+    }
+  }, [unreadCount, onUnreadCountChange])
+
+  // 定期刷新未读消息数量
+  useEffect(() => {
+    if (isSocialFeatureEnabled) {
+      // 立即获取一次
+      fetchUnreadCount()
+      
+      // 每30秒刷新一次未读数量
+      const interval = setInterval(fetchUnreadCount, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [isSocialFeatureEnabled])
+
+  // 获取未读消息数量
+  const fetchUnreadCount = async () => {
+    if (!isSocialFeatureEnabled) return
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/social/messaging?action=conversations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const totalUnread = data.data.conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
+        setUnreadCount(totalUnread)
+      }
+    } catch (error) {
+      console.error('获取未读消息数量失败:', error)
+    }
+  }
+
   // 获取帖子列表
   const fetchPosts = async (type: 'feed' | 'following' = 'feed') => {
     try {
@@ -969,9 +1009,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
               <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               <p className="text-yellow-800 dark:text-yellow-200">
                 请先验证邮箱后再使用社交功能。
-                <a href="/settings" className="text-yellow-600 dark:text-yellow-400 underline hover:text-yellow-700 dark:hover:text-yellow-300 ml-1">
-                  前往设置
-                </a>
+                <button 
+                  onClick={() => embedded ? setActiveTab('verify-email' as any) : navigate('/verify-email')}
+                  className="text-yellow-600 dark:text-yellow-400 underline hover:text-yellow-700 dark:hover:text-yellow-300 ml-1"
+                >
+                  立即验证
+                </button>
               </p>
             </div>
           </div>

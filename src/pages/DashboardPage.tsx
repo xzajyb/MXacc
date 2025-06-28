@@ -42,6 +42,7 @@ const DashboardPage: React.FC = () => {
   const { t, formatDate, language } = useLanguage()
   const [activeView, setActiveView] = useState<ActiveView>('home')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [socialUnreadCount, setSocialUnreadCount] = useState(0)  // 新增：社交未读消息数量
   const navigate = useNavigate()
 
   // 根据用户状态自动显示邮箱验证
@@ -173,7 +174,7 @@ const DashboardPage: React.FC = () => {
     const content = (() => {
       switch (activeView) {
         case 'social':
-          return <SocialPage embedded={true} />
+          return <SocialPage embedded={true} onUnreadCountChange={setSocialUnreadCount} />
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':
@@ -297,13 +298,20 @@ const DashboardPage: React.FC = () => {
                       key={item.id}
                       whileHover={{ scale: isDisabled ? 1 : 1.02 }}
                       whileTap={{ scale: isDisabled ? 1 : 0.98 }}
-                      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 ${
+                      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 relative ${
                         isDisabled 
                           ? 'opacity-50 cursor-not-allowed' 
                           : 'cursor-pointer hover:shadow-md'
                       } transition-all`}
                       onClick={() => handleNavClick(item.id as ActiveView)}
                     >
+                      {/* 社交中心未读消息红点 */}
+                      {item.id === 'social' && socialUnreadCount > 0 && !isDisabled && (
+                        <span className="absolute top-3 right-3 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                          {socialUnreadCount > 99 ? '99+' : socialUnreadCount}
+                        </span>
+                      )}
+                      
                       <div className="flex items-center space-x-3">
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                           isDisabled 
@@ -426,7 +434,7 @@ const DashboardPage: React.FC = () => {
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id as ActiveView)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors relative ${
                     activeView === item.id
                       ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
@@ -434,6 +442,12 @@ const DashboardPage: React.FC = () => {
                 >
                   <Icon size={20} />
                   <span className="font-medium">{item.label}</span>
+                  {/* 社交中心未读消息红点 */}
+                  {item.id === 'social' && socialUnreadCount > 0 && (
+                    <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {socialUnreadCount > 99 ? '99+' : socialUnreadCount}
+                    </span>
+                  )}
                 </button>
               )
             })}
