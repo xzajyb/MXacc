@@ -433,7 +433,7 @@ module.exports = async function handler(req, res) {
         const result = await comments.insertOne(newComment)
         const author = await getUserById(users, decoded.userId)
 
-        // 更新评论计数 - 统计该帖子的所有评论
+        // 更新评论计数 - 统计该帖子的所有评论（包括所有级别的评论）
         const commentsCount = await comments.countDocuments({ 
           postId: new ObjectId(postId)
         })

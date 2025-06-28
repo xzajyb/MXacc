@@ -349,44 +349,62 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   const handleCommentDelete = async (commentId: string) => {
     try {
       const token = localStorage.getItem('token')
+      const postId = Object.keys(showComments).find(id => showComments[id])
+      
+      if (!postId) {
+        showError('无法找到对应的帖子')
+        return
+      }
+
+      // 先立即从界面中移除评论（乐观更新）
+      setComments(prev => ({
+        ...prev,
+        [postId]: removeCommentFromTree(prev[postId] || [], commentId)
+      }))
+
       const response = await fetch(`/api/social/content?action=comment&id=${commentId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
       
       if (response.ok) {
-        // 在树状结构中删除评论
-        const postId = Object.keys(showComments).find(id => showComments[id])
-        if (postId) {
-          setComments(prev => ({
-            ...prev,
-            [postId]: removeCommentFromTree(prev[postId] || [], commentId)
-          }))
+        // 重新获取准确的评论计数（因为删除评论可能包含子评论）
+        const countResponse = await fetch(`/api/social/content?action=comments&postId=${postId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        
+        if (countResponse.ok) {
+          const countData = await countResponse.json()
+          const newCommentsCount = countData.data.stats.totalComments
           
-          // 重新获取准确的评论计数（因为删除评论可能包含子评论）
-          const countResponse = await fetch(`/api/social/content?action=comments&postId=${postId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-          
-          if (countResponse.ok) {
-            const countData = await countResponse.json()
-            const newCommentsCount = countData.data.stats.totalComments
-            
-            setPosts(prev => prev.map(post => 
-              post.id === postId 
-                ? { ...post, commentsCount: newCommentsCount }
-                : post
-            ))
+          // 更新帖子的评论计数
+          setPosts(prev => prev.map(post => 
+            post.id === postId 
+              ? { ...post, commentsCount: newCommentsCount }
+              : post
+          ))
+
+          // 同时更新评论树结构，确保与服务器数据一致
+          if (countData.data.comments) {
+            const treeComments = buildCommentTree(countData.data.comments)
+            setComments(prev => ({ ...prev, [postId]: treeComments }))
           }
         }
         showSuccess('评论删除成功')
       } else {
+        // 如果删除失败，恢复评论显示
+        await fetchComments(postId)
         const errorData = await response.json()
         throw new Error(errorData.message || '删除失败')
       }
     } catch (error: any) {
       console.error('删除评论失败:', error)
       showError(error.message || '删除失败')
+      // 如果出错，重新获取评论确保数据一致性
+      const postId = Object.keys(showComments).find(id => showComments[id])
+      if (postId) {
+        await fetchComments(postId)
+      }
     }
   }
 
