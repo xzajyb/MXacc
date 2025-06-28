@@ -1032,57 +1032,50 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                 )}
               </div>
               <div className="flex-1">
-                <textarea
-                  placeholder="分享你的想法..."
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                  maxLength={1000}
-                />
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex space-x-2">
-                    <label className="p-2 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer">
-                      <ImageIcon className="w-5 h-5" />
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageSelect}
-                      />
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {newPostContent.length}/1000
-                    </span>
-                    <button
-                      onClick={handleCreatePost}
-                      disabled={!newPostContent.trim() || isPosting}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-                    >
-                      {isPosting ? '发布中...' : '发布'}
-                    </button>
+                <div className="flex items-center space-x-2 mb-1">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
+                  {/* 管理员标签 */}
+                  {user?.role === 'admin' && (
+                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                      <Shield className="w-3 h-3 mr-1" />
+                      管理员
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-500 dark:text-gray-400">@{user?.username}</p>
+                
+                {user?.profile?.bio && (
+                  <p className="text-gray-700 dark:text-gray-300 mt-2">{user.profile.bio}</p>
+                )}
+
+                <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
+                  {user?.profile?.location && (
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="w-4 h-4" />
+                      <span>{user.profile.location}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>加入于 {user?.createdAt ? formatDate(user.createdAt, 'date') : '未知'}</span>
                   </div>
                 </div>
-                
-                {/* 图片预览 */}
-                {imagePreviewUrls.length > 0 && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {imagePreviewUrls.map((url, index) => (
-                      <div key={index} className="relative aspect-square">
-                        <img src={url} alt={`预览 ${index + 1}`} className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => openImageModal(url)} />
-                        <button
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+
+                {/* 统计信息 */}
+                <div className="flex space-x-6 mt-4">
+                  <div className="text-center">
+                    <div className="font-bold text-gray-900 dark:text-white">{myPosts.length}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">帖子</div>
                   </div>
-                )}
+                  <div className="text-center">
+                    <div className="font-bold text-gray-900 dark:text-white">{myProfile?.followersCount || 0}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">粉丝</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-gray-900 dark:text-white">{myProfile?.followingCount || 0}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">关注</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1187,7 +1180,16 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
                     {/* 用户信息 */}
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
+                        {/* 管理员标签 */}
+                        {user?.role === 'admin' && (
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                            <Shield className="w-3 h-3 mr-1" />
+                            管理员
+                          </div>
+                        )}
+                      </div>
                       <p className="text-gray-500 dark:text-gray-400">@{user?.username}</p>
                       
                       {user?.profile?.bio && (
