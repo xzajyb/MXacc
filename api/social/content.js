@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      // 获取评论列表（支持二级评论）
+      // 获取评论列表（支持多级树状评论）
       if (action === 'comments') {
         if (!postId) {
           return res.status(400).json({ 
@@ -176,21 +176,16 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        const skip = (parseInt(page) - 1) * parseInt(limit)
-        
-        // 获取一级评论
-        const commentList = await comments.find({ 
-          postId: new ObjectId(postId),
-          parentId: { $exists: false } // 只获取一级评论
+        // 获取该帖子的所有评论（不分页，因为需要构建树状结构）
+        const allComments = await comments.find({ 
+          postId: new ObjectId(postId)
         })
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(parseInt(limit))
+          .sort({ createdAt: 1 }) // 按时间正序获取，方便构建树状结构
           .toArray()
 
-        // 获取评论详情和二级评论
-        const commentsWithDetails = await Promise.all(commentList.map(async (comment) => {
-          const [author, likesCount, repliesCount, isLiked, replies] = await Promise.all([
+        // 获取评论详情
+        const commentsWithDetails = await Promise.all(allComments.map(async (comment) => {
+          const [author, likesCount, repliesCount, isLiked] = await Promise.all([
             getUserById(users, comment.authorId),
             likes.countDocuments({ targetId: comment._id, type: 'comment' }),
             comments.countDocuments({ parentId: comment._id }),
@@ -198,34 +193,8 @@ module.exports = async function handler(req, res) {
               targetId: comment._id, 
               userId: new ObjectId(decoded.userId), 
               type: 'comment' 
-            }),
-            // 获取最新的3条二级评论作为预览
-            comments.find({ parentId: comment._id })
-              .sort({ createdAt: -1 })
-              .limit(3)
-              .toArray()
+            })
           ])
-
-          // 获取二级评论的作者信息
-          const repliesWithAuthors = await Promise.all(replies.map(async (reply) => {
-            const replyAuthor = await getUserById(users, reply.authorId)
-            return {
-              id: reply._id,
-              content: reply.content,
-              author: {
-                id: replyAuthor._id,
-                username: replyAuthor.username,
-                nickname: replyAuthor.profile?.nickname || replyAuthor.username,
-                avatar: replyAuthor.profile?.avatar
-              },
-              replyTo: reply.replyTo ? {
-                id: reply.replyTo.userId,
-                username: reply.replyTo.username
-              } : null,
-              canDelete: reply.authorId.toString() === decoded.userId || currentUser.role === 'admin',
-              createdAt: reply.createdAt
-            }
-          }))
 
           return {
             id: comment._id,
@@ -234,32 +203,34 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role // 包含用户角色信息
             },
+            replyTo: comment.replyTo ? {
+              id: comment.replyTo.userId,
+              username: comment.replyTo.username,
+              nickname: comment.replyTo.nickname || comment.replyTo.username
+            } : null,
             likesCount,
             repliesCount,
             isLiked: !!isLiked,
-            replies: repliesWithAuthors.reverse(), // 最新的在下面
             canDelete: comment.authorId.toString() === decoded.userId || currentUser.role === 'admin',
             createdAt: comment.createdAt,
-            updatedAt: comment.updatedAt
+            parentId: comment.parentId?.toString() || null
           }
         }))
 
-        const total = await comments.countDocuments({ 
-          postId: new ObjectId(postId),
-          parentId: { $exists: false }
-        })
+        // 统计信息
+        const totalComments = allComments.length
+        const rootCommentsCount = allComments.filter(c => !c.parentId).length
 
         return res.status(200).json({
           success: true,
           data: {
             comments: commentsWithDetails,
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total,
-              pages: Math.ceil(total / parseInt(limit))
+            stats: {
+              totalComments,
+              rootCommentsCount
             }
           }
         })

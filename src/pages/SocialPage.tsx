@@ -27,6 +27,8 @@ import {
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CommentTree, { TreeComment } from '../components/CommentTree'
+import { buildCommentTree, updateCommentInTree, removeCommentFromTree, addReplyToTree } from '../utils/commentUtils'
 import { createPortal } from 'react-dom'
 
 interface Post {
@@ -100,7 +102,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   const [loading, setLoading] = useState(false)
   const [newPostContent, setNewPostContent] = useState('')
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
-  const [comments, setComments] = useState<Record<string, Comment[]>>({})
+  const [comments, setComments] = useState<Record<string, TreeComment[]>>({})
   const [commentContent, setCommentContent] = useState<Record<string, string>>({})
   const [replyingTo, setReplyingTo] = useState<Record<string, { commentId: string, username: string } | undefined>>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -301,7 +303,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   }
 
   // 点赞/取消点赞评论
-  const handleCommentLike = async (commentId: string, postId: string) => {
+  const handleCommentLike = async (commentId: string) => {
     if (!isSocialFeatureEnabled) {
       showError('请先验证邮箱后再使用社交功能')
       return
@@ -324,18 +326,58 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       
       if (response.ok) {
         const data = await response.json()
-        setComments(prev => ({
-          ...prev,
-          [postId]: prev[postId]?.map(comment => 
-            comment.id === commentId 
-              ? { ...comment, isLiked: data.data.isLiked, likesCount: data.data.likesCount }
-              : comment
-          ) || []
-        }))
+        // 在树状结构中更新评论
+        const postId = Object.keys(showComments).find(id => showComments[id])
+        if (postId) {
+          setComments(prev => ({
+            ...prev,
+            [postId]: updateCommentInTree(prev[postId] || [], commentId, comment => ({
+              ...comment,
+              isLiked: data.data.isLiked,
+              likesCount: data.data.likesCount
+            }))
+          }))
+        }
       }
     } catch (error) {
       console.error('评论点赞失败:', error)
       showError('操作失败')
+    }
+  }
+
+  // 删除评论
+  const handleCommentDelete = async (commentId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/content?action=comment&id=${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        // 在树状结构中删除评论
+        const postId = Object.keys(showComments).find(id => showComments[id])
+        if (postId) {
+          setComments(prev => ({
+            ...prev,
+            [postId]: removeCommentFromTree(prev[postId] || [], commentId)
+          }))
+          
+          // 更新帖子的评论计数
+          setPosts(prev => prev.map(post => 
+            post.id === postId 
+              ? { ...post, commentsCount: Math.max(0, post.commentsCount - 1) }
+              : post
+          ))
+        }
+        showSuccess('评论删除成功')
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.message || '删除失败')
+      }
+    } catch (error: any) {
+      console.error('删除评论失败:', error)
+      showError(error.message || '删除失败')
     }
   }
 
@@ -405,7 +447,9 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       
       if (response.ok) {
         const data = await response.json()
-        setComments(prev => ({ ...prev, [postId]: data.data.comments }))
+        // 将平展的评论转换为树状结构
+        const treeComments = buildCommentTree(data.data.comments)
+        setComments(prev => ({ ...prev, [postId]: treeComments }))
       }
     } catch (error) {
       console.error('获取评论失败:', error)
@@ -439,10 +483,28 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       
       if (response.ok) {
         const data = await response.json()
-        setComments(prev => ({
-          ...prev,
-          [postId]: [data.data.comment, ...(prev[postId] || [])]
-        }))
+        const newComment = data.data.comment
+        
+        if (reply?.commentId) {
+          // 如果是回复，添加到对应的父评论下
+          setComments(prev => ({
+            ...prev,
+            [postId]: addReplyToTree(prev[postId] || [], reply.commentId, newComment)
+          }))
+        } else {
+          // 如果是根评论，添加到根级别
+          const treeComment: TreeComment = {
+            ...newComment,
+            children: [],
+            level: 1,
+            isExpanded: true
+          }
+          setComments(prev => ({
+            ...prev,
+            [postId]: [treeComment, ...(prev[postId] || [])]
+          }))
+        }
+        
         setPosts(prev => prev.map(post => 
           post.id === postId 
             ? { ...post, commentsCount: data.data.commentsCount }
@@ -459,6 +521,64 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     } catch (error: any) {
       console.error('发布评论失败:', error)
       showError(error.message || '发布评论失败')
+    }
+  }
+
+  // 处理树状评论的回复
+  const handleCommentReply = async (parentId: string, content: string, replyTo?: { id: string; username: string; nickname: string }) => {
+    // 找到当前正在显示评论的帖子ID
+    const postId = Object.keys(showComments).find(id => showComments[id])
+    if (!postId) {
+      showError('无法找到对应的帖子')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/social/content', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'create-comment',
+          postId,
+          content: content.trim(),
+          parentId,
+          replyTo: replyTo ? {
+            userId: replyTo.id,
+            username: replyTo.username,
+            nickname: replyTo.nickname
+          } : undefined
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const newComment = data.data.comment
+        
+        // 添加到树状结构中
+        setComments(prev => ({
+          ...prev,
+          [postId]: addReplyToTree(prev[postId] || [], parentId, newComment)
+        }))
+        
+        // 更新帖子的评论计数
+        setPosts(prev => prev.map(post => 
+          post.id === postId 
+            ? { ...post, commentsCount: post.commentsCount + 1 }
+            : post
+        ))
+        
+        showSuccess('回复发布成功')
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.message || '回复失败')
+      }
+    } catch (error: any) {
+      console.error('发布回复失败:', error)
+      throw error
     }
   }
 
@@ -629,116 +749,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     setImagePreviewUrls(newUrls)
   }
 
-  // 组织评论为树状结构，但显示更简洁
-  const organizeComments = (comments: Comment[]) => {
-    const parentComments = comments.filter(comment => !comment.parentId)
-    const childComments = comments.filter(comment => comment.parentId)
-    
-    return parentComments.map(parent => ({
-      ...parent,
-      replies: childComments.filter(child => child.parentId === parent.id)
-    })).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  }
 
-  // 渲染评论 - 真正的树状结构
-  const renderComment = (comment: Comment, postId: string, isReply = false) => (
-    <div key={comment.id} className={`${isReply ? 'ml-8 mt-2 relative' : 'py-3'}`}>
-      {/* 子评论连接线 */}
-      {isReply && (
-        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-600 -ml-4"></div>
-      )}
-      
-      <div className={`flex space-x-3 ${isReply ? 'pl-4' : ''}`}>
-        {/* 头像 */}
-        <div 
-          className={`${isReply ? 'w-6 h-6' : 'w-8 h-8'} rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 cursor-pointer flex-shrink-0`}
-          onClick={() => handleViewProfile(comment.author.id)}
-        >
-          {comment.author.avatar ? (
-            <img src={comment.author.avatar} alt={comment.author.nickname} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <span className={`text-white font-bold ${isReply ? 'text-xs' : 'text-xs'}`}>
-                {comment.author.nickname.charAt(0).toUpperCase()}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* 评论内容 */}
-        <div className="flex-1 min-w-0">
-          {/* 评论气泡 */}
-          <div className={`bg-gray-50 dark:bg-gray-700 rounded-lg ${isReply ? 'p-2' : 'p-3'}`}>
-            {/* 用户信息行 */}
-            <div className={`flex items-center space-x-2 ${isReply ? 'text-xs' : 'text-sm'} mb-1`}>
-              <span 
-                className="font-medium text-gray-900 dark:text-white cursor-pointer hover:underline"
-                onClick={() => handleViewProfile(comment.author.id)}
-              >
-                {comment.author.nickname}
-              </span>
-              <span className="text-gray-500 dark:text-gray-400">·</span>
-              <span className="text-gray-500 dark:text-gray-400">
-                {formatDate(comment.createdAt, 'datetime')}
-              </span>
-              {comment.canDelete && (
-                <>
-                  <span className="text-gray-500 dark:text-gray-400">·</span>
-                  <button 
-                    onClick={() => showDeleteConfirmDialog('comment', comment.id, postId)}
-                    className="text-gray-400 hover:text-red-600 transition-colors"
-                    title="删除评论"
-                  >
-                    <Trash2 className={`${isReply ? 'w-2.5 h-2.5' : 'w-3 h-3'}`} />
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* 评论文本 */}
-            <div>
-              <p className={`text-gray-900 dark:text-white ${isReply ? 'text-xs' : 'text-sm'}`}>
-                {comment.replyTo && (
-                  <span className="text-blue-600 dark:text-blue-400 mr-1">
-                    @{comment.replyTo.nickname}
-                  </span>
-                )}
-                {comment.content}
-              </p>
-            </div>
-          </div>
-
-          {/* 操作按钮 */}
-          <div className={`flex items-center space-x-4 mt-2 ${isReply ? 'text-xs' : 'text-xs'} text-gray-500 dark:text-gray-400`}>
-            <button
-              onClick={() => handleCommentLike(comment.id, postId)}
-              className={`flex items-center space-x-1 transition-colors hover:text-red-600 ${
-                comment.isLiked ? 'text-red-600' : ''
-              }`}
-            >
-              <Heart className={`${isReply ? 'w-2.5 h-2.5' : 'w-3 h-3'} ${comment.isLiked ? 'fill-current' : ''}`} />
-              {comment.likesCount > 0 && <span>{comment.likesCount}</span>}
-            </button>
-            
-            {!isReply && (
-              <button
-                onClick={() => handleReply(postId, comment.id, comment.author.nickname)}
-                className="flex items-center space-x-1 transition-colors hover:text-blue-600"
-              >
-                <Reply className="w-3 h-3" />
-                <span>回复</span>
-              </button>
-            )}
-            
-            <button className="flex items-center space-x-1 transition-colors hover:text-green-600">
-              <Share className={`${isReply ? 'w-2.5 h-2.5' : 'w-3 h-3'}`} />
-              <span>分享</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 
   // 获取会话列表
   const fetchConversations = async () => {
@@ -1516,16 +1527,19 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                           </div>
 
                           {/* 评论列表 */}
-                          <div className="space-y-1">
-                            {comments[post.id] && organizeComments(comments[post.id]).map((comment) => (
-                              <div key={comment.id}>
-                                {renderComment(comment, post.id)}
-                                {comment.replies && comment.replies.map((reply) => 
-                                  renderComment(reply, post.id, true)
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                          {comments[post.id] && comments[post.id].length > 0 && (
+                            <CommentTree
+                              comments={comments[post.id]}
+                              postId={post.id}
+                              currentUserId={user?.id || ''}
+                              currentUserAvatar={user?.profile?.avatar}
+                              onCommentLike={handleCommentLike}
+                              onCommentDelete={handleCommentDelete}
+                              onCommentReply={handleCommentReply}
+                              onViewProfile={handleViewProfile}
+                              maxDepth={5}
+                            />
+                          )}
                         </div>
                       </motion.div>
                     )}
