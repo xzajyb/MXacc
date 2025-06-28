@@ -46,7 +46,13 @@ module.exports = async function handler(req, res) {
         const defaultSettings = {
           theme: 'auto',
           notifications: { email: true, browser: true, marketing: false },
-          privacy: { profileVisible: true, activityVisible: false, allowDataCollection: true },
+          privacy: { 
+            profileVisible: true, 
+            activityVisible: false, 
+            allowDataCollection: true,
+            showFollowers: true,
+            showFollowing: true
+          },
           language: 'zh-CN',
           timezone: 'Asia/Shanghai'
         }

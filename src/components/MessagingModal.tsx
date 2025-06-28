@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, User, Trash2 } from 'lucide-react'
+import { X, Send, User, Undo2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 
@@ -86,7 +86,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
 
   // 获取特定会话的消息
   const fetchMessages = async (conversationId?: string, otherUserId?: string) => {
-    setMessagesLoading(true)  // 开始加载
+    setMessagesLoading(true)
     try {
       let url = '/api/social/messaging'
       const params = new URLSearchParams()
@@ -120,11 +120,11 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     } catch (error) {
       console.error('获取消息失败:', error)
     } finally {
-      setMessagesLoading(false)  // 结束加载
+      setMessagesLoading(false)
     }
   }
 
-  // 发送消息
+  // 发送消息 - 前端先更新
   const sendMessage = async () => {
     if (!newMessage.trim()) return
     
@@ -133,14 +133,10 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     let conversationId = ''
     
     if (targetUser) {
-      // 通过主页私信
       recipientId = targetUser.id
-      console.log('通过主页私信给用户:', targetUser.nickname, '(ID:', recipientId, ')')
     } else if (selectedConversation) {
-      // 通过会话列表私信
       recipientId = selectedConversation.otherUser.id
       conversationId = selectedConversation.id
-      console.log('通过会话列表私信给用户:', selectedConversation.otherUser.nickname, '(ID:', recipientId, ')')
     } else {
       showError('无法确定接收者')
       return
@@ -151,14 +147,24 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       return
     }
 
+    // 创建临时消息对象（前端先显示）
+    const tempMessage: Message = {
+      id: 'temp-' + Date.now(),
+      content: newMessage.trim(),
+      senderId: user?.id || '',
+      recipientId,
+      createdAt: new Date().toISOString(),
+      isRead: false
+    }
+
+    // 立即更新前端显示
+    setMessages(prev => [...prev, tempMessage])
+    const originalContent = newMessage
+    setNewMessage('')
+    setTimeout(scrollToBottom, 100)
+
     setSendingMessage(true)
     try {
-      console.log('发送消息请求:', {
-        recipientId,
-        content: newMessage.trim(),
-        conversationId: conversationId || undefined
-      })
-
       const response = await fetch('/api/social/messaging', {
         method: 'POST',
         headers: {
@@ -167,110 +173,45 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         },
         body: JSON.stringify({
           recipientId,
-          content: newMessage.trim(),
+          content: tempMessage.content,
           ...(conversationId && { conversationId })
         })
       })
 
       const data = await response.json()
-      console.log('发送消息响应:', data)
 
       if (data.success) {
-        setNewMessage('')
-        showSuccess('消息发送成功')
-        
-        // 刷新消息列表
-        if (targetUser) {
-          // 通过主页私信时，获取与目标用户的消息
-          await fetchMessages(undefined, targetUser.id)
-        } else if (selectedConversation) {
-          // 通过会话列表时，获取该会话的消息
-          await fetchMessages(selectedConversation.id)
-        }
-        
-        // 刷新会话列表
-        await fetchConversations()
+        // 后台刷新数据，替换临时消息
+        setTimeout(() => {
+          if (targetUser) {
+            fetchMessages(undefined, targetUser.id)
+          } else if (selectedConversation) {
+            fetchMessages(selectedConversation.id)
+          }
+          fetchConversations()
+        }, 500)
       } else {
+        // 发送失败，移除临时消息并恢复输入框
+        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
+        setNewMessage(originalContent)
         showError(data.message || '发送失败')
       }
     } catch (error) {
       console.error('发送消息失败:', error)
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
+      setNewMessage(originalContent)
       showError('发送失败')
     } finally {
       setSendingMessage(false)
     }
   }
 
-  // 组件挂载时获取数据
-  useEffect(() => {
-    if (isOpen) {
-      if (targetUser) {
-        // 通过主页私信：直接获取与目标用户的消息，不显示会话列表
-        console.log('通过主页私信模式，目标用户:', targetUser.nickname)
-        fetchMessages(undefined, targetUser.id)
-      } else {
-        // 通过私信选项卡：显示会话列表
-        console.log('通过私信选项卡模式，获取会话列表')
-        fetchConversations()
-      }
-    }
-  }, [isOpen, targetUser])
-
-  // 当选择会话时获取消息
-  useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id)
-    }
-  }, [selectedConversation])
-
-  // 格式化时间 - 智能显示
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInMinutes = (now.getTime() - date.getTime()) / (1000 * 60)
-    const diffInHours = diffInMinutes / 60
-    const diffInDays = diffInHours / 24
-    const diffInYears = diffInDays / 365
-    
-    // 24小时内显示时间
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString('zh-CN', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
-    }
-    // 一年内显示月日和时间
-    else if (diffInYears < 1) {
-      return date.toLocaleDateString('zh-CN', { 
-        month: '2-digit', 
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
-    // 超过一年显示年月日和时间
-    else {
-      return date.toLocaleDateString('zh-CN', { 
-        year: 'numeric',
-        month: '2-digit', 
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
-  }
-
-  // 检查消息是否可以撤回（3分钟内）
-  const canRecallMessage = (createdAt: string, senderId: string) => {
-    if (senderId !== user?.id) return false
-    const messageTime = new Date(createdAt).getTime()
-    const now = new Date().getTime()
-    const diffInMinutes = (now - messageTime) / (1000 * 60)
-    return diffInMinutes <= 3
-  }
-
-  // 撤回消息
+  // 撤回消息 - 前端先更新
   const recallMessage = async (messageId: string) => {
+    // 立即从前端移除消息
+    const originalMessages = messages
+    setMessages(prev => prev.filter(msg => msg.id !== messageId))
+    
     try {
       const response = await fetch('/api/social/messaging', {
         method: 'DELETE',
@@ -287,18 +228,80 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       const data = await response.json()
       if (data.success) {
         showSuccess('消息已撤回')
-        // 刷新消息列表
-        if (targetUser) {
-          await fetchMessages(undefined, targetUser.id)
-        } else if (selectedConversation) {
-          await fetchMessages(selectedConversation.id)
-        }
+        // 后台刷新数据确保一致性
+        setTimeout(() => {
+          if (targetUser) {
+            fetchMessages(undefined, targetUser.id)
+          } else if (selectedConversation) {
+            fetchMessages(selectedConversation.id)
+          }
+        }, 500)
       } else {
+        // 撤回失败，恢复消息显示
+        setMessages(originalMessages)
         showError(data.message || '撤回失败')
       }
     } catch (error) {
       console.error('撤回消息失败:', error)
+      setMessages(originalMessages)
       showError('撤回失败')
+    }
+  }
+
+  // 检查消息是否可以撤回（3分钟内）
+  const canRecallMessage = (createdAt: string, senderId: string) => {
+    if (senderId !== user?.id) return false
+    const messageTime = new Date(createdAt).getTime()
+    const now = new Date().getTime()
+    const diffInMinutes = (now - messageTime) / (1000 * 60)
+    return diffInMinutes <= 3
+  }
+
+  // 组件挂载时获取数据
+  useEffect(() => {
+    if (isOpen) {
+      if (targetUser) {
+        fetchMessages(undefined, targetUser.id)
+      } else {
+        fetchConversations()
+      }
+    }
+  }, [isOpen, targetUser])
+
+  // 当选择会话时获取消息
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation.id)
+    }
+  }, [selectedConversation])
+
+  // 格式化时间 - 智能显示
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    const diffInYears = diffInHours / (24 * 365)
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    } else if (diffInYears < 1) {
+      return date.toLocaleDateString('zh-CN', { 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } else {
+      return date.toLocaleDateString('zh-CN', { 
+        year: 'numeric',
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
   }
 
@@ -333,7 +336,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     return currentDate !== previousDate
   }
 
-  const showConversationsList = !targetUser // 只有不是通过主页私信时才显示会话列表
+  const showConversationsList = !targetUser
 
   return (
     <>
@@ -497,14 +500,14 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                                       </p>
                                     </div>
                                     
-                                    {/* 撤回按钮 */}
+                                    {/* 撤回按钮 - 新样式 */}
                                     {canRecallMessage(message.createdAt, message.senderId) && (
                                       <button
                                         onClick={() => recallMessage(message.id)}
-                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                        title="撤回消息"
+                                        className="absolute -top-1 -left-8 bg-gray-500 hover:bg-gray-600 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 transform hover:scale-110 shadow-sm"
+                                        title="撤回消息（3分钟内有效）"
                                       >
-                                        <Trash2 className="w-3 h-3" />
+                                        <Undo2 className="w-3 h-3" />
                                       </button>
                                     )}
                                   </div>
