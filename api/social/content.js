@@ -139,7 +139,8 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role || 'user'
             },
             likesCount,
             commentsCount,
@@ -215,7 +216,8 @@ module.exports = async function handler(req, res) {
                 id: replyAuthor._id,
                 username: replyAuthor.username,
                 nickname: replyAuthor.profile?.nickname || replyAuthor.username,
-                avatar: replyAuthor.profile?.avatar
+                avatar: replyAuthor.profile?.avatar,
+                role: replyAuthor.role || 'user'
               },
               replyTo: reply.replyTo ? {
                 id: reply.replyTo.userId,
@@ -233,7 +235,8 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role || 'user'
             },
             likesCount,
             repliesCount,
@@ -292,7 +295,8 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role || 'user'
             },
             replyTo: reply.replyTo ? {
               id: reply.replyTo.userId,
@@ -384,7 +388,8 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role || 'user'
             },
             likesCount: 0,
             commentsCount: 0,
@@ -460,7 +465,8 @@ module.exports = async function handler(req, res) {
                 id: author._id,
                 username: author.username,
                 nickname: author.profile?.nickname || author.username,
-                avatar: author.profile?.avatar
+                avatar: author.profile?.avatar,
+                role: author.role || 'user'
               },
               replyTo: newComment.replyTo || null,
               likesCount: 0,

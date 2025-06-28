@@ -118,6 +118,12 @@ module.exports = async function handler(req, res) {
           if (typeof settings.privacy.allowDataCollection === 'boolean') {
             validatedSettings.privacy.allowDataCollection = settings.privacy.allowDataCollection
           }
+          if (typeof settings.privacy.showFollowers === 'boolean') {
+            validatedSettings.privacy.showFollowers = settings.privacy.showFollowers
+          }
+          if (typeof settings.privacy.showFollowing === 'boolean') {
+            validatedSettings.privacy.showFollowing = settings.privacy.showFollowing
+          }
         }
 
         if (settings.language && typeof settings.language === 'string') {

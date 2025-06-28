@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal } from 'lucide-react'
+import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield, Users } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -20,6 +20,24 @@ interface User {
   postsCount: number
   joinedAt: string
   isOwnProfile: boolean
+  role?: string
+  settings?: {
+    privacy?: {
+      showFollowers?: boolean
+      showFollowing?: boolean
+    }
+  }
+}
+
+interface FollowUser {
+  id: string
+  username: string
+  nickname: string
+  avatar: string
+  bio?: string
+  isFollowing: boolean
+  followedAt: string
+  role?: string
 }
 
 interface Post {
@@ -31,6 +49,7 @@ interface Post {
     username: string
     nickname: string
     avatar: string
+    role?: string
   }
   likesCount: number
   commentsCount: number
@@ -52,7 +71,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
   
   const [user, setUser] = useState<User | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
+  const [followers, setFollowers] = useState<FollowUser[]>([])
+  const [following, setFollowing] = useState<FollowUser[]>([])
   const [loading, setLoading] = useState(false)
+  const [listLoading, setListLoading] = useState(false)
   const [showMessaging, setShowMessaging] = useState(false)
   const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following'>('posts')
 
@@ -98,7 +120,59 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
     }
   }
 
-  // 关注/取消关注
+  // 获取关注者列表
+  const fetchFollowers = async () => {
+    if (!userId) return
+
+    try {
+      setListLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/messaging?action=followers&userId=${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setFollowers(data.data.followers)
+      } else {
+        const errorData = await response.json()
+        showError(errorData.message || '获取粉丝列表失败')
+      }
+    } catch (error) {
+      console.error('获取关注者列表失败:', error)
+      showError('获取粉丝列表失败')
+    } finally {
+      setListLoading(false)
+    }
+  }
+
+  // 获取关注列表
+  const fetchFollowing = async () => {
+    if (!userId) return
+
+    try {
+      setListLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/messaging?action=following&userId=${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setFollowing(data.data.following)
+      } else {
+        const errorData = await response.json()
+        showError(errorData.message || '获取关注列表失败')
+      }
+    } catch (error) {
+      console.error('获取关注列表失败:', error)
+      showError('获取关注列表失败')
+    } finally {
+      setListLoading(false)
+    }
+  }
+
+  // 关注/取消关注（用户详情页面）
   const handleFollow = async () => {
     if (!user) return
 
@@ -128,6 +202,58 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
     } catch (error) {
       console.error('关注操作失败:', error)
       showError('操作失败')
+    }
+  }
+
+  // 关注/取消关注（列表中的用户）
+  const handleFollowUser = async (targetUserId: string, isFollowing: boolean) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/social/messaging', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: isFollowing ? 'unfollow' : 'follow',
+          userId: targetUserId
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        
+        // 更新关注者列表
+        setFollowers(prev => prev.map(user => 
+          user.id === targetUserId 
+            ? { ...user, isFollowing: data.data.isFollowing }
+            : user
+        ))
+        
+        // 更新关注列表
+        setFollowing(prev => prev.map(user => 
+          user.id === targetUserId 
+            ? { ...user, isFollowing: data.data.isFollowing }
+            : user
+        ))
+        
+        showSuccess(data.message)
+      }
+    } catch (error) {
+      console.error('关注操作失败:', error)
+      showError('操作失败')
+    }
+  }
+
+  // 切换标签页
+  const handleTabChange = (tab: 'posts' | 'followers' | 'following') => {
+    setActiveTab(tab)
+    
+    if (tab === 'followers' && followers.length === 0) {
+      fetchFollowers()
+    } else if (tab === 'following' && following.length === 0) {
+      fetchFollowing()
     }
   }
 
@@ -183,6 +309,61 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
     }
   }
 
+  // 渲染管理员标签
+  const renderAdminBadge = (role?: string) => {
+    if (role === 'admin') {
+      return (
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full ml-2">
+          <Shield className="w-3 h-3 mr-1" />
+          管理员
+        </span>
+      )
+    }
+    return null
+  }
+
+  // 渲染用户卡片
+  const renderUserCard = (user: FollowUser) => (
+    <div key={user.id} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+            {user.avatar ? (
+              <img src={user.avatar} alt={user.nickname} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <span className="text-white font-bold">{user.nickname.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center">
+              <h4 className="font-medium text-gray-900 dark:text-white">{user.nickname}</h4>
+              {renderAdminBadge(user.role)}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</p>
+            {user.bio && (
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{user.bio}</p>
+            )}
+          </div>
+        </div>
+        
+        {user.id !== currentUser?.id && (
+          <button
+            onClick={() => handleFollowUser(user.id, user.isFollowing)}
+            className={`px-3 py-1 text-sm rounded-md font-medium transition-colors ${
+              user.isFollowing
+                ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {user.isFollowing ? '取消关注' : '关注'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+
   useEffect(() => {
     if (isOpen && userId) {
       fetchUser()
@@ -233,7 +414,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
 
                   {/* 用户信息 */}
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
+                    <div className="flex items-center">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
+                      {renderAdminBadge(user.role)}
+                    </div>
                     <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
                     
                     {user.bio && (
@@ -259,11 +443,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                         <div className="font-bold text-gray-900 dark:text-white">{user.postsCount}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">帖子</div>
                       </div>
-                      <div className="text-center">
+                      <div 
+                        className="text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition-colors"
+                        onClick={() => handleTabChange('followers')}
+                      >
                         <div className="font-bold text-gray-900 dark:text-white">{user.followersCount}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">粉丝</div>
                       </div>
-                      <div className="text-center">
+                      <div 
+                        className="text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition-colors"
+                        onClick={() => handleTabChange('following')}
+                      >
                         <div className="font-bold text-gray-900 dark:text-white">{user.followingCount}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">关注</div>
                       </div>
@@ -309,7 +499,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
               <div className="border-b border-gray-200 dark:border-gray-600">
                 <div className="flex space-x-8 px-6">
                   <button
-                    onClick={() => setActiveTab('posts')}
+                    onClick={() => handleTabChange('posts')}
                     className={`py-3 border-b-2 transition-colors ${
                       activeTab === 'posts'
                         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
@@ -318,11 +508,32 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                   >
                     帖子 ({user.postsCount})
                   </button>
+                  <button
+                    onClick={() => handleTabChange('followers')}
+                    className={`py-3 border-b-2 transition-colors ${
+                      activeTab === 'followers'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    粉丝 ({user.followersCount})
+                  </button>
+                  <button
+                    onClick={() => handleTabChange('following')}
+                    className={`py-3 border-b-2 transition-colors ${
+                      activeTab === 'following'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    关注 ({user.followingCount})
+                  </button>
                 </div>
               </div>
 
               {/* 内容区域 */}
               <div className="flex-1 overflow-y-auto p-6">
+                {/* 帖子标签页 */}
                 {activeTab === 'posts' && (
                   <div className="space-y-4">
                     {posts.length === 0 ? (
@@ -345,7 +556,10 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                 )}
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
+                                <div className="flex items-center">
+                                  <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
+                                  {renderAdminBadge(post.author.role)}
+                                </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                               </div>
                             </div>
@@ -399,6 +613,48 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                           </div>
                         </div>
                       ))
+                    )}
+                  </div>
+                )}
+
+                {/* 粉丝标签页 */}
+                {activeTab === 'followers' && (
+                  <div>
+                    {listLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">加载中...</p>
+                      </div>
+                    ) : followers.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">暂无粉丝</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {followers.map(renderUserCard)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 关注标签页 */}
+                {activeTab === 'following' && (
+                  <div>
+                    {listLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">加载中...</p>
+                      </div>
+                    ) : following.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">暂无关注</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {following.map(renderUserCard)}
+                      </div>
                     )}
                   </div>
                 )}
