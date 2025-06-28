@@ -1009,12 +1009,6 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               <p className="text-yellow-800 dark:text-yellow-200">
                 请先验证邮箱后再使用社交功能。
-                <button 
-                  onClick={() => embedded ? setActiveTab('verify-email' as any) : navigate('/verify-email')}
-                  className="text-yellow-600 dark:text-yellow-400 underline hover:text-yellow-700 dark:hover:text-yellow-300 ml-1"
-                >
-                  立即验证
-                </button>
               </p>
             </div>
           </div>
