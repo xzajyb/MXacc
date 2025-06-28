@@ -85,8 +85,10 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   }
 
   // 获取特定会话的消息
-  const fetchMessages = async (conversationId?: string, otherUserId?: string) => {
-    setMessagesLoading(true)  // 开始加载
+  const fetchMessages = async (conversationId?: string, otherUserId?: string, showLoading: boolean = true) => {
+    if (showLoading) {
+      setMessagesLoading(true)  // 只在需要时显示加载动画
+    }
     try {
       let url = '/api/social/messaging'
       const params = new URLSearchParams()
@@ -120,7 +122,9 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     } catch (error) {
       console.error('获取消息失败:', error)
     } finally {
-      setMessagesLoading(false)  // 结束加载
+      if (showLoading) {
+        setMessagesLoading(false)  // 只在显示了加载动画时才关闭
+      }
     }
   }
 
@@ -179,13 +183,11 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         setNewMessage('')
         showSuccess('消息发送成功')
         
-        // 刷新消息列表
+        // 刷新消息列表 - 不显示加载动画
         if (targetUser) {
-          // 通过主页私信时，获取与目标用户的消息
-          await fetchMessages(undefined, targetUser.id)
+          await fetchMessages(undefined, targetUser.id, false)
         } else if (selectedConversation) {
-          // 通过会话列表时，获取该会话的消息
-          await fetchMessages(selectedConversation.id)
+          await fetchMessages(selectedConversation.id, undefined, false)
         }
         
         // 刷新会话列表
@@ -287,11 +289,11 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       const data = await response.json()
       if (data.success) {
         showSuccess('消息已撤回')
-        // 刷新消息列表 - 确保显示加载动画
+        // 刷新消息列表 - 不显示加载动画
         if (targetUser) {
-          await fetchMessages(undefined, targetUser.id)
+          await fetchMessages(undefined, targetUser.id, false)
         } else if (selectedConversation) {
-          await fetchMessages(selectedConversation.id)
+          await fetchMessages(selectedConversation.id, undefined, false)
         }
       } else {
         showError(data.message || '撤回失败')

@@ -21,7 +21,8 @@ import {
   MapPin,
   Calendar,
   X,
-  AlertCircle
+  AlertCircle,
+  Shield
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -37,6 +38,7 @@ interface Post {
     username: string
     nickname: string
     avatar: string
+    role?: string
   }
   likesCount: number
   commentsCount: number
@@ -55,6 +57,7 @@ interface Comment {
     username: string
     nickname: string
     avatar: string
+    role?: string
   }
   replyTo?: {
     id: string
@@ -80,6 +83,10 @@ interface User {
   followingCount: number
   postsCount: number
   joinedAt: string
+  role?: string
+  profileVisible?: boolean
+  showFollowers?: boolean
+  showFollowing?: boolean
 }
 
 interface SocialPageProps {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal } from 'lucide-react'
+import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -20,6 +20,10 @@ interface User {
   postsCount: number
   joinedAt: string
   isOwnProfile: boolean
+  role?: string
+  profileVisible?: boolean
+  showFollowers?: boolean
+  showFollowing?: boolean
 }
 
 interface Post {
@@ -31,6 +35,7 @@ interface Post {
     username: string
     nickname: string
     avatar: string
+    role?: string
   }
   likesCount: number
   commentsCount: number
@@ -233,7 +238,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
 
                   {/* 用户信息 */}
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
+                      {user.role === 'admin' && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                          <Shield className="w-3 h-3 mr-1" />
+                          管理员
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
                     
                     {user.bio && (
