@@ -27,11 +27,19 @@ async function getUserById(users, userId) {
         'profile.nickname': 1,
         'profile.avatar': 1,
         'profile.bio': 1,
+        'profile.displayName': 1,
         role: 1,
-        isEmailVerified: 1
+        isEmailVerified: 1,
+        'security.emailVerified': 1
       } 
     }
   )
+  
+  // 统一处理邮箱验证状态字段
+  if (user) {
+    user.isEmailVerified = user.isEmailVerified || user.security?.emailVerified || false
+  }
+  
   return user
 }
 
@@ -48,6 +56,7 @@ module.exports = async function handler(req, res) {
   try {
     console.log('=== Social Posts API ===')
     console.log('Method:', req.method)
+    console.log('Headers:', req.headers.authorization ? 'Token present' : 'No token')
     console.log('Body:', req.body)
 
     // 连接数据库
@@ -60,12 +69,25 @@ module.exports = async function handler(req, res) {
     const follows = db.collection('follows')
 
     // 验证用户身份
+    console.log('🔍 开始验证用户身份...')
     const decoded = verifyToken(req.headers.authorization)
-    const currentUser = await getUserById(users, decoded.id)
+    console.log('✅ Token解码成功, 用户ID:', decoded.userId)
+    
+    const currentUser = await getUserById(users, decoded.userId)
+    console.log('👤 查询到的用户:', currentUser ? {
+      id: currentUser._id,
+      username: currentUser.username,
+      email: currentUser.email,
+      isEmailVerified: currentUser.isEmailVerified,
+      hasProfile: !!currentUser.profile
+    } : null)
     
     if (!currentUser) {
+      console.log('❌ 用户不存在，用户ID:', decoded.userId)
       return res.status(401).json({ success: false, message: '用户不存在' })
     }
+
+    console.log('✅ 用户验证成功')
 
     if (req.method === 'GET') {
       const { type = 'feed', page = 1, limit = 10, userId } = req.query
@@ -79,11 +101,11 @@ module.exports = async function handler(req, res) {
       } else if (type === 'following') {
         // 获取关注用户的帖子
         const followingUsers = await follows.find({ 
-          followerId: new ObjectId(decoded.id) 
+          followerId: new ObjectId(decoded.userId) 
         }).toArray()
         
         const followingIds = followingUsers.map(f => f.followingId)
-        followingIds.push(new ObjectId(decoded.id)) // 包含自己的帖子
+        followingIds.push(new ObjectId(decoded.userId)) // 包含自己的帖子
         
         query = { authorId: { $in: followingIds } }
       }
@@ -106,7 +128,7 @@ module.exports = async function handler(req, res) {
           comments.countDocuments({ postId: post._id }),
           likes.findOne({ 
             postId: post._id, 
-            userId: new ObjectId(decoded.id), 
+            userId: new ObjectId(decoded.userId), 
             type: 'like' 
           })
         ])
@@ -165,7 +187,7 @@ module.exports = async function handler(req, res) {
         }
 
         const newPost = {
-          authorId: new ObjectId(decoded.id),
+          authorId: new ObjectId(decoded.userId),
           content: content.trim(),
           images: images || [],
           createdAt: new Date(),
@@ -176,7 +198,7 @@ module.exports = async function handler(req, res) {
         
         // 获取完整的帖子信息返回
         const createdPost = await posts.findOne({ _id: result.insertedId })
-        const author = await getUserById(users, decoded.id)
+        const author = await getUserById(users, decoded.userId)
 
         return res.status(201).json({
           success: true,
@@ -211,7 +233,7 @@ module.exports = async function handler(req, res) {
 
         const existingLike = await likes.findOne({
           postId: new ObjectId(postId),
-          userId: new ObjectId(decoded.id),
+          userId: new ObjectId(decoded.userId),
           type: 'like'
         })
 
@@ -232,7 +254,7 @@ module.exports = async function handler(req, res) {
           // 添加点赞
           await likes.insertOne({
             postId: new ObjectId(postId),
-            userId: new ObjectId(decoded.id),
+            userId: new ObjectId(decoded.userId),
             type: 'like',
             createdAt: new Date()
           })
@@ -275,14 +297,14 @@ module.exports = async function handler(req, res) {
 
         const newComment = {
           postId: new ObjectId(postId),
-          authorId: new ObjectId(decoded.id),
+          authorId: new ObjectId(decoded.userId),
           content: commentContent.trim(),
           createdAt: new Date(),
           updatedAt: new Date()
         }
 
         const result = await comments.insertOne(newComment)
-        const author = await getUserById(users, decoded.id)
+        const author = await getUserById(users, decoded.userId)
         const commentsCount = await comments.countDocuments({ 
           postId: new ObjectId(postId) 
         })
@@ -333,7 +355,7 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      if (post.authorId.toString() !== decoded.id && currentUser.role !== 'admin') {
+      if (post.authorId.toString() !== decoded.userId && currentUser.role !== 'admin') {
         return res.status(403).json({ 
           success: false, 
           message: '没有权限删除此帖子' 

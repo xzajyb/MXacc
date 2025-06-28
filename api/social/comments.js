@@ -26,10 +26,19 @@ async function getUserById(users, userId) {
         email: 1, 
         'profile.nickname': 1,
         'profile.avatar': 1,
-        role: 1
+        'profile.displayName': 1,
+        role: 1,
+        isEmailVerified: 1,
+        'security.emailVerified': 1
       } 
     }
   )
+  
+  // 统一处理邮箱验证状态字段
+  if (user) {
+    user.isEmailVerified = user.isEmailVerified || user.security?.emailVerified || false
+  }
+  
   return user
 }
 
@@ -132,8 +141,8 @@ module.exports = async function handler(req, res) {
       }
 
       // 检查权限（只有评论作者或管理员可以删除）
-      const currentUser = await getUserById(users, decoded.id)
-      if (comment.authorId.toString() !== decoded.id && currentUser.role !== 'admin') {
+      const currentUser = await getUserById(users, decoded.userId)
+      if (comment.authorId.toString() !== decoded.userId && currentUser.role !== 'admin') {
         return res.status(403).json({ 
           success: false, 
           message: '没有权限删除此评论' 

@@ -28,12 +28,20 @@ async function getUserById(users, userId) {
         'profile.avatar': 1,
         'profile.bio': 1,
         'profile.location': 1,
+        'profile.displayName': 1,
         role: 1,
         isEmailVerified: 1,
+        'security.emailVerified': 1,
         createdAt: 1
       } 
     }
   )
+  
+  // 统一处理邮箱验证状态字段
+  if (user) {
+    user.isEmailVerified = user.isEmailVerified || user.security?.emailVerified || false
+  }
+  
   return user
 }
 
@@ -62,7 +70,7 @@ module.exports = async function handler(req, res) {
 
     // 验证用户身份
     const decoded = verifyToken(req.headers.authorization)
-    const currentUser = await getUserById(users, decoded.id)
+    const currentUser = await getUserById(users, decoded.userId)
     
     if (!currentUser) {
       return res.status(401).json({ success: false, message: '用户不存在' })
@@ -89,7 +97,7 @@ module.exports = async function handler(req, res) {
             { 'profile.nickname': searchRegex },
             { email: searchRegex }
           ],
-          _id: { $ne: new ObjectId(decoded.id) } // 排除自己
+          _id: { $ne: new ObjectId(decoded.userId) } // 排除自己
         })
           .skip(skip)
           .limit(parseInt(limit))
@@ -98,7 +106,7 @@ module.exports = async function handler(req, res) {
         // 检查关注状态
         const usersWithFollowStatus = await Promise.all(userList.map(async (user) => {
           const isFollowing = await follows.findOne({
-            followerId: new ObjectId(decoded.id),
+            followerId: new ObjectId(decoded.userId),
             followingId: user._id
           })
 
@@ -129,7 +137,7 @@ module.exports = async function handler(req, res) {
             { 'profile.nickname': searchRegex },
             { email: searchRegex }
           ],
-          _id: { $ne: new ObjectId(decoded.id) }
+          _id: { $ne: new ObjectId(decoded.userId) }
         })
 
         return res.status(200).json({
@@ -159,7 +167,7 @@ module.exports = async function handler(req, res) {
 
         const [isFollowing, followersCount, followingCount, postsCount] = await Promise.all([
           follows.findOne({
-            followerId: new ObjectId(decoded.id),
+            followerId: new ObjectId(decoded.userId),
             followingId: new ObjectId(userId)
           }),
           follows.countDocuments({ followingId: new ObjectId(userId) }),
@@ -181,7 +189,7 @@ module.exports = async function handler(req, res) {
             followingCount,
             postsCount,
             joinedAt: user.createdAt,
-            isOwnProfile: user._id.toString() === decoded.id
+            isOwnProfile: user._id.toString() === decoded.userId
           }
         })
       }
@@ -200,7 +208,7 @@ module.exports = async function handler(req, res) {
         const followersWithInfo = await Promise.all(followersList.map(async (follow) => {
           const user = await getUserById(users, follow.followerId)
           const isFollowing = await follows.findOne({
-            followerId: new ObjectId(decoded.id),
+            followerId: new ObjectId(decoded.userId),
             followingId: follow.followerId
           })
 
@@ -245,7 +253,7 @@ module.exports = async function handler(req, res) {
         const followingWithInfo = await Promise.all(followingList.map(async (follow) => {
           const user = await getUserById(users, follow.followingId)
           const isFollowing = await follows.findOne({
-            followerId: new ObjectId(decoded.id),
+            followerId: new ObjectId(decoded.userId),
             followingId: follow.followingId
           })
 
@@ -294,7 +302,7 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        if (userId === decoded.id) {
+        if (userId === decoded.userId) {
           return res.status(400).json({ 
             success: false, 
             message: '不能关注自己' 
@@ -312,7 +320,7 @@ module.exports = async function handler(req, res) {
 
         // 检查是否已经关注
         const existingFollow = await follows.findOne({
-          followerId: new ObjectId(decoded.id),
+          followerId: new ObjectId(decoded.userId),
           followingId: new ObjectId(userId)
         })
 
@@ -325,7 +333,7 @@ module.exports = async function handler(req, res) {
 
         // 创建关注关系
         await follows.insertOne({
-          followerId: new ObjectId(decoded.id),
+          followerId: new ObjectId(decoded.userId),
           followingId: new ObjectId(userId),
           createdAt: new Date()
         })
@@ -351,7 +359,7 @@ module.exports = async function handler(req, res) {
         }
 
         const result = await follows.deleteOne({
-          followerId: new ObjectId(decoded.id),
+          followerId: new ObjectId(decoded.userId),
           followingId: new ObjectId(userId)
         })
 
