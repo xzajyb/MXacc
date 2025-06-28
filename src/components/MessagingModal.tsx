@@ -32,12 +32,14 @@ interface MessagingModalProps {
   isOpen: boolean
   targetUser: User | null
   onClose: () => void
+  onUnreadCountChange?: () => void // 新增：未读计数变化回调
 }
 
 const MessagingModal: React.FC<MessagingModalProps> = ({ 
   isOpen, 
   targetUser, 
-  onClose 
+  onClose,
+  onUnreadCountChange
 }) => {
   const { user } = useAuth()
   const { showSuccess, showError } = useToast()
@@ -131,6 +133,15 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         if (!hasInitiallyLoaded) {
           setHasInitiallyLoaded(true)
         }
+        
+        // 获取消息后立即刷新会话列表（因为后端已将消息标记为已读）
+        setTimeout(async () => {
+          await fetchConversations()
+          // 通知父组件未读计数可能已变化
+          if (onUnreadCountChange) {
+            onUnreadCountChange()
+          }
+        }, 100)
       }
     } catch (error) {
       console.error('获取消息失败:', error)
@@ -419,7 +430,16 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                             className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                               selectedConversation?.id === conv.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                             }`}
-                            onClick={() => setSelectedConversation(conv)}
+                            onClick={() => {
+                              setSelectedConversation(conv)
+                              // 选择会话后短暂延时更新未读计数（给后端时间标记消息为已读）
+                              setTimeout(() => {
+                                fetchConversations()
+                                if (onUnreadCountChange) {
+                                  onUnreadCountChange()
+                                }
+                              }, 200)
+                            }}
                           >
                             <div className="flex items-center space-x-3">
                               <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">

@@ -32,6 +32,7 @@ import SecurityPage from './SecurityPage'
 import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
+import SystemNotifications from '../components/SystemNotifications'
 
 type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
@@ -520,17 +521,22 @@ const DashboardPage: React.FC = () => {
 
       {/* 主内容区域 */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* 顶部栏 (移动端) - 固定高度 */}
-        <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0">
+        {/* 顶部栏 - 固定高度 */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            >
-              <Menu size={20} />
-            </button>
-            <h1 className="font-semibold text-gray-900 dark:text-white">{getPageTitle()}</h1>
-            <div className="w-8" /> {/* 占位符，保持标题居中 */}
+            <div className="lg:hidden">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <Menu size={20} />
+              </button>
+            </div>
+            <h1 className="font-semibold text-gray-900 dark:text-white lg:block hidden">{getPageTitle()}</h1>
+            <h1 className="font-semibold text-gray-900 dark:text-white lg:hidden block">{getPageTitle()}</h1>
+            <div className="flex items-center space-x-2">
+              <SystemNotifications />
+            </div>
           </div>
         </div>
 

@@ -165,7 +165,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       fetchUnreadCount()
       
       // 每30秒刷新一次未读数量
-      const interval = setInterval(fetchUnreadCount, 30000)
+      const interval = setInterval(fetchUnreadCount, 10000) // 改为10秒更新一次
       return () => clearInterval(interval)
     }
   }, [isSocialFeatureEnabled])
@@ -183,6 +183,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       if (response.ok) {
         const data = await response.json()
         const totalUnread = data.data.conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
+        console.log('未读计数更新:', totalUnread) // 添加调试日志
         setUnreadCount(totalUnread)
       }
     } catch (error) {
@@ -959,6 +960,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                 if (conversations.length === 0) {
                   fetchConversations()
                 }
+                // 切换到私信选项卡时立即更新未读计数
+                setTimeout(fetchUnreadCount, 100)
               }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
                 !isSocialFeatureEnabled 
@@ -1191,6 +1194,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                           joinedAt: ''
                         })
                         setShowMessaging(true)
+                        // 打开私信对话时立即更新未读计数
+                        setTimeout(fetchUnreadCount, 200)
                       }}
                     >
                       <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
@@ -1608,14 +1613,17 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       </div>
 
       {/* 私信模态框 */}
-      <MessagingModal
-        isOpen={showMessaging}
-        targetUser={targetUser}
-        onClose={() => {
-          setShowMessaging(false)
-          setTargetUser(null)
-        }}
-      />
+              <MessagingModal
+          isOpen={showMessaging}
+          targetUser={targetUser}
+          onClose={() => {
+            setShowMessaging(false)
+            setTargetUser(null)
+            // 关闭私信时刷新未读计数
+            setTimeout(fetchUnreadCount, 100)
+          }}
+          onUnreadCountChange={fetchUnreadCount}
+        />
 
       {/* 用户资料模态框 */}
       <UserProfile

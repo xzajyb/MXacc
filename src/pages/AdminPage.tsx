@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X } from 'lucide-react'
+import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2 } from 'lucide-react'
 import axios from 'axios'
 import { motion } from 'framer-motion'
 
@@ -37,7 +37,7 @@ interface AdminPageProps {
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
   const { showToast } = useToast()
-  const [activeTab, setActiveTab] = useState<'email' | 'users'>('email')
+  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages'>('email')
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -77,6 +77,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [filterRole, setFilterRole] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
+
+  // 系统消息相关状态
+  const [messageTitle, setMessageTitle] = useState('')
+  const [messageContent, setMessageContent] = useState('')
+  const [messageType, setMessageType] = useState<'info' | 'warning' | 'success' | 'error'>('info')
+  const [messagePriority, setMessagePriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal')
+  const [publishingMessage, setPublishingMessage] = useState(false)
+  const [systemMessages, setSystemMessages] = useState<any[]>([])
+  const [messagesLoading, setMessagesLoading] = useState(false)
 
   // 检查管理员权限
   if (!user || user.role !== 'admin') {
@@ -138,6 +147,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   useEffect(() => {
     if (activeTab === 'users' && token) {
       loadUsers()
+    } else if (activeTab === 'messages' && token) {
+      loadSystemMessages()
     }
   }, [activeTab, currentPage, token])
 
@@ -210,6 +221,75 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     } catch (error: any) {
       console.error('用户操作失败:', error)
       showToast(error.response?.data?.message || '操作失败', 'error')
+    }
+  }
+
+  // 加载系统消息列表
+  const loadSystemMessages = async () => {
+    if (!token) return
+    
+    setMessagesLoading(true)
+    try {
+      const response = await axios.get('/api/admin/system-messages?action=admin-list&page=1&limit=20', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setSystemMessages(response.data.data.messages)
+    } catch (error) {
+      console.error('加载系统消息失败:', error)
+      showToast('加载系统消息失败', 'error')
+    } finally {
+      setMessagesLoading(false)
+    }
+  }
+
+  // 发布系统消息
+  const handlePublishMessage = async () => {
+    if (!messageTitle.trim() || !messageContent.trim()) {
+      showToast('请填写完整的标题和内容', 'error')
+      return
+    }
+
+    setPublishingMessage(true)
+    try {
+      await axios.post('/api/admin/system-messages', {
+        action: 'create',
+        title: messageTitle,
+        content: messageContent,
+        type: messageType,
+        priority: messagePriority
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast('系统消息发布成功', 'success')
+      setMessageTitle('')
+      setMessageContent('')
+      setMessageType('info')
+      setMessagePriority('normal')
+      loadSystemMessages()
+    } catch (error: any) {
+      console.error('发布系统消息失败:', error)
+      showToast(error.response?.data?.message || '发布失败', 'error')
+    } finally {
+      setPublishingMessage(false)
+    }
+  }
+
+  // 删除系统消息
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm('确定要删除这条系统消息吗？')) {
+      return
+    }
+
+    try {
+      await axios.delete(`/api/admin/system-messages?id=${messageId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      showToast('消息删除成功', 'success')
+      loadSystemMessages()
+    } catch (error: any) {
+      console.error('删除消息失败:', error)
+      showToast(error.response?.data?.message || '删除失败', 'error')
     }
   }
 
@@ -479,6 +559,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 >
                   <Users className="h-5 w-5 inline mr-2" />
                   用户管理
+                </button>
+                <button
+                  onClick={() => setActiveTab('messages')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'messages'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <MessageSquare className="h-5 w-5 inline mr-2" />
+                  系统公告
                 </button>
               </nav>
             </div>
@@ -1047,6 +1138,184 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                         </tbody>
                       </table>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 系统消息管理内容 */}
+            {activeTab === 'messages' && (
+              <div className="max-w-6xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 左侧：发布系统消息 */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                      <MessageSquare className="w-5 h-5 mr-2" />
+                      发布系统公告
+                    </h2>
+                    
+                    <div className="space-y-4">
+                      {/* 消息标题 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          公告标题 *
+                        </label>
+                        <input
+                          type="text"
+                          value={messageTitle}
+                          onChange={(e) => setMessageTitle(e.target.value)}
+                          placeholder="例如：系统维护通知、新功能上线公告"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {/* 消息内容 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          公告内容 *
+                        </label>
+                        <textarea
+                          value={messageContent}
+                          onChange={(e) => setMessageContent(e.target.value)}
+                          placeholder="请输入详细的公告内容..."
+                          rows={6}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {/* 消息类型和优先级 */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            消息类型
+                          </label>
+                          <select
+                            value={messageType}
+                            onChange={(e) => setMessageType(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="info">信息 ℹ️</option>
+                            <option value="warning">警告 ⚠️</option>
+                            <option value="success">成功 ✅</option>
+                            <option value="error">错误 ❌</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            优先级
+                          </label>
+                          <select
+                            value={messagePriority}
+                            onChange={(e) => setMessagePriority(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="low">低优先级</option>
+                            <option value="normal">普通</option>
+                            <option value="high">重要</option>
+                            <option value="urgent">紧急</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* 发布按钮 */}
+                      <button
+                        onClick={handlePublishMessage}
+                        disabled={publishingMessage || !messageTitle.trim() || !messageContent.trim()}
+                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                      >
+                        {publishingMessage ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin mr-2" />
+                            发布中...
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="w-5 h-5 mr-2" />
+                            发布公告
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 右侧：消息列表 */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                        <Bell className="w-5 h-5 mr-2" />
+                        已发布的公告
+                      </h2>
+                    </div>
+
+                    <div className="max-h-[600px] overflow-y-auto">
+                      {messagesLoading ? (
+                        <div className="p-8 text-center">
+                          <Loader className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+                          <p className="mt-2 text-gray-500 dark:text-gray-400">加载中...</p>
+                        </div>
+                      ) : systemMessages.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500 dark:text-gray-400">暂无系统公告</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-200 dark:divide-gray-600">
+                          {systemMessages.map((message) => (
+                            <div key={message.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    {message.type === 'info' && <Info className="w-4 h-4 text-blue-600" />}
+                                    {message.type === 'warning' && <AlertTriangle className="w-4 h-4 text-yellow-600" />}
+                                    {message.type === 'success' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                                    {message.type === 'error' && <AlertCircle className="w-4 h-4 text-red-600" />}
+                                    
+                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                      {message.title}
+                                    </h3>
+                                    
+                                    {message.priority !== 'normal' && (
+                                      <span className={`text-xs px-2 py-1 rounded-full ${
+                                        message.priority === 'urgent' 
+                                          ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                          : message.priority === 'high'
+                                          ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+                                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                                      }`}>
+                                        {message.priority === 'urgent' ? '紧急' : 
+                                         message.priority === 'high' ? '重要' : '低优先级'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
+                                    {message.content}
+                                  </p>
+                                  
+                                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                    <span>
+                                      发布时间: {new Date(message.createdAt).toLocaleString('zh-CN')}
+                                    </span>
+                                    <span>
+                                      阅读率: {message.readRate}% ({message.readCount}/{message.totalUsers})
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                <button
+                                  onClick={() => handleDeleteMessage(message.id)}
+                                  className="ml-2 p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                  title="删除公告"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
