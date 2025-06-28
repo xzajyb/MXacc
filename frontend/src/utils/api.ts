@@ -138,7 +138,7 @@ export const authApi = {
 export const userApi = {
   // 更新用户资料
   updateProfile: (data: ProfileUpdateRequest): Promise<AxiosResponse<ApiResponse<{ profile: User['profile'] }>>> =>
-    api.put('/user/user-profile', data),
+    api.put('/user/profile', data),
 
   // 上传头像
   uploadAvatar: (file: File): Promise<AxiosResponse<ApiResponse<{ avatar: string }>>> => {
