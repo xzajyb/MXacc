@@ -122,7 +122,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
     setMessage('')
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/user/user-profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
