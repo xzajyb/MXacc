@@ -87,7 +87,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const { t, formatDate } = useLanguage()
   const navigate = useNavigate()
   
-  const [activeTab, setActiveTab] = useState<'feed' | 'following' | 'profile'>('feed')
+  const [activeTab, setActiveTab] = useState<'feed' | 'following' | 'profile' | 'messages'>('feed')
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [newPostContent, setNewPostContent] = useState('')
@@ -120,7 +120,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   // 图片上传状态
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
-
+  
+  // 私信状态
+  const [conversations, setConversations] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  
   // 获取帖子列表
   const fetchPosts = async (type: 'feed' | 'following' = 'feed') => {
     try {
@@ -538,35 +542,40 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
   // 渲染评论组件
   const renderComment = (comment: Comment, postId: string, isReply = false) => (
-    <div key={comment.id} className={`${isReply ? 'ml-8 mt-3' : 'mt-4'} ${isReply ? 'border-l-2 border-gray-200 dark:border-gray-600 pl-4' : ''}`}>
-      <div className="flex space-x-3">
+    <div key={comment.id} className={`${isReply ? 'ml-6 mt-2 relative' : 'mt-4'}`}>
+      {isReply && (
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-600"></div>
+      )}
+      <div className={`flex space-x-${isReply ? '2' : '3'} ${isReply ? 'pl-4' : ''}`}>
         <div 
-          className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 cursor-pointer flex-shrink-0"
+          className={`${isReply ? 'w-6 h-6' : 'w-8 h-8'} rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 cursor-pointer flex-shrink-0`}
           onClick={() => handleViewProfile(comment.author.id)}
         >
           {comment.author.avatar ? (
             <img src={comment.author.avatar} alt={comment.author.nickname} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <span className="text-white font-bold text-xs">{comment.author.nickname.charAt(0).toUpperCase()}</span>
+              <span className={`text-white font-bold ${isReply ? 'text-xs' : 'text-xs'}`}>
+                {comment.author.nickname.charAt(0).toUpperCase()}
+              </span>
             </div>
           )}
         </div>
         <div className="flex-1">
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+          <div className={`bg-gray-50 dark:bg-gray-700 rounded-lg ${isReply ? 'p-2' : 'p-3'}`}>
             <div className="flex items-center space-x-2 mb-1">
               <span 
-                className="font-medium text-gray-900 dark:text-white cursor-pointer text-sm"
+                className={`font-medium text-gray-900 dark:text-white cursor-pointer ${isReply ? 'text-xs' : 'text-sm'}`}
                 onClick={() => handleViewProfile(comment.author.id)}
               >
                 {comment.author.nickname}
               </span>
               {comment.replyTo && (
-                <span className="text-xs text-gray-500">
+                <span className={`text-gray-500 ${isReply ? 'text-xs' : 'text-xs'}`}>
                   回复 @{comment.replyTo.nickname}
                 </span>
               )}
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className={`text-gray-500 dark:text-gray-400 ${isReply ? 'text-xs' : 'text-xs'}`}>
                 {formatDate(comment.createdAt, 'datetime')}
               </span>
               {comment.canDelete && (
@@ -575,30 +584,32 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                   className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                   title="删除评论"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className={`${isReply ? 'w-2.5 h-2.5' : 'w-3 h-3'}`} />
                 </button>
               )}
             </div>
-            <p className="text-gray-900 dark:text-white text-sm whitespace-pre-wrap">{comment.content}</p>
+            <p className={`text-gray-900 dark:text-white whitespace-pre-wrap ${isReply ? 'text-xs' : 'text-sm'}`}>
+              {comment.content}
+            </p>
           </div>
-          <div className="flex items-center space-x-4 mt-2">
+          <div className={`flex items-center space-x-4 mt-2 ${isReply ? 'text-xs' : 'text-xs'}`}>
             <button
               onClick={() => handleCommentLike(comment.id, postId)}
-              className={`flex items-center space-x-1 text-xs transition-colors ${
+              className={`flex items-center space-x-1 transition-colors ${
                 comment.isLiked 
                   ? 'text-red-600' 
                   : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
               }`}
             >
-              <Heart className={`w-3 h-3 ${comment.isLiked ? 'fill-current' : ''}`} />
+              <Heart className={`${isReply ? 'w-2.5 h-2.5' : 'w-3 h-3'} ${comment.isLiked ? 'fill-current' : ''}`} />
               {comment.likesCount > 0 && <span>{comment.likesCount}</span>}
             </button>
             {!isReply && (
               <button
                 onClick={() => handleReply(postId, comment.id, comment.author.nickname)}
-                className="flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
               >
-                <Reply className="w-3 h-3" />
+                <Reply className="w-2.5 h-2.5" />
                 <span>回复</span>
               </button>
             )}
@@ -607,6 +618,44 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       </div>
     </div>
   )
+
+  // 获取会话列表
+  const fetchConversations = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/social/messaging?action=conversations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setConversations(data.data.conversations)
+        // 计算未读消息数
+        const unread = data.data.conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
+        setUnreadCount(unread)
+      }
+    } catch (error) {
+      console.error('获取会话列表失败:', error)
+    }
+  }
+
+  // 分享帖子
+  const handleShare = (post: Post) => {
+    if (navigator.share) {
+      navigator.share({
+        title: `${post.author.nickname}的动态`,
+        text: post.content,
+        url: window.location.href
+      }).catch(console.error)
+    } else {
+      // 复制链接到剪贴板
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        showSuccess('链接已复制到剪贴板')
+      }).catch(() => {
+        showError('分享失败')
+      })
+    }
+  }
 
   useEffect(() => {
     fetchPosts(activeTab === 'following' ? 'following' : 'feed')
@@ -686,6 +735,27 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
             >
               <UserIcon className="w-4 h-4 inline mr-2" />
               我的主页
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('messages')
+                if (conversations.length === 0) {
+                  fetchConversations()
+                }
+              }}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
+                activeTab === 'messages'
+                  ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-400'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4 inline mr-2" />
+              私信
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -978,10 +1048,20 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                               <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} />
                               <span>{post.likesCount}</span>
                             </button>
-                            <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
-                              <MessageCircle className="w-4 h-4" />
+                            <button
+                              onClick={() => toggleComments(post.id)}
+                              className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                            >
+                              <MessageCircle className="w-5 h-5" />
                               <span>{post.commentsCount}</span>
-                            </div>
+                            </button>
+                            <button
+                              onClick={() => handleShare(post)}
+                              className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors"
+                            >
+                              <Share className="w-5 h-5" />
+                              <span>分享</span>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1088,7 +1168,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                         <MessageCircle className="w-5 h-5" />
                         <span>{post.commentsCount}</span>
                       </button>
-                      <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors">
+                      <button
+                        onClick={() => handleShare(post)}
+                        className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors"
+                      >
                         <Share className="w-5 h-5" />
                         <span>分享</span>
                       </button>
