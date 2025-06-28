@@ -88,7 +88,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/posts?type=${type}`, {
+      const response = await fetch(`/api/social?type=posts&action=list&page=1&limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -96,7 +96,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setPosts(data.data.posts)
+        setPosts(data)
       } else {
         throw new Error('获取帖子失败')
       }
@@ -118,26 +118,25 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     try {
       setIsPosting(true)
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/posts', {
+      const response = await fetch('/api/social?type=posts&action=create', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'create',
           content: newPostContent.trim()
         })
       })
       
       if (response.ok) {
         const data = await response.json()
-        setPosts(prev => [data.data, ...prev])
+        setPosts(prev => [data, ...prev])
         setNewPostContent('')
         showSuccess('帖子发布成功')
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.message || '发布失败')
+        throw new Error(errorData.error || '发布失败')
       }
     } catch (error) {
       console.error('发布帖子失败:', error)
@@ -151,25 +150,21 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const handleLike = async (postId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/posts', {
+      const response = await fetch('/api/social?type=posts&action=like', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'like',
           postId
         })
       })
       
       if (response.ok) {
         const data = await response.json()
-        setPosts(prev => prev.map(post => 
-          post.id === postId 
-            ? { ...post, isLiked: data.data.isLiked, likesCount: data.data.likesCount }
-            : post
-        ))
+        await fetchPosts()
+        showSuccess(data.message)
       } else {
         throw new Error('操作失败')
       }
@@ -183,7 +178,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const fetchComments = async (postId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/comments?postId=${postId}`, {
+      const response = await fetch(`/api/social?type=comments&action=list&postId=${postId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -191,7 +186,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setComments(prev => ({ ...prev, [postId]: data.data.comments }))
+        setComments(prev => ({ ...prev, [postId]: data }))
       }
     } catch (error) {
       console.error('获取评论失败:', error)
@@ -208,16 +203,15 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/posts', {
+      const response = await fetch('/api/social?type=comments&action=create', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'comment',
           postId,
-          commentContent: content.trim()
+          content: content.trim()
         })
       })
       
@@ -225,18 +219,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
         const data = await response.json()
         setComments(prev => ({
           ...prev,
-          [postId]: [data.data.comment, ...(prev[postId] || [])]
+          [postId]: [data, ...(prev[postId] || [])]
         }))
-        setPosts(prev => prev.map(post => 
-          post.id === postId 
-            ? { ...post, commentsCount: data.data.commentsCount }
-            : post
-        ))
         setCommentContent(prev => ({ ...prev, [postId]: '' }))
         showSuccess('评论发布成功')
+        await fetchPosts()
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.message || '评论失败')
+        throw new Error(errorData.error || '评论失败')
       }
     } catch (error) {
       console.error('发布评论失败:', error)
@@ -253,7 +243,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/users?action=search&search=${encodeURIComponent(searchQuery.trim())}`, {
+      const response = await fetch(`/api/social?type=messages&action=search-users&query=${encodeURIComponent(searchQuery.trim())}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -261,7 +251,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setSearchResults(data.data.users)
+        setSearchResults(data)
       }
     } catch (error) {
       console.error('搜索用户失败:', error)
@@ -273,29 +263,29 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const handleFollow = async (userId: string, isFollowing: boolean) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/users', {
+      const action = isFollowing ? 'unfollow' : 'follow'
+      const response = await fetch(`/api/social?type=users&action=${action}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: isFollowing ? 'unfollow' : 'follow',
-          userId
+          targetUserId: userId
         })
       })
       
       if (response.ok) {
         const data = await response.json()
         setSearchResults(prev => prev.map(user => 
-          user.id === userId 
-            ? { ...user, isFollowing: data.data.isFollowing, followersCount: data.data.followersCount }
+          user._id === userId 
+            ? { ...user, isFollowing: !isFollowing }
             : user
         ))
         showSuccess(data.message)
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.message || '操作失败')
+        throw new Error(errorData.error || '操作失败')
       }
     } catch (error) {
       console.error('关注操作失败:', error)

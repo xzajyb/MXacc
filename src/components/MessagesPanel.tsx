@@ -80,7 +80,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/messages?action=conversations', {
+      const response = await fetch('/api/social?type=messages&action=conversations', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -88,7 +88,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setConversations(data.data.conversations)
+        setConversations(data)
       } else {
         throw new Error('获取会话列表失败')
       }
@@ -104,7 +104,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
   const fetchMessages = async (conversationId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/messages?action=messages&conversationId=${conversationId}`, {
+      const response = await fetch(`/api/social?type=messages&action=messages&conversationId=${conversationId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -112,7 +112,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setMessages(data.data.messages)
+        setMessages(data)
         setActiveConversation(conversationId)
       } else {
         throw new Error('获取消息失败')
@@ -132,19 +132,18 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
       const token = localStorage.getItem('token')
       
       const body: any = {
-        action: 'send',
         content: newMessage.trim()
       }
 
       if (activeConversation) {
         body.conversationId = activeConversation
       } else if (recipientId) {
-        body.userId = recipientId
+        body.recipientId = recipientId
       } else {
         throw new Error('缺少收件人信息')
       }
 
-      const response = await fetch('/api/social/messages', {
+      const response = await fetch('/api/social?type=messages&action=send', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -155,11 +154,11 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setMessages(prev => [...prev, data.data])
+        setMessages(prev => [...prev, data])
         setNewMessage('')
         
         if (!activeConversation) {
-          setActiveConversation(data.data.conversationId)
+          setActiveConversation(data.conversationId)
         }
         
         // 更新会话列表
@@ -170,7 +169,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
         }
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.message || '发送失败')
+        throw new Error(errorData.error || '发送失败')
       }
     } catch (error) {
       console.error('发送消息失败:', error)
@@ -189,7 +188,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/users?action=search&search=${encodeURIComponent(searchQuery.trim())}`, {
+      const response = await fetch(`/api/social?type=messages&action=search-users&query=${encodeURIComponent(searchQuery.trim())}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -197,7 +196,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setSearchResults(data.data.users)
+        setSearchResults(data)
       }
     } catch (error) {
       console.error('搜索用户失败:', error)
@@ -208,7 +207,7 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
   const startNewConversation = async (userId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/messages?action=messages&userId=${userId}`, {
+      const response = await fetch(`/api/social?type=messages&action=messages&userId=${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -216,8 +215,8 @@ const MessagesPanel: React.FC<MessagesPanelProps> = ({ embedded = false }) => {
       
       if (response.ok) {
         const data = await response.json()
-        setMessages(data.data.messages)
-        setActiveConversation(data.data.conversationId)
+        setMessages(data)
+        setActiveConversation(data.conversationId || 'new')
         setShowSearch(false)
         setSearchQuery('')
         setSearchResults([])
