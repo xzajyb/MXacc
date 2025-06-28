@@ -1255,17 +1255,16 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                 )}
                               </div>
                               <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                                <h4 className="font-medium text-gray-900 dark:text-white flex items-center space-x-2">
+                                  <span>{post.author.nickname}</span>
                                   {/* 管理员标签 */}
                                   {post.author.role === 'admin' && (
-                                    <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                                      <Shield className="w-3 h-3 mr-1" />
+                                    <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                      <Shield className="w-2.5 h-2.5 mr-1" />
                                       管理员
                                     </div>
                                   )}
-                                </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                                </h4>
                               </div>
                             </div>
                             {post.canDelete && (
@@ -1375,16 +1374,16 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                         )}
                       </div>
                       <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center space-x-2">
+                          <span>{post.author.nickname}</span>
                           {/* 管理员标签 */}
                           {post.author.role === 'admin' && (
-                            <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                              <Shield className="w-3 h-3 mr-1" />
+                            <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                              <Shield className="w-2.5 h-2.5 mr-1" />
                               管理员
                             </div>
                           )}
-                        </div>
+                        </h4>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                       </div>
                     </div>
