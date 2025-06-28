@@ -88,7 +88,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/posts?type=${type}`, {
+      const response = await fetch(`/api/social/content?action=posts&type=${type}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -118,14 +118,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     try {
       setIsPosting(true)
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/posts', {
+      const response = await fetch('/api/social/content', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'create',
+          action: 'create-post',
           content: newPostContent.trim()
         })
       })
@@ -139,7 +139,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
         const errorData = await response.json()
         throw new Error(errorData.message || '发布失败')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('发布帖子失败:', error)
       showError(error.message || '发布帖子失败')
     } finally {
@@ -151,14 +151,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const handleLike = async (postId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/posts', {
+      const response = await fetch('/api/social/content', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'like',
+          action: 'toggle-like',
           postId
         })
       })
@@ -183,7 +183,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const fetchComments = async (postId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/comments?postId=${postId}`, {
+      const response = await fetch(`/api/social/content?action=comments&postId=${postId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -208,16 +208,16 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/posts', {
+      const response = await fetch('/api/social/content', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          action: 'comment',
+          action: 'create-comment',
           postId,
-          commentContent: content.trim()
+          content: content.trim()
         })
       })
       
@@ -253,7 +253,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/users?action=search&search=${encodeURIComponent(searchQuery.trim())}`, {
+      const response = await fetch(`/api/social/messaging?action=search-users&search=${encodeURIComponent(searchQuery.trim())}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -273,7 +273,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const handleFollow = async (userId: string, isFollowing: boolean) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/social/users', {
+      const response = await fetch('/api/social/messaging', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
