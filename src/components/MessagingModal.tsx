@@ -96,6 +96,9 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       } else if (otherUserId) {
         params.append('otherUserId', otherUserId)
       } else {
+        console.log('没有提供conversationId或otherUserId')
+        setMessages([])
+        setMessagesLoading(false)
         return
       }
       
@@ -114,11 +117,16 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       console.log('消息响应:', data)
       
       if (data.success) {
+        console.log('设置消息:', data.data.messages?.length || 0, '条消息')
         setMessages(data.data.messages || [])
         setTimeout(scrollToBottom, 100)
+      } else {
+        console.error('获取消息失败:', data.message)
+        setMessages([])
       }
     } catch (error) {
       console.error('获取消息失败:', error)
+      setMessages([])
     } finally {
       setMessagesLoading(false)
     }

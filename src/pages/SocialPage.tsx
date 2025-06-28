@@ -643,14 +643,6 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     setImagePreviewUrls(newUrls)
   }
 
-  // 组织评论为树状结构，但显示更简洁
-  const organizeComments = (comments: Comment[]) => {
-    // API已经返回了正确的树状结构，直接返回一级评论
-    // 每个一级评论都包含replies字段包含其子评论
-    return comments.filter(comment => !comment.parentId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-  }
-
   // 渲染管理员标签
   const renderAdminBadge = (role?: string) => {
     if (role === 'admin') {
@@ -1525,7 +1517,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
                           {/* 评论列表 */}
                           <div className="space-y-1">
-                            {comments[post.id] && organizeComments(comments[post.id]).map((comment) => (
+                            {comments[post.id] && comments[post.id].map((comment) => (
                               <div key={comment.id}>
                                 {renderComment(comment, post.id)}
                                 {comment.replies && comment.replies.map((reply) => 
