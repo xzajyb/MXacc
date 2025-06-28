@@ -87,7 +87,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const { t, formatDate } = useLanguage()
   const navigate = useNavigate()
   
-  const [activeTab, setActiveTab] = useState<'feed' | 'following' | 'explore'>('feed')
+  const [activeTab, setActiveTab] = useState<'feed' | 'following' | 'profile'>('feed')
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [newPostContent, setNewPostContent] = useState('')
@@ -111,6 +111,15 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     id: string
     postId?: string
   } | null>(null)
+  
+  // 个人主页状态
+  const [myProfile, setMyProfile] = useState<any>(null)
+  const [myPosts, setMyPosts] = useState<Post[]>([])
+  const [profileLoading, setProfileLoading] = useState(false)
+  
+  // 图片上传状态
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([])
 
   // 获取帖子列表
   const fetchPosts = async (type: 'feed' | 'following' = 'feed') => {
@@ -454,9 +463,66 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     setShowMessaging(true)
   }
 
-  // 跳转到个人资料页面
+  // 切换到个人资料选项栏
   const handleGoToProfile = () => {
-    navigate('/profile')
+    setActiveTab('profile')
+    if (!myProfile) {
+      fetchMyProfile()
+    }
+  }
+  
+  // 获取我的个人资料
+  const fetchMyProfile = async () => {
+    try {
+      setProfileLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/messaging?action=user-profile&userId=${user?.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setMyProfile(data.data)
+      }
+      
+      // 获取我的帖子
+      const postsResponse = await fetch(`/api/social/content?action=posts&type=user&userId=${user?.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (postsResponse.ok) {
+        const postsData = await postsResponse.json()
+        setMyPosts(postsData.data.posts)
+      }
+    } catch (error) {
+      console.error('获取个人资料失败:', error)
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+  
+  // 处理图片选择
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length + selectedImages.length > 4) {
+      showError('最多只能选择4张图片')
+      return
+    }
+    
+    const newImages = [...selectedImages, ...files]
+    setSelectedImages(newImages)
+    
+    // 生成预览URL
+    const newUrls = files.map(file => URL.createObjectURL(file))
+    setImagePreviewUrls(prev => [...prev, ...newUrls])
+  }
+  
+  // 移除图片
+  const removeImage = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index)
+    const newUrls = imagePreviewUrls.filter((_, i) => i !== index)
+    setSelectedImages(newImages)
+    setImagePreviewUrls(newUrls)
   }
 
   // 组织评论为树状结构
@@ -612,7 +678,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
             </button>
             <button
               onClick={() => handleGoToProfile()}
-              className="px-4 py-2 rounded-lg font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'profile'
+                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'
+                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+              }`}
             >
               <UserIcon className="w-4 h-4 inline mr-2" />
               我的主页
@@ -727,9 +797,16 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
               />
               <div className="flex items-center justify-between mt-3">
                 <div className="flex space-x-2">
-                  <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                  <label className="p-2 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer">
                     <ImageIcon className="w-5 h-5" />
-                  </button>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageSelect}
+                    />
+                  </label>
                 </div>
                 <div className="flex items-center space-x-3">
                   <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -744,195 +821,361 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                   </button>
                 </div>
               </div>
+              
+              {/* 图片预览 */}
+              {imagePreviewUrls.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {imagePreviewUrls.map((url, index) => (
+                    <div key={index} className="relative">
+                      <img src={url} alt={`预览 ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* 帖子列表 */}
         <div className="space-y-6">
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">加载中...</p>
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                暂无动态
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                {activeTab === 'following' ? '关注一些用户来查看他们的动态' : '成为第一个发布动态的用户'}
-              </p>
-            </div>
-          ) : (
-            posts.map((post) => (
-              <motion.div
-                key={post.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
-              >
-                {/* 帖子头部 */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div 
-                      className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 cursor-pointer"
-                      onClick={() => handleViewProfile(post.author.id)}
-                    >
-                      {post.author.avatar ? (
-                        <img src={post.author.avatar} alt={post.author.nickname} className="w-full h-full object-cover" />
+          {activeTab === 'profile' ? (
+            // 个人主页内容
+            profileLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-500 dark:text-gray-400 mt-2">加载中...</p>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                {/* 个人资料头部 */}
+                <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-start space-x-4">
+                    {/* 头像 */}
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
+                      {user?.profile?.avatar ? (
+                        <img src={user.profile.avatar} alt={user?.profile?.nickname || user?.username || ''} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                          <span className="text-white font-bold">{post.author.nickname.charAt(0).toUpperCase()}</span>
+                          <span className="text-2xl font-bold text-white">
+                            {(user?.profile?.nickname || user?.username || '?').charAt(0).toUpperCase()}
+                          </span>
                         </div>
                       )}
                     </div>
-                    <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                      <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
-                    </div>
-                  </div>
-                  {post.canDelete && (
-                    <button 
-                      onClick={() => showDeleteConfirmDialog('post', post.id)}
-                      className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-                      title="删除帖子"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
 
-                {/* 帖子内容 */}
-                <div className="mb-4">
-                  <p className="text-gray-900 dark:text-white whitespace-pre-wrap">{post.content}</p>
-                </div>
+                    {/* 用户信息 */}
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
+                      <p className="text-gray-500 dark:text-gray-400">@{user?.username}</p>
+                      
+                      {user?.profile?.bio && (
+                        <p className="text-gray-700 dark:text-gray-300 mt-2">{user.profile.bio}</p>
+                      )}
 
-                {/* 帖子图片 */}
-                {post.images && post.images.length > 0 && (
-                  <div className="mb-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      {post.images.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`帖子图片 ${index + 1}`}
-                          className="rounded-lg object-cover w-full h-48"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 帖子操作 */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <div className="flex items-center space-x-6">
-                    <button
-                      onClick={() => handleLike(post.id)}
-                      className={`flex items-center space-x-2 transition-colors ${
-                        post.isLiked 
-                          ? 'text-red-600' 
-                          : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
-                      }`}
-                    >
-                      <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
-                      <span>{post.likesCount}</span>
-                    </button>
-                    <button
-                      onClick={() => toggleComments(post.id)}
-                      className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      <span>{post.commentsCount}</span>
-                    </button>
-                    <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors">
-                      <Share className="w-5 h-5" />
-                      <span>分享</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 评论区域 */}
-                <AnimatePresence>
-                  {showComments[post.id] && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-6 border-t border-gray-200 dark:border-gray-600 pt-4">
-                        {/* 评论输入框 */}
-                        <div className="flex space-x-3 mb-4">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
-                            {user?.profile?.avatar ? (
-                              <img src={user.profile.avatar} alt={user.username} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                <span className="text-white font-bold text-xs">{user?.username?.charAt(0).toUpperCase()}</span>
-                              </div>
-                            )}
+                      <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
+                        {user?.profile?.location && (
+                          <div className="flex items-center space-x-1">
+                            <span>📍 {user.profile.location}</span>
                           </div>
-                          <div className="flex-1">
-                            {replyingTo[post.id] && (
-                              <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
-                                <span className="text-blue-600 dark:text-blue-400">
-                                  回复 @{replyingTo[post.id]?.username}
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    const { [post.id]: _, ...rest } = replyingTo
-                                    setReplyingTo(rest)
-                                    setCommentContent(prev => ({ ...prev, [post.id]: '' }))
-                                  }}
-                                  className="ml-2 text-gray-500 hover:text-red-600"
-                                >
-                                  取消
-                                </button>
-                              </div>
-                            )}
-                            <div className="flex space-x-2">
-                              <input
-                                type="text"
-                                placeholder="写评论..."
-                                value={commentContent[post.id] || ''}
-                                onChange={(e) => setCommentContent(prev => ({ ...prev, [post.id]: e.target.value }))}
-                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleComment(post.id)
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={() => handleComment(post.id)}
-                                disabled={!commentContent[post.id]?.trim()}
-                                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <Send className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 评论列表 */}
-                        <div className="space-y-1">
-                          {comments[post.id] && organizeComments(comments[post.id]).map((comment) => (
-                            <div key={comment.id}>
-                              {renderComment(comment, post.id)}
-                              {comment.replies && comment.replies.map((reply) => 
-                                renderComment(reply, post.id, true)
-                              )}
-                            </div>
-                          ))}
+                        )}
+                        <div className="flex items-center space-x-1">
+                          <span>📅 加入于 {user?.createdAt ? formatDate(user.createdAt, 'date') : '未知'}</span>
                         </div>
                       </div>
-                    </motion.div>
+
+                      {/* 统计信息 */}
+                      <div className="flex space-x-6 mt-4">
+                        <div className="text-center">
+                          <div className="font-bold text-gray-900 dark:text-white">{myPosts.length}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">帖子</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-bold text-gray-900 dark:text-white">{myProfile?.followersCount || 0}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">粉丝</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-bold text-gray-900 dark:text-white">{myProfile?.followingCount || 0}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">关注</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 我的帖子 */}
+                <div className="p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">我的帖子</h4>
+                  {myPosts.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500 dark:text-gray-400">暂无帖子</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {myPosts.map((post) => (
+                        <div key={post.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                          {/* 帖子头部 */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+                                {post.author.avatar ? (
+                                  <img src={post.author.avatar} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                                    {post.author.nickname.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                              </div>
+                            </div>
+                            {post.canDelete && (
+                              <button
+                                onClick={() => showDeleteConfirmDialog('post', post.id)}
+                                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* 帖子内容 */}
+                          <p className="text-gray-900 dark:text-white mb-3 whitespace-pre-wrap">{post.content}</p>
+
+                          {/* 帖子图片 */}
+                          {post.images && post.images.length > 0 && (
+                            <div className="mb-3">
+                              <div className="grid grid-cols-2 gap-2">
+                                {post.images.map((image, index) => (
+                                  <img
+                                    key={index}
+                                    src={image}
+                                    alt=""
+                                    className="rounded object-cover w-full h-32"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 帖子操作 */}
+                          <div className="flex items-center space-x-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <button
+                              onClick={() => handleLike(post.id)}
+                              className={`flex items-center space-x-1 text-sm transition-colors ${
+                                post.isLiked 
+                                  ? 'text-red-600 dark:text-red-400' 
+                                  : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
+                              }`}
+                            >
+                              <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} />
+                              <span>{post.likesCount}</span>
+                            </button>
+                            <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
+                              <MessageCircle className="w-4 h-4" />
+                              <span>{post.commentsCount}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </AnimatePresence>
-              </motion.div>
-            ))
+                </div>
+              </div>
+            )
+          ) : (
+            // 正常的帖子列表
+            loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-500 dark:text-gray-400 mt-2">加载中...</p>
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  暂无动态
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {activeTab === 'following' ? '关注一些用户来查看他们的动态' : '成为第一个发布动态的用户'}
+                </p>
+              </div>
+            ) : (
+              posts.map((post) => (
+                <motion.div
+                  key={post.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+                >
+                  {/* 帖子头部 */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 cursor-pointer"
+                        onClick={() => handleViewProfile(post.author.id)}
+                      >
+                        {post.author.avatar ? (
+                          <img src={post.author.avatar} alt={post.author.nickname} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                            <span className="text-white font-bold">{post.author.nickname.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
+                        <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                      </div>
+                    </div>
+                    {post.canDelete && (
+                      <button 
+                        onClick={() => showDeleteConfirmDialog('post', post.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="删除帖子"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 帖子内容 */}
+                  <div className="mb-4">
+                    <p className="text-gray-900 dark:text-white whitespace-pre-wrap">{post.content}</p>
+                  </div>
+
+                  {/* 帖子图片 */}
+                  {post.images && post.images.length > 0 && (
+                    <div className="mb-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        {post.images.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`帖子图片 ${index + 1}`}
+                            className="rounded-lg object-cover w-full h-48"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 帖子操作 */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-6">
+                      <button
+                        onClick={() => handleLike(post.id)}
+                        className={`flex items-center space-x-2 transition-colors ${
+                          post.isLiked 
+                            ? 'text-red-600' 
+                            : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
+                        }`}
+                      >
+                        <Heart className={`w-5 h-5 ${post.isLiked ? 'fill-current' : ''}`} />
+                        <span>{post.likesCount}</span>
+                      </button>
+                      <button
+                        onClick={() => toggleComments(post.id)}
+                        className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        <span>{post.commentsCount}</span>
+                      </button>
+                      <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors">
+                        <Share className="w-5 h-5" />
+                        <span>分享</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 评论区域 */}
+                  <AnimatePresence>
+                    {showComments[post.id] && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-6 border-t border-gray-200 dark:border-gray-600 pt-4">
+                          {/* 评论输入框 */}
+                          <div className="flex space-x-3 mb-4">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
+                              {user?.profile?.avatar ? (
+                                <img src={user.profile.avatar} alt={user.username} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                  <span className="text-white font-bold text-xs">{user?.username?.charAt(0).toUpperCase()}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              {replyingTo[post.id] && (
+                                <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
+                                  <span className="text-blue-600 dark:text-blue-400">
+                                    回复 @{replyingTo[post.id]?.username}
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      const { [post.id]: _, ...rest } = replyingTo
+                                      setReplyingTo(rest)
+                                      setCommentContent(prev => ({ ...prev, [post.id]: '' }))
+                                    }}
+                                    className="ml-2 text-gray-500 hover:text-red-600"
+                                  >
+                                    取消
+                                  </button>
+                                </div>
+                              )}
+                              <div className="flex space-x-2">
+                                <input
+                                  type="text"
+                                  placeholder="写评论..."
+                                  value={commentContent[post.id] || ''}
+                                  onChange={(e) => setCommentContent(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      handleComment(post.id)
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={() => handleComment(post.id)}
+                                  disabled={!commentContent[post.id]?.trim()}
+                                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <Send className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 评论列表 */}
+                          <div className="space-y-1">
+                            {comments[post.id] && organizeComments(comments[post.id]).map((comment) => (
+                              <div key={comment.id}>
+                                {renderComment(comment, post.id)}
+                                {comment.replies && comment.replies.map((reply) => 
+                                  renderComment(reply, post.id, true)
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ))
+            )
           )}
         </div>
       </div>
