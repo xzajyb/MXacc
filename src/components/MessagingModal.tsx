@@ -118,6 +118,9 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (data.success) {
         setMessages(data.data.messages || [])
         setTimeout(scrollToBottom, 100)
+        
+        // 标记消息为已读
+        await markMessagesAsRead(conversationId, otherUserId)
       }
     } catch (error) {
       console.error('获取消息失败:', error)
@@ -125,6 +128,31 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (showLoading) {
         setMessagesLoading(false)  // 只在显示了加载动画时才关闭
       }
+    }
+  }
+
+  // 标记消息为已读
+  const markMessagesAsRead = async (conversationId?: string, otherUserId?: string) => {
+    try {
+      const response = await fetch('/api/social/messaging', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'mark-read',
+          conversationId,
+          otherUserId
+        })
+      })
+      
+      if (response.ok) {
+        // 立即刷新会话列表以更新未读数量
+        await fetchConversations()
+      }
+    } catch (error) {
+      console.error('标记已读失败:', error)
     }
   }
 

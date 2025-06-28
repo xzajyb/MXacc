@@ -750,56 +750,139 @@ module.exports = async function handler(req, res) {
       })
     }
 
-    // DELETE: 删除操作
-    if (req.method === 'DELETE') {
-      const { action, messageId } = req.body
+    // PUT: 更新操作
+    if (req.method === 'PUT') {
+      const { action, conversationId, otherUserId } = req.body
 
-      // 撤回消息
-      if (action === 'recall-message') {
-        if (!messageId) {
+      // 标记消息为已读
+      if (action === 'mark-read') {
+        let conversation
+        
+        if (conversationId) {
+          // 通过会话ID标记已读
+          conversation = await conversations.findOne({
+            _id: new ObjectId(conversationId),
+            participants: new ObjectId(decoded.userId)
+          })
+          
+          if (!conversation) {
+            return res.status(403).json({ 
+              success: false, 
+              message: '无权访问此会话' 
+            })
+          }
+        } else if (otherUserId) {
+          // 通过对方用户ID标记已读
+          conversation = await conversations.findOne({
+            participants: { 
+              $all: [new ObjectId(decoded.userId), new ObjectId(otherUserId)],
+              $size: 2
+            }
+          })
+          
+          if (!conversation) {
+            return res.status(404).json({ 
+              success: false, 
+              message: '会话不存在' 
+            })
+          }
+        } else {
           return res.status(400).json({ 
             success: false, 
-            message: '消息ID不能为空' 
+            message: '必须提供会话ID或对方用户ID' 
           })
         }
 
-        // 查找消息
-        const message = await messages.findOne({
-          _id: new ObjectId(messageId),
-          senderId: new ObjectId(decoded.userId)
-        })
-
-        if (!message) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '消息不存在或无权限撤回' 
-          })
-        }
-
-        // 检查消息是否在3分钟内
-        const now = new Date()
-        const messageTime = new Date(message.createdAt)
-        const diffInMinutes = (now - messageTime) / (1000 * 60)
-
-        if (diffInMinutes > 3) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '只能撤回3分钟内发送的消息' 
-          })
-        }
-
-        // 删除消息
-        await messages.deleteOne({ _id: new ObjectId(messageId) })
+        // 标记来自对方的未读消息为已读
+        const result = await messages.updateMany(
+          {
+            conversationId: conversation._id,
+            senderId: { $ne: new ObjectId(decoded.userId) },
+            readAt: { $exists: false }
+          },
+          {
+            $set: { readAt: new Date() }
+          }
+        )
 
         return res.status(200).json({
           success: true,
-          message: '消息撤回成功'
+          message: '消息已标记为已读',
+          data: { markedCount: result.modifiedCount }
         })
       }
 
       return res.status(400).json({ 
         success: false, 
-        message: '不支持的删除操作' 
+        message: '不支持的更新操作' 
+      })
+    }
+
+    // PUT: 更新操作
+    if (req.method === 'PUT') {
+      const { action, conversationId, otherUserId } = req.body
+
+      // 标记消息为已读
+      if (action === 'mark-read') {
+        let conversation
+        
+        if (conversationId) {
+          // 通过会话ID标记已读
+          conversation = await conversations.findOne({
+            _id: new ObjectId(conversationId),
+            participants: new ObjectId(decoded.userId)
+          })
+          
+          if (!conversation) {
+            return res.status(403).json({ 
+              success: false, 
+              message: '无权访问此会话' 
+            })
+          }
+        } else if (otherUserId) {
+          // 通过对方用户ID标记已读
+          conversation = await conversations.findOne({
+            participants: { 
+              $all: [new ObjectId(decoded.userId), new ObjectId(otherUserId)],
+              $size: 2
+            }
+          })
+          
+          if (!conversation) {
+            return res.status(404).json({ 
+              success: false, 
+              message: '会话不存在' 
+            })
+          }
+        } else {
+          return res.status(400).json({ 
+            success: false, 
+            message: '必须提供会话ID或对方用户ID' 
+          })
+        }
+
+        // 标记来自对方的未读消息为已读
+        const result = await messages.updateMany(
+          {
+            conversationId: conversation._id,
+            senderId: { $ne: new ObjectId(decoded.userId) },
+            readAt: { $exists: false }
+          },
+          {
+            $set: { readAt: new Date() }
+          }
+        )
+
+        return res.status(200).json({
+          success: true,
+          message: '消息已标记为已读',
+          data: { markedCount: result.modifiedCount }
+        })
+      }
+
+      return res.status(400).json({ 
+        success: false, 
+        message: '不支持的更新操作' 
       })
     }
 
