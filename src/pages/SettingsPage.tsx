@@ -38,8 +38,6 @@ interface UserSettings {
     profileVisible: boolean
     activityVisible: boolean
     allowDataCollection: boolean
-    showFollowers: boolean
-    showFollowing: boolean
   }
   language: string
   timezone: string
@@ -62,9 +60,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     privacy: {
       profileVisible: true,
       activityVisible: false,
-      allowDataCollection: true,
-      showFollowers: true,
-      showFollowing: true
+      allowDataCollection: true
     },
     language: language,
     timezone: timezone
@@ -423,9 +419,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
                 {[
                   { key: 'profileVisible', label: t.settings.profileVisible, desc: t.settings.profileVisibleDesc, icon: Eye },
                   { key: 'activityVisible', label: t.settings.activityVisible, desc: t.settings.activityVisibleDesc, icon: Globe },
-                  { key: 'allowDataCollection', label: t.settings.dataCollection, desc: t.settings.dataCollectionDesc, icon: Shield },
-                  { key: 'showFollowers', label: t.settings.showFollowers, desc: t.settings.showFollowersDesc, icon: Eye },
-                  { key: 'showFollowing', label: t.settings.showFollowing, desc: t.settings.showFollowingDesc, icon: Globe }
+                  { key: 'allowDataCollection', label: t.settings.dataCollection, desc: t.settings.dataCollectionDesc, icon: Shield }
                 ].map((privacy) => {
                   const Icon = privacy.icon
                   return (

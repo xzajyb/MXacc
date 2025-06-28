@@ -80,10 +80,6 @@ interface LanguageResources {
     activityVisibleDesc: string
     dataCollection: string
     dataCollectionDesc: string
-    showFollowers: string
-    showFollowersDesc: string
-    showFollowing: string
-    showFollowingDesc: string
     interfaceLanguage: string
     timezoneSettings: string
     autoSaveEnabled: string
@@ -223,10 +219,6 @@ const languageResources: Record<Language, LanguageResources> = {
       activityVisibleDesc: '显示您的在线状态和最后活动时间',
       dataCollection: '数据收集',
       dataCollectionDesc: '允许收集匿名使用数据以改善服务',
-      showFollowers: '显示关注者',
-      showFollowersDesc: '允许其他用户查看您的关注者列表',
-      showFollowing: '显示关注中',
-      showFollowingDesc: '允许其他用户查看您关注的人列表',
       interfaceLanguage: '界面语言',
       timezoneSettings: '时区设置',
       autoSaveEnabled: '自动保存已启用',
@@ -363,10 +355,6 @@ const languageResources: Record<Language, LanguageResources> = {
       activityVisibleDesc: '顯示您的線上狀態和最後活動時間',
       dataCollection: '資料收集',
       dataCollectionDesc: '允許收集匿名使用資料以改善服務',
-      showFollowers: '顯示關注者',
-      showFollowersDesc: '允許其他使用者查看您的關注者列表',
-      showFollowing: '顯示關注中',
-      showFollowingDesc: '允許其他使用者查看您關注的人列表',
       interfaceLanguage: '介面語言',
       timezoneSettings: '時區設定',
       autoSaveEnabled: '自動儲存已啟用',
@@ -503,10 +491,6 @@ const languageResources: Record<Language, LanguageResources> = {
       activityVisibleDesc: 'Show your online status and last activity time',
       dataCollection: 'Data Collection',
       dataCollectionDesc: 'Allow collection of anonymous usage data to improve service',
-      showFollowers: 'Show Followers',
-      showFollowersDesc: 'Allow other users to view your followers list',
-      showFollowing: 'Show Following',
-      showFollowingDesc: 'Allow other users to view the list of people you follow',
       interfaceLanguage: 'Interface Language',
       timezoneSettings: 'Timezone Settings',
       autoSaveEnabled: 'Auto-save enabled',
@@ -643,10 +627,6 @@ const languageResources: Record<Language, LanguageResources> = {
       activityVisibleDesc: 'オンライン状況と最終アクティビティ時間を表示',
       dataCollection: 'データ収集',
       dataCollectionDesc: 'サービス向上のための匿名使用データ収集を許可',
-      showFollowers: 'フォロワーを表示',
-      showFollowersDesc: '他のユーザーがフォロワーリストを表示できるようにする',
-      showFollowing: 'フォロー中を表示',
-      showFollowingDesc: '他のユーザーがフォローしている人のリストを表示できるようにする',
       interfaceLanguage: 'インターフェース言語',
       timezoneSettings: 'タイムゾーン設定',
       autoSaveEnabled: '自動保存が有効',

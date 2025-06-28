@@ -46,13 +46,7 @@ module.exports = async function handler(req, res) {
         const defaultSettings = {
           theme: 'auto',
           notifications: { email: true, browser: true, marketing: false },
-          privacy: { 
-            profileVisible: true, 
-            activityVisible: false, 
-            allowDataCollection: true,
-            showFollowers: true,
-            showFollowing: true
-          },
+          privacy: { profileVisible: true, activityVisible: false, allowDataCollection: true },
           language: 'zh-CN',
           timezone: 'Asia/Shanghai'
         }
@@ -117,12 +111,6 @@ module.exports = async function handler(req, res) {
           }
           if (typeof settings.privacy.allowDataCollection === 'boolean') {
             validatedSettings.privacy.allowDataCollection = settings.privacy.allowDataCollection
-          }
-          if (typeof settings.privacy.showFollowers === 'boolean') {
-            validatedSettings.privacy.showFollowers = settings.privacy.showFollowers
-          }
-          if (typeof settings.privacy.showFollowing === 'boolean') {
-            validatedSettings.privacy.showFollowing = settings.privacy.showFollowing
           }
         }
 
