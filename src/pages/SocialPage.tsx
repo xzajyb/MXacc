@@ -984,27 +984,41 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                       key={conv.id}
                       className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                       onClick={() => {
-                        setTargetUser(conv.user)
+                        setTargetUser({
+                          id: conv.otherUser.id,
+                          username: conv.otherUser.username,
+                          nickname: conv.otherUser.nickname,
+                          avatar: conv.otherUser.avatar,
+                          bio: '',
+                          location: '',
+                          isFollowing: false,
+                          followersCount: 0,
+                          followingCount: 0,
+                          postsCount: 0,
+                          joinedAt: ''
+                        })
                         setShowMessaging(true)
                       }}
                     >
                       <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
-                        {conv.user.avatar ? (
-                          <img src={conv.user.avatar} alt={conv.user.nickname} className="w-full h-full object-cover" />
+                        {conv.otherUser.avatar ? (
+                          <img src={conv.otherUser.avatar} alt={conv.otherUser.nickname} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                            <span className="text-white font-bold">{conv.user.nickname.charAt(0).toUpperCase()}</span>
+                            <span className="text-white font-bold">{conv.otherUser.nickname.charAt(0).toUpperCase()}</span>
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900 dark:text-white truncate">{conv.user.nickname}</h4>
+                          <h4 className="font-medium text-gray-900 dark:text-white truncate">{conv.otherUser.nickname}</h4>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatDate(conv.lastMessage.timestamp, 'datetime')}
+                            {conv.lastMessage ? formatDate(conv.lastMessage.createdAt, 'datetime') : ''}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{conv.lastMessage.content}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                          {conv.lastMessage ? conv.lastMessage.content : '开始新对话'}
+                        </p>
                       </div>
                       {conv.unreadCount > 0 && (
                         <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -1403,41 +1417,55 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       />
 
       {/* 图片查看模态框 */}
-      {showImageModal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-95 z-[11000] flex items-center justify-center"
-          onClick={() => setShowImageModal(false)}
-        >
-          <div className="relative w-full h-full flex items-center justify-center p-4">
-            <motion.img
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              src={selectedImageUrl}
-              alt="查看图片"
-              className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+      <AnimatePresence>
+        {showImageModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4"
+            onClick={() => setShowImageModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
-            />
-            
-            {/* 关闭按钮 */}
-            <button
-              onClick={() => setShowImageModal(false)}
-              className="absolute top-6 right-6 w-12 h-12 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-sm"
             >
-              <X className="w-6 h-6" />
-            </button>
-            
-            {/* 底部信息栏 */}
-            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
-              <p className="text-sm">点击任意地方关闭</p>
-            </div>
-          </div>
-        </motion.div>
-      )}
+              {/* 模态框头部 */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">查看图片</h3>
+                <button
+                  onClick={() => setShowImageModal(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 图片内容 */}
+              <div className="p-6 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <img
+                  src={selectedImageUrl}
+                  alt="查看图片"
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                />
+              </div>
+
+              {/* 模态框底部 */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-600">
+                <div className="flex items-center justify-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    点击图片外部区域关闭
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
