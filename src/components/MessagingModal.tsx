@@ -77,13 +77,13 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
 
   // 发送消息
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return
+    if (!newMessage.trim()) return
 
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
       
-      // 如果是新会话且有目标用户
+      // 如果有目标用户但没有选中会话，创建新会话
       if (targetUser && !selectedConversation) {
         const response = await fetch('/api/social/messaging', {
           method: 'POST',
@@ -100,13 +100,49 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
 
         if (response.ok) {
           const data = await response.json()
-          setMessages(prev => [...prev, data.data])
+          // 添加消息到当前列表
+          setMessages(prev => [...prev, {
+            id: data.data.id,
+            content: newMessage.trim(),
+            sender: { id: '', username: '', nickname: '我', avatar: '' },
+            isOwnMessage: true,
+            createdAt: new Date().toISOString()
+          }])
           setNewMessage('')
-          fetchConversations()
+          // 刷新会话列表
+          await fetchConversations()
+          
+          // 如果创建了新会话，自动选中
+          if (data.data.conversationId) {
+            setSelectedConversation(data.data.conversationId)
+          }
         }
-      } else {
-        // 现有会话发送消息
-        // 这里需要根据实际API调整
+      } else if (selectedConversation) {
+        // 发送到现有会话
+        const response = await fetch('/api/social/messaging', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'send-message',
+            conversationId: selectedConversation,
+            content: newMessage.trim()
+          })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setMessages(prev => [...prev, {
+            id: data.data.id,
+            content: newMessage.trim(),
+            sender: { id: '', username: '', nickname: '我', avatar: '' },
+            isOwnMessage: true,
+            createdAt: new Date().toISOString()
+          }])
+          setNewMessage('')
+        }
       }
     } catch (error) {
       console.error('发送消息失败:', error)
@@ -118,8 +154,27 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
   useEffect(() => {
     if (isOpen) {
       fetchConversations()
+      // 如果有目标用户，自动添加到会话列表或选中现有会话
+      if (targetUser) {
+        // 检查是否已存在会话
+        const existingConv = conversations.find(conv => conv.otherUser.id === targetUser.id)
+        if (existingConv) {
+          setSelectedConversation(existingConv.id)
+        } else {
+          // 创建临时会话条目显示
+          const tempConversation: Conversation = {
+            id: `temp-${targetUser.id}`,
+            otherUser: targetUser,
+            lastMessage: null,
+            unreadCount: 0
+          }
+          setConversations(prev => [tempConversation, ...prev])
+          setSelectedConversation(tempConversation.id)
+          setMessages([]) // 清空消息列表准备新会话
+        }
+      }
     }
-  }, [isOpen])
+  }, [isOpen, targetUser])
 
   useEffect(() => {
     if (selectedConversation) {
@@ -130,7 +185,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
   if (!isOpen) return null
 
   const modalContent = (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[10000] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
