@@ -272,6 +272,17 @@ module.exports = async function handler(req, res) {
           })
         }
 
+        // 检查隐私设置 - 如果不是本人且设置为不可见，则拒绝访问
+        const isOwnProfile = user._id.toString() === decoded.userId
+        const profileVisible = user.settings?.privacy?.profileVisible !== false
+
+        if (!isOwnProfile && !profileVisible) {
+          return res.status(403).json({ 
+            success: false, 
+            message: '该用户设置了隐私保护，无法查看其个人信息' 
+          })
+        }
+
         const [isFollowing, followersCount, followingCount, postsCount] = await Promise.all([
           follows.findOne({
             followerId: new ObjectId(decoded.userId),
@@ -296,12 +307,13 @@ module.exports = async function handler(req, res) {
             followingCount,
             postsCount,
             joinedAt: user.createdAt,
-            isOwnProfile: user._id.toString() === decoded.userId,
+            isOwnProfile,
             role: user.role || 'user',
             settings: {
               privacy: user.settings?.privacy || {
                 showFollowers: true,
-                showFollowing: true
+                showFollowing: true,
+                profileVisible: true
               }
             }
           }

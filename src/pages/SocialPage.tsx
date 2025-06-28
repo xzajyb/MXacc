@@ -21,7 +21,8 @@ import {
   MapPin,
   Calendar,
   X,
-  AlertCircle
+  AlertCircle,
+  Shield
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -37,6 +38,7 @@ interface Post {
     username: string
     nickname: string
     avatar: string
+    role?: string
   }
   likesCount: number
   commentsCount: number
@@ -100,7 +102,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
   const [comments, setComments] = useState<Record<string, Comment[]>>({})
   const [commentContent, setCommentContent] = useState<Record<string, string>>({})
-  const [replyingTo, setReplyingTo] = useState<Record<string, { commentId: string, username: string } | undefined>>({})
+  const [replyingTo, setReplyingTo] = useState<Record<string, { commentId: string, username: string, userId: string } | undefined>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<User[]>([])
   const [showSearch, setShowSearch] = useState(false)
@@ -421,35 +423,49 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     try {
       const token = localStorage.getItem('token')
       const reply = replyingTo[postId]
+      
+      // 构建请求体
+      const requestBody: any = {
+        action: 'create-comment',
+        postId,
+        content: content.trim()
+      }
+      
+      // 如果是回复评论，添加parentId和replyTo信息
+      if (reply) {
+        requestBody.parentId = reply.commentId
+        requestBody.replyTo = {
+          userId: reply.userId,
+          username: reply.username
+        }
+      }
+      
       const response = await fetch('/api/social/content', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          action: 'create-comment',
-          postId,
-          content: content.trim(),
-          parentId: reply?.commentId
-        })
+        body: JSON.stringify(requestBody)
       })
       
       if (response.ok) {
         const data = await response.json()
-        setComments(prev => ({
-          ...prev,
-          [postId]: [data.data.comment, ...(prev[postId] || [])]
-        }))
+        
+        // 刷新评论列表以获取正确的树状结构
+        await fetchComments(postId)
+        
+        // 更新帖子评论计数
         setPosts(prev => prev.map(post => 
           post.id === postId 
-            ? { ...post, commentsCount: data.data.commentsCount }
+            ? { ...post, commentsCount: post.commentsCount + 1 }
             : post
         ))
+        
         setCommentContent(prev => ({ ...prev, [postId]: '' }))
         const { [postId]: _, ...restReplyingTo } = replyingTo
         setReplyingTo(restReplyingTo)
-        showSuccess('评论发布成功')
+        showSuccess(reply ? '回复发布成功' : '评论发布成功')
       } else {
         const errorData = await response.json()
         throw new Error(errorData.message || '评论失败')
@@ -539,8 +555,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   }
 
   // 回复评论
-  const handleReply = (postId: string, commentId: string, username: string) => {
-    setReplyingTo(prev => ({ ...prev, [postId]: { commentId, username } }))
+  const handleReply = (postId: string, commentId: string, username: string, userId: string) => {
+    setReplyingTo(prev => ({ ...prev, [postId]: { commentId, username, userId } }))
     setCommentContent(prev => ({ ...prev, [postId]: `@${username} ` }))
   }
 
@@ -629,13 +645,23 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
   // 组织评论为树状结构，但显示更简洁
   const organizeComments = (comments: Comment[]) => {
-    const parentComments = comments.filter(comment => !comment.parentId)
-    const childComments = comments.filter(comment => comment.parentId)
-    
-    return parentComments.map(parent => ({
-      ...parent,
-      replies: childComments.filter(child => child.parentId === parent.id)
-    })).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    // API已经返回了正确的树状结构，直接返回一级评论
+    // 每个一级评论都包含replies字段包含其子评论
+    return comments.filter(comment => !comment.parentId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  }
+
+  // 渲染管理员标签
+  const renderAdminBadge = (role?: string) => {
+    if (role === 'admin') {
+      return (
+        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full ml-2">
+          <Shield className="w-3 h-3 mr-1" />
+          管理员
+        </span>
+      )
+    }
+    return null
   }
 
   // 渲染评论 - 真正的树状结构
@@ -720,7 +746,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
             
             {!isReply && (
               <button
-                onClick={() => handleReply(postId, comment.id, comment.author.nickname)}
+                onClick={() => handleReply(postId, comment.id, comment.author.nickname, comment.author.id)}
                 className="flex items-center space-x-1 transition-colors hover:text-blue-600"
               >
                 <Reply className="w-3 h-3" />
@@ -1247,9 +1273,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                   </div>
                                 )}
                               </div>
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                              <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
+                                <div className="flex items-center">
+                                  <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                                  {renderAdminBadge(post.author.role)}
+                                </div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                               </div>
                             </div>
                             {post.canDelete && (
@@ -1359,7 +1388,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                         )}
                       </div>
                       <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                        <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                        <div className="flex items-center">
+                          <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                          {renderAdminBadge(post.author.role)}
+                        </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                       </div>
                     </div>

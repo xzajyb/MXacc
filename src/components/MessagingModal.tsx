@@ -521,6 +521,17 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
 
                       {/* 消息输入框 */}
                       <div className="p-4 border-t border-gray-200 dark:border-gray-600">
+                        {/* 合法性提示 */}
+                        <div className="mb-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                          <div className="flex items-start space-x-2">
+                            <div className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5">⚠️</div>
+                            <div className="text-xs text-yellow-800 dark:text-yellow-200">
+                              <p className="font-medium mb-1">聊天合法性提醒</p>
+                              <p>请文明聊天，不要发送违法违规、骚扰、诈骗等内容。所有聊天记录可能被监管部门要求提供。恶意使用将承担法律责任。</p>
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="flex space-x-3">
                           <input
                             type="text"
