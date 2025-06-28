@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, MessageCircle } from 'lucide-react'
 
@@ -128,8 +129,8 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
 
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -242,6 +243,8 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
       </motion.div>
     </div>
   )
+
+  return modalContent
 }
 
 export default MessagingModal 

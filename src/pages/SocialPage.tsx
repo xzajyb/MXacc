@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Heart, 
@@ -85,6 +86,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const { user } = useAuth()
   const { showSuccess, showError } = useToast()
   const { t, formatDate } = useLanguage()
+  const navigate = useNavigate()
   
   const [activeTab, setActiveTab] = useState<'feed' | 'following' | 'explore'>('feed')
   const [posts, setPosts] = useState<Post[]>([])
@@ -444,6 +446,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     setShowMessaging(true)
   }
 
+  // 跳转到个人资料页面
+  const handleGoToProfile = () => {
+    navigate('/profile')
+  }
+
   useEffect(() => {
     fetchPosts(activeTab === 'following' ? 'following' : 'feed')
   }, [activeTab])
@@ -513,7 +520,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
               发现用户
             </button>
             <button
-              onClick={() => handleViewProfile(user?.id || '')}
+              onClick={() => handleGoToProfile()}
               className="px-4 py-2 rounded-lg font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
             >
               <UserIcon className="w-4 h-4 inline mr-2" />
@@ -608,7 +615,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
           <div className="flex space-x-4">
             <div 
               className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 cursor-pointer"
-              onClick={() => handleViewProfile(user?.id || '')}
+              onClick={() => handleGoToProfile()}
             >
               {user?.profile?.avatar ? (
                 <img src={user.profile.avatar} alt={user.username} className="w-full h-full object-cover" />

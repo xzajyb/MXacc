@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -191,9 +192,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
 
   if (!isOpen || !userId) return null
 
-  return (
+  const modalContent = (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -423,6 +424,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
       />
     </>
   )
+
+  return createPortal(modalContent, document.body)
 }
 
 export default UserProfile 
