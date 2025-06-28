@@ -84,6 +84,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [messageType, setMessageType] = useState<'info' | 'warning' | 'success' | 'error'>('info')
   const [messagePriority, setMessagePriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal')
   const [messageAutoRead, setMessageAutoRead] = useState(false)
+  const [messageScope, setMessageScope] = useState<'global' | 'personal'>('global') // 消息范围：全局或个人专属
+  const [targetUserId, setTargetUserId] = useState('') // 目标用户ID（个人专属消息）
   const [publishingMessage, setPublishingMessage] = useState(false)
   const [systemMessages, setSystemMessages] = useState<any[]>([])
   const [messagesLoading, setMessagesLoading] = useState(false)
@@ -150,6 +152,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       loadUsers()
     } else if (activeTab === 'messages' && token) {
       loadSystemMessages()
+      // 系统消息选项卡也需要加载用户列表，供个人专属消息选择器使用
+      loadUsers()
     }
   }, [activeTab, currentPage, token])
 
@@ -250,25 +254,44 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       return
     }
 
+    if (messageScope === 'personal' && !targetUserId) {
+      showToast('请选择目标用户', 'error')
+      return
+    }
+
     setPublishingMessage(true)
     try {
-      await axios.post('/api/admin/system-messages', {
+      const payload: any = {
         action: 'create',
         title: messageTitle,
         content: messageContent,
         type: messageType,
         priority: messagePriority,
         autoRead: messageAutoRead
-      }, {
+      }
+
+      // 如果是个人专属消息，添加目标用户ID
+      if (messageScope === 'personal') {
+        payload.targetUserId = targetUserId
+      }
+
+      await axios.post('/api/admin/system-messages', payload, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
-      showToast('系统消息发布成功', 'success')
+      showToast(
+        messageScope === 'personal' 
+          ? '个人专属消息发布成功' 
+          : '全局系统消息发布成功', 
+        'success'
+      )
       setMessageTitle('')
       setMessageContent('')
       setMessageType('info')
       setMessagePriority('normal')
       setMessageAutoRead(false)
+      setMessageScope('global')
+      setTargetUserId('')
       loadSystemMessages()
     } catch (error: any) {
       console.error('发布系统消息失败:', error)
@@ -1186,6 +1209,69 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                         />
                       </div>
 
+                      {/* 消息范围选择 */}
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          📢 消息范围
+                        </label>
+                        <div className="space-y-3">
+                          <label className="flex items-start space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              checked={messageScope === 'global'}
+                              onChange={() => setMessageScope('global')}
+                              className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">🌍 全局消息</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">所有用户都能看到这条消息</div>
+                            </div>
+                          </label>
+                          <label className="flex items-start space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              checked={messageScope === 'personal'}
+                              onChange={() => setMessageScope('personal')}
+                              className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">👤 个人专属消息</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">只有指定用户能看到这条消息</div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* 目标用户选择器（仅在个人专属消息时显示） */}
+                      {messageScope === 'personal' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            选择目标用户 *
+                          </label>
+                          <select
+                            value={targetUserId}
+                            onChange={(e) => setTargetUserId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">请选择用户...</option>
+                            {users.map((userItem) => (
+                              <option key={userItem._id} value={userItem._id}>
+                                {userItem.username} ({userItem.email}) 
+                                {userItem.role === 'admin' ? ' [管理员]' : ''}
+                                {!userItem.isEmailVerified ? ' [未验证]' : ''}
+                              </option>
+                            ))}
+                          </select>
+                          {targetUserId && (
+                            <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
+                              <p className="text-sm text-blue-700 dark:text-blue-300">
+                                ✅ 已选择：{users.find(u => u._id === targetUserId)?.username || '未知用户'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* 消息类型和优先级 */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -1257,7 +1343,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                       {/* 发布按钮 */}
                       <button
                         onClick={handlePublishMessage}
-                        disabled={publishingMessage || !messageTitle.trim() || !messageContent.trim()}
+                        disabled={
+                          publishingMessage || 
+                          !messageTitle.trim() || 
+                          !messageContent.trim() ||
+                          (messageScope === 'personal' && !targetUserId)
+                        }
                         className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                       >
                         {publishingMessage ? (

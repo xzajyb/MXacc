@@ -21,7 +21,7 @@ try {
 }
 
 // 导入自动系统消息功能
-const { publishWelcomeMessage } = require('../_lib/auto-system-messages')
+const { publishWelcomeMessage, publishPersonalWelcomeMessage } = require('../_lib/auto-system-messages')
 
 // 生成6位数字验证码
 function generateVerificationCode() {
@@ -437,6 +437,11 @@ module.exports = async function handler(req, res) {
       // 自动发布欢迎系统消息（异步，不阻塞响应）
       publishWelcomeMessage(username, isFirstUser).catch(error => {
         console.error('发布欢迎系统消息失败:', error)
+      })
+
+      // 发布个人专属欢迎消息（异步，不阻塞响应）
+      publishPersonalWelcomeMessage(username, result.insertedId.toString(), isFirstUser).catch(error => {
+        console.error('发布个人专属欢迎消息失败:', error)
       })
 
       console.log('✅ 用户注册成功:', username)

@@ -72,7 +72,13 @@ module.exports = async function handler(req, res) {
       if (action === 'list') {
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
-        const messagesList = await systemMessages.find()
+        // 查询全局消息和专属于当前用户的消息
+        const messagesList = await systemMessages.find({
+          $or: [
+            { targetUserId: null }, // 全局消息
+            { targetUserId: new ObjectId(decoded.userId) } // 个人专属消息
+          ]
+        })
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(parseInt(limit))
@@ -101,7 +107,12 @@ module.exports = async function handler(req, res) {
           }
         }))
 
-        const total = await systemMessages.countDocuments()
+        const total = await systemMessages.countDocuments({
+          $or: [
+            { targetUserId: null },
+            { targetUserId: new ObjectId(decoded.userId) }
+          ]
+        })
 
         return res.status(200).json({
           success: true,
@@ -119,7 +130,12 @@ module.exports = async function handler(req, res) {
 
       // 获取未读消息数量
       if (action === 'unread-count') {
-        const totalMessages = await systemMessages.countDocuments()
+        const totalMessages = await systemMessages.countDocuments({
+          $or: [
+            { targetUserId: null },
+            { targetUserId: new ObjectId(decoded.userId) }
+          ]
+        })
         const readMessages = await userReadStatus.countDocuments({
           userId: new ObjectId(decoded.userId)
         })
@@ -252,6 +268,7 @@ module.exports = async function handler(req, res) {
           type,
           priority,
           autoRead: autoRead || false, // 是否自动标记已读
+          targetUserId: req.body.targetUserId ? new ObjectId(req.body.targetUserId) : null, // 目标用户ID，null表示全局消息
           authorId: new ObjectId(decoded.userId),
           authorName: currentUser.profile?.nickname || currentUser.username,
           createdAt: new Date(),
@@ -314,7 +331,12 @@ module.exports = async function handler(req, res) {
 
       // 标记所有消息为已读
       if (action === 'mark-all-read') {
-        const allMessages = await systemMessages.find({}, { projection: { _id: 1 } }).toArray()
+        const allMessages = await systemMessages.find({
+          $or: [
+            { targetUserId: null },
+            { targetUserId: new ObjectId(decoded.userId) }
+          ]
+        }, { projection: { _id: 1 } }).toArray()
         
         const readOperations = allMessages.map(message => ({
           updateOne: {
