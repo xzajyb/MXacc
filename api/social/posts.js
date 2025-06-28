@@ -1,5 +1,6 @@
 const clientPromise = require('../_lib/mongodb')
 const { ObjectId } = require('mongodb')
+const cacheManager = require('./cache-manager')
 
 // 验证JWT token
 function verifyToken(authHeader) {
@@ -16,8 +17,15 @@ function verifyToken(authHeader) {
   }
 }
 
-// 获取用户信息
+// 获取用户信息（带缓存）
 async function getUserById(users, userId) {
+  // 先从缓存获取
+  const cachedUser = cacheManager.get('users', userId)
+  if (cachedUser) {
+    return cachedUser
+  }
+  
+  // 从数据库获取
   const user = await users.findOne(
     { _id: new ObjectId(userId) },
     { 
@@ -35,12 +43,38 @@ async function getUserById(users, userId) {
     }
   )
   
-  // 统一处理邮箱验证状态字段
   if (user) {
     user.isEmailVerified = user.isEmailVerified || user.security?.emailVerified || false
+    // 缓存用户信息
+    cacheManager.set('users', userId, user)
   }
   
   return user
+}
+
+// 获取帖子统计信息（带缓存）
+async function getPostStats(postId, userId, db) {
+  const cacheKey = `stats_${postId}_${userId}`
+  const cachedStats = cacheManager.get('posts', cacheKey)
+  
+  if (cachedStats) {
+    return cachedStats
+  }
+
+  const [likesCount, commentsCount, isLiked] = await Promise.all([
+    db.collection('likes').countDocuments({ postId: new ObjectId(postId), type: 'like' }),
+    db.collection('comments').countDocuments({ postId: new ObjectId(postId) }),
+    db.collection('likes').findOne({ 
+      postId: new ObjectId(postId), 
+      userId: new ObjectId(userId), 
+      type: 'like' 
+    })
+  ])
+
+  const stats = { likesCount, commentsCount, isLiked: !!isLiked }
+  cacheManager.set('posts', cacheKey, stats)
+  
+  return stats
 }
 
 module.exports = async function handler(req, res) {
@@ -89,6 +123,11 @@ module.exports = async function handler(req, res) {
 
     console.log('✅ 用户验证成功')
 
+    // 定期同步缓存到数据库
+    if (Date.now() - cacheManager.lastSync.getTime() > 5 * 60 * 1000) {
+      cacheManager.syncToDatabase(db).catch(console.error)
+    }
+
     if (req.method === 'GET') {
       const { type = 'feed', page = 1, limit = 10, userId } = req.query
 
@@ -96,41 +135,41 @@ module.exports = async function handler(req, res) {
       let sort = { createdAt: -1 }
 
       if (type === 'user' && userId) {
-        // 获取特定用户的帖子
         query = { authorId: new ObjectId(userId) }
       } else if (type === 'following') {
-        // 获取关注用户的帖子
         const followingUsers = await follows.find({ 
           followerId: new ObjectId(decoded.userId) 
         }).toArray()
         
         const followingIds = followingUsers.map(f => f.followingId)
-        followingIds.push(new ObjectId(decoded.userId)) // 包含自己的帖子
+        followingIds.push(new ObjectId(decoded.userId))
         
         query = { authorId: { $in: followingIds } }
       }
-      // type === 'feed' 时获取所有公开帖子
 
       const skip = (parseInt(page) - 1) * parseInt(limit)
       
-      // 获取帖子
-      const postList = await posts.find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit))
-        .toArray()
+      // 先尝试从缓存获取帖子
+      const cacheKey = `${type}_${page}_${limit}_${userId || 'all'}`
+      let postList = cacheManager.get('posts', cacheKey)
+      
+      if (!postList) {
+        // 从数据库获取
+        postList = await posts.find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .toArray()
+        
+        // 缓存帖子列表
+        cacheManager.set('posts', cacheKey, postList)
+      }
 
       // 获取帖子统计信息
       const postsWithStats = await Promise.all(postList.map(async (post) => {
-        const [author, likesCount, commentsCount, isLiked] = await Promise.all([
+        const [author, stats] = await Promise.all([
           getUserById(users, post.authorId),
-          likes.countDocuments({ postId: post._id, type: 'like' }),
-          comments.countDocuments({ postId: post._id }),
-          likes.findOne({ 
-            postId: post._id, 
-            userId: new ObjectId(decoded.userId), 
-            type: 'like' 
-          })
+          getPostStats(post._id.toString(), decoded.userId, db)
         ])
 
         return {
@@ -143,9 +182,9 @@ module.exports = async function handler(req, res) {
             nickname: author.profile?.nickname || author.username,
             avatar: author.profile?.avatar
           },
-          likesCount,
-          commentsCount,
-          isLiked: !!isLiked,
+          likesCount: stats.likesCount,
+          commentsCount: stats.commentsCount,
+          isLiked: stats.isLiked,
           createdAt: post.createdAt,
           updatedAt: post.updatedAt
         }
@@ -168,7 +207,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { action, postId, content, images, commentContent } = req.body
+      const { action, postId, content, images, commentContent, parentCommentId } = req.body
 
       if (action === 'create') {
         // 创建新帖子
@@ -194,10 +233,13 @@ module.exports = async function handler(req, res) {
           updatedAt: new Date()
         }
 
+        // 同时写入数据库和缓存
         const result = await posts.insertOne(newPost)
+        const createdPost = { ...newPost, _id: result.insertedId }
         
-        // 获取完整的帖子信息返回
-        const createdPost = await posts.findOne({ _id: result.insertedId })
+        // 缓存新帖子
+        cacheManager.set('posts', result.insertedId.toString(), createdPost, true)
+        
         const author = await getUserById(users, decoded.userId)
 
         return res.status(201).json({
@@ -237,21 +279,31 @@ module.exports = async function handler(req, res) {
           type: 'like'
         })
 
+        let isLiked, likesCount
+
         if (existingLike) {
-          // 取消点赞
+          // 取消点赞 - 记录到缓存，延迟同步到数据库
+          cacheManager.markForSync('likes', `${postId}_${decoded.userId}`, {
+            action: 'unlike',
+            postId,
+            userId: decoded.userId
+          })
+          
           await likes.deleteOne({ _id: existingLike._id })
-          const likesCount = await likes.countDocuments({ 
+          likesCount = await likes.countDocuments({ 
             postId: new ObjectId(postId), 
             type: 'like' 
           })
-          
-          return res.status(200).json({
-            success: true,
-            message: '取消点赞成功',
-            data: { isLiked: false, likesCount }
-          })
+          isLiked = false
         } else {
-          // 添加点赞
+          // 添加点赞 - 记录到缓存，延迟同步到数据库
+          cacheManager.markForSync('likes', `${postId}_${decoded.userId}`, {
+            action: 'like',
+            postId,
+            userId: decoded.userId,
+            createdAt: new Date()
+          })
+          
           await likes.insertOne({
             postId: new ObjectId(postId),
             userId: new ObjectId(decoded.userId),
@@ -259,21 +311,26 @@ module.exports = async function handler(req, res) {
             createdAt: new Date()
           })
           
-          const likesCount = await likes.countDocuments({ 
+          likesCount = await likes.countDocuments({ 
             postId: new ObjectId(postId), 
             type: 'like' 
           })
-          
-          return res.status(200).json({
-            success: true,
-            message: '点赞成功',
-            data: { isLiked: true, likesCount }
-          })
+          isLiked = true
         }
+
+        // 更新缓存中的统计信息
+        const statsKey = `stats_${postId}_${decoded.userId}`
+        cacheManager.set('posts', statsKey, { likesCount, isLiked })
+
+        return res.status(200).json({
+          success: true,
+          message: isLiked ? '点赞成功' : '取消点赞成功',
+          data: { isLiked, likesCount }
+        })
       }
 
       if (action === 'comment') {
-        // 添加评论
+        // 添加评论（支持二级评论）
         if (!postId || !commentContent) {
           return res.status(400).json({ 
             success: false, 
@@ -299,11 +356,19 @@ module.exports = async function handler(req, res) {
           postId: new ObjectId(postId),
           authorId: new ObjectId(decoded.userId),
           content: commentContent.trim(),
+          parentCommentId: parentCommentId ? new ObjectId(parentCommentId) : null,
+          level: parentCommentId ? 2 : 1, // 最多支持2级评论
           createdAt: new Date(),
           updatedAt: new Date()
         }
 
+        // 同时写入数据库和缓存
         const result = await comments.insertOne(newComment)
+        const createdComment = { ...newComment, _id: result.insertedId }
+        
+        // 缓存评论，标记需要同步
+        cacheManager.set('comments', result.insertedId.toString(), createdComment, true)
+        
         const author = await getUserById(users, decoded.userId)
         const commentsCount = await comments.countDocuments({ 
           postId: new ObjectId(postId) 
@@ -316,6 +381,8 @@ module.exports = async function handler(req, res) {
             comment: {
               id: result.insertedId,
               content: newComment.content,
+              parentCommentId: newComment.parentCommentId,
+              level: newComment.level,
               author: {
                 id: author._id,
                 username: author.username,
@@ -335,43 +402,11 @@ module.exports = async function handler(req, res) {
       })
     }
 
+    // 注意：不支持DELETE方法（帖子删除功能已移除）
     if (req.method === 'DELETE') {
-      const { postId } = req.query
-
-      if (!postId) {
-        return res.status(400).json({ 
-          success: false, 
-          message: '帖子ID不能为空' 
-        })
-      }
-
-      // 检查帖子是否存在且属于当前用户
-      const post = await posts.findOne({ _id: new ObjectId(postId) })
-      
-      if (!post) {
-        return res.status(404).json({ 
-          success: false, 
-          message: '帖子不存在' 
-        })
-      }
-
-      if (post.authorId.toString() !== decoded.userId && currentUser.role !== 'admin') {
-        return res.status(403).json({ 
-          success: false, 
-          message: '没有权限删除此帖子' 
-        })
-      }
-
-      // 删除帖子及相关数据
-      await Promise.all([
-        posts.deleteOne({ _id: new ObjectId(postId) }),
-        comments.deleteMany({ postId: new ObjectId(postId) }),
-        likes.deleteMany({ postId: new ObjectId(postId) })
-      ])
-
-      return res.status(200).json({
-        success: true,
-        message: '帖子删除成功'
+      return res.status(405).json({ 
+        success: false, 
+        message: '不支持删除帖子功能' 
       })
     }
 
