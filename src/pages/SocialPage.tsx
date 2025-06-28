@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 interface Post {
   id: string
@@ -104,6 +105,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const [targetUser, setTargetUser] = useState<User | null>(null)
   const [showUserProfile, setShowUserProfile] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  
+  // 确认对话框状态
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'post' | 'comment'
+    id: string
+    postId?: string
+  } | null>(null)
 
   // 获取帖子列表
   const fetchPosts = async (type: 'feed' | 'following' = 'feed') => {

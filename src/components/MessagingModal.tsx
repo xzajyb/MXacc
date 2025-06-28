@@ -244,7 +244,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
     </div>
   )
 
-  return modalContent
+  return createPortal(modalContent, document.body)
 }
 
 export default MessagingModal 

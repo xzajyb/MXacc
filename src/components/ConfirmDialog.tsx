@@ -1,7 +1,7 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle, XCircle, X } from 'lucide-react'
 import LoadingSpinner from './LoadingSpinner'
 
 interface ConfirmDialogProps {
