@@ -16,6 +16,9 @@ try {
     throw new Error('邮件服务配置错误，请检查配置文件')
   }
 }
+
+// 导入自动系统消息功能
+const { publishEmailVerifiedMessage } = require('../_lib/auto-system-messages')
 const { ObjectId } = require('mongodb')
 
 module.exports = async function handler(req, res) {
@@ -270,6 +273,11 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
     console.error('❌ 发送欢迎邮件失败:', error)
     welcomeEmailError = error.message || '未知错误'
   }
+
+  // 自动发布邮箱验证成功系统消息（异步，不阻塞响应）
+  publishEmailVerifiedMessage(user.username).catch(error => {
+    console.error('发布邮箱验证成功系统消息失败:', error)
+  })
 
   // 构建响应消息
   let message = '邮箱验证成功！'

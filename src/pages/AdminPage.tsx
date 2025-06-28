@@ -83,6 +83,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [messageContent, setMessageContent] = useState('')
   const [messageType, setMessageType] = useState<'info' | 'warning' | 'success' | 'error'>('info')
   const [messagePriority, setMessagePriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal')
+  const [messageAutoRead, setMessageAutoRead] = useState(false)
   const [publishingMessage, setPublishingMessage] = useState(false)
   const [systemMessages, setSystemMessages] = useState<any[]>([])
   const [messagesLoading, setMessagesLoading] = useState(false)
@@ -256,7 +257,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
         title: messageTitle,
         content: messageContent,
         type: messageType,
-        priority: messagePriority
+        priority: messagePriority,
+        autoRead: messageAutoRead
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -266,6 +268,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       setMessageContent('')
       setMessageType('info')
       setMessagePriority('normal')
+      setMessageAutoRead(false)
       loadSystemMessages()
     } catch (error: any) {
       console.error('发布系统消息失败:', error)
@@ -1218,6 +1221,39 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                         </div>
                       </div>
 
+                      {/* 确认方式选择 */}
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          📋 确认方式
+                        </label>
+                        <div className="space-y-3">
+                          <label className="flex items-start space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              checked={!messageAutoRead}
+                              onChange={() => setMessageAutoRead(false)}
+                              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">🔒 手动确认</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">用户需要点击"确认"按钮来标记消息为已读</div>
+                            </div>
+                          </label>
+                          <label className="flex items-start space-x-3 cursor-pointer">
+                            <input
+                              type="radio"
+                              checked={messageAutoRead}
+                              onChange={() => setMessageAutoRead(true)}
+                              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">⚡ 自动确认</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">用户看到消息后自动标记为已读，无需手动操作</div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
                       {/* 发布按钮 */}
                       <button
                         onClick={handlePublishMessage}
@@ -1271,22 +1307,31 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                     {message.type === 'success' && <CheckCircle className="w-4 h-4 text-green-600" />}
                                     {message.type === 'error' && <AlertCircle className="w-4 h-4 text-red-600" />}
                                     
-                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                      {message.title}
-                                    </h3>
-                                    
-                                    {message.priority !== 'normal' && (
-                                      <span className={`text-xs px-2 py-1 rounded-full ${
-                                        message.priority === 'urgent' 
-                                          ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                                          : message.priority === 'high'
-                                          ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
-                                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                                      }`}>
-                                        {message.priority === 'urgent' ? '紧急' : 
-                                         message.priority === 'high' ? '重要' : '低优先级'}
-                                      </span>
-                                    )}
+                                                                       <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                     {message.title}
+                                   </h3>
+                                   
+                                   <div className="flex items-center space-x-2">
+                                     {/* 自动确认标识 */}
+                                     {message.autoRead && (
+                                       <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                         ⚡ 自动确认
+                                       </span>
+                                     )}
+                                     
+                                     {message.priority !== 'normal' && (
+                                       <span className={`text-xs px-2 py-1 rounded-full ${
+                                         message.priority === 'urgent' 
+                                           ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                                           : message.priority === 'high'
+                                           ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+                                           : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                                       }`}>
+                                         {message.priority === 'urgent' ? '紧急' : 
+                                          message.priority === 'high' ? '重要' : '低优先级'}
+                                       </span>
+                                     )}
+                                   </div>
                                   </div>
                                   
                                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">

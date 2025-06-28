@@ -20,6 +20,9 @@ try {
   }
 }
 
+// 导入自动系统消息功能
+const { publishWelcomeMessage } = require('../_lib/auto-system-messages')
+
 // 生成6位数字验证码
 function generateVerificationCode() {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -429,6 +432,11 @@ module.exports = async function handler(req, res) {
       // 发送欢迎邮件（异步，不阻塞响应）
       sendWelcomeEmail(email, username).catch(error => {
         console.error('发送欢迎邮件失败:', error)
+      })
+
+      // 自动发布欢迎系统消息（异步，不阻塞响应）
+      publishWelcomeMessage(username, isFirstUser).catch(error => {
+        console.error('发布欢迎系统消息失败:', error)
       })
 
       console.log('✅ 用户注册成功:', username)

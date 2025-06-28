@@ -91,6 +91,7 @@ module.exports = async function handler(req, res) {
             content: message.content,
             type: message.type,
             priority: message.priority,
+            autoRead: message.autoRead || false,
             isRead: !!readStatus,
             createdAt: message.createdAt,
             author: {
@@ -160,6 +161,7 @@ module.exports = async function handler(req, res) {
             content: message.content,
             type: message.type,
             priority: message.priority,
+            autoRead: message.autoRead || false,
             readCount,
             totalUsers,
             readRate: totalUsers > 0 ? (readCount / totalUsers * 100).toFixed(1) : '0',
@@ -195,7 +197,7 @@ module.exports = async function handler(req, res) {
 
     // POST: 创建系统消息和操作
     if (req.method === 'POST') {
-      const { action, title, content, type = 'info', priority = 'normal', messageId } = req.body
+      const { action, title, content, type = 'info', priority = 'normal', messageId, autoRead = false } = req.body
 
       // 发布系统消息（管理员专用）
       if (action === 'create') {
@@ -249,6 +251,7 @@ module.exports = async function handler(req, res) {
           content: content.trim(),
           type,
           priority,
+          autoRead: autoRead || false, // 是否自动标记已读
           authorId: new ObjectId(decoded.userId),
           authorName: currentUser.profile?.nickname || currentUser.username,
           createdAt: new Date(),
