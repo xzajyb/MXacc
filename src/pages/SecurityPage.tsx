@@ -13,7 +13,9 @@ import {
   CheckCircle,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Users,
+  UserPlus
 } from 'lucide-react'
 
 interface LoginRecord {
@@ -26,6 +28,12 @@ interface LoginRecord {
 interface SecuritySettings {
   loginNotifications: boolean
   emailVerified: boolean
+}
+
+interface SocialPrivacySettings {
+  profileVisible: boolean
+  showFollowers: boolean
+  showFollowing: boolean
 }
 
 interface SecurityPageProps {
@@ -45,6 +53,12 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
     loginNotifications: true,
     emailVerified: false
+  })
+
+  const [socialPrivacySettings, setSocialPrivacySettings] = useState<SocialPrivacySettings>({
+    profileVisible: true,
+    showFollowers: true,
+    showFollowing: true
   })
 
   const [passwordForm, setPasswordForm] = useState({
@@ -106,6 +120,37 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
     }
 
     fetchSecuritySettings()
+  }, [])
+
+  // 获取社交隐私设置
+  useEffect(() => {
+    const fetchSocialPrivacySettings = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const response = await fetch('/api/user/user-settings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.settings && data.settings.privacy) {
+            setSocialPrivacySettings({
+              profileVisible: data.settings.privacy.profileVisible ?? true,
+              showFollowers: data.settings.privacy.showFollowers ?? true,
+              showFollowing: data.settings.privacy.showFollowing ?? true
+            })
+          }
+        }
+      } catch (error) {
+        console.error('获取社交隐私设置失败:', error)
+      }
+    }
+
+    fetchSocialPrivacySettings()
   }, [])
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,6 +246,44 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
       }
     } catch (error) {
       console.error('更新登录通知设置失败:', error)
+      showError('设置更新失败，请重试')
+    }
+  }
+
+  // 更新社交隐私设置
+  const handleSocialPrivacyToggle = async (setting: keyof SocialPrivacySettings, enabled: boolean) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const updatedPrivacy = { ...socialPrivacySettings, [setting]: enabled }
+
+      const response = await fetch('/api/user/user-settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          settings: {
+            privacy: updatedPrivacy
+          }
+        })
+      })
+
+      if (response.ok) {
+        setSocialPrivacySettings(updatedPrivacy)
+        const settingNames = {
+          profileVisible: '个人信息可见性',
+          showFollowers: '粉丝列表可见性',
+          showFollowing: '关注列表可见性'
+        }
+        showSuccess(`${settingNames[setting]}已${enabled ? '开启' : '关闭'}`)
+      } else {
+        showError('设置更新失败')
+      }
+    } catch (error) {
+      console.error('更新社交隐私设置失败:', error)
       showError('设置更新失败，请重试')
     }
   }
@@ -509,6 +592,84 @@ const SecurityPage: React.FC<SecurityPageProps> = ({ embedded = false }) => {
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                     </label>
+                  </div>
+
+                  {/* 社交隐私设置分组 */}
+                  <div className="mt-8">
+                    <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-4">社交隐私设置</h4>
+                    <div className="space-y-4">
+                      {/* 个人信息可见性 */}
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                            <Eye size={20} className="text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">个人信息可见性</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              其他用户是否可以查看您的个人主页信息
+                            </p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer" 
+                            checked={socialPrivacySettings.profileVisible}
+                            onChange={(e) => handleSocialPrivacyToggle('profileVisible', e.target.checked)}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
+                      {/* 粉丝列表可见性 */}
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                            <Users size={20} className="text-green-600 dark:text-green-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">粉丝列表可见性</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              其他用户是否可以查看您的粉丝列表
+                            </p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer" 
+                            checked={socialPrivacySettings.showFollowers}
+                            onChange={(e) => handleSocialPrivacyToggle('showFollowers', e.target.checked)}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+
+                      {/* 关注列表可见性 */}
+                      <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
+                            <UserPlus size={20} className="text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">关注列表可见性</h4>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              其他用户是否可以查看您的关注列表
+                            </p>
+                          </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer" 
+                            checked={socialPrivacySettings.showFollowing}
+                            onChange={(e) => handleSocialPrivacyToggle('showFollowing', e.target.checked)}
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

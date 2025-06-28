@@ -106,6 +106,12 @@ module.exports = async function handler(req, res) {
           if (typeof settings.privacy.profileVisible === 'boolean') {
             validatedSettings.privacy.profileVisible = settings.privacy.profileVisible
           }
+          if (typeof settings.privacy.showFollowers === 'boolean') {
+            validatedSettings.privacy.showFollowers = settings.privacy.showFollowers
+          }
+          if (typeof settings.privacy.showFollowing === 'boolean') {
+            validatedSettings.privacy.showFollowing = settings.privacy.showFollowing
+          }
           if (typeof settings.privacy.activityVisible === 'boolean') {
             validatedSettings.privacy.activityVisible = settings.privacy.activityVisible
           }
