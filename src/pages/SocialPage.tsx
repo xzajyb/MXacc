@@ -17,7 +17,9 @@ import {
   Image as ImageIcon,
   Plus,
   Reply,
-  User as UserIcon
+  User as UserIcon,
+  MapPin,
+  Calendar
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -160,6 +162,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     try {
       setIsPosting(true)
       const token = localStorage.getItem('token')
+      
       const response = await fetch('/api/social/content', {
         method: 'POST',
         headers: {
@@ -168,7 +171,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
         },
         body: JSON.stringify({
           action: 'create-post',
-          content: newPostContent.trim()
+          content: newPostContent.trim(),
+          images: imagePreviewUrls // 直接使用base64字符串
         })
       })
       
@@ -176,6 +180,9 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
         const data = await response.json()
         setPosts(prev => [data.data, ...prev])
         setNewPostContent('')
+        // 清空图片选择
+        setSelectedImages([])
+        setImagePreviewUrls([])
         showSuccess('帖子发布成功')
       } else {
         const errorData = await response.json()
@@ -513,12 +520,21 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       return
     }
     
-    const newImages = [...selectedImages, ...files]
-    setSelectedImages(newImages)
-    
-    // 生成预览URL
-    const newUrls = files.map(file => URL.createObjectURL(file))
-    setImagePreviewUrls(prev => [...prev, ...newUrls])
+    // 处理文件为base64
+    files.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) { // 5MB限制
+        showError('图片大小不能超过5MB')
+        return
+      }
+      
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string
+        setSelectedImages(prev => [...prev, file])
+        setImagePreviewUrls(prev => [...prev, base64])
+      }
+      reader.readAsDataURL(file)
+    })
   }
   
   // 移除图片
@@ -896,11 +912,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
               {imagePreviewUrls.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {imagePreviewUrls.map((url, index) => (
-                    <div key={index} className="relative">
-                      <img src={url} alt={`预览 ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                    <div key={index} className="relative aspect-square">
+                      <img src={url} alt={`预览 ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
                       <button
                         onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
                       >
                         ×
                       </button>
@@ -951,11 +967,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                       <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
                         {user?.profile?.location && (
                           <div className="flex items-center space-x-1">
-                            <span>📍 {user.profile.location}</span>
+                            <MapPin className="w-4 h-4" />
+                            <span>{user.profile.location}</span>
                           </div>
                         )}
                         <div className="flex items-center space-x-1">
-                          <span>📅 加入于 {user?.createdAt ? formatDate(user.createdAt, 'date') : '未知'}</span>
+                          <Calendar className="w-4 h-4" />
+                          <span>加入于 {user?.createdAt ? formatDate(user.createdAt, 'date') : '未知'}</span>
                         </div>
                       </div>
 
@@ -1021,15 +1039,16 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
                           {/* 帖子图片 */}
                           {post.images && post.images.length > 0 && (
-                            <div className="mb-3">
+                            <div className="mb-4">
                               <div className="grid grid-cols-2 gap-2">
                                 {post.images.map((image, index) => (
-                                  <img
-                                    key={index}
-                                    src={image}
-                                    alt=""
-                                    className="rounded object-cover w-full h-32"
-                                  />
+                                  <div key={index} className="aspect-square">
+                                    <img
+                                      src={image}
+                                      alt={`帖子图片 ${index + 1}`}
+                                      className="w-full h-full object-cover rounded-lg"
+                                    />
+                                  </div>
                                 ))}
                               </div>
                             </div>
@@ -1039,7 +1058,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                           <div className="flex items-center space-x-4 pt-3 border-t border-gray-200 dark:border-gray-600">
                             <button
                               onClick={() => handleLike(post.id)}
-                              className={`flex items-center space-x-1 text-sm transition-colors ${
+                              className={`flex items-center space-x-2 transition-colors ${
                                 post.isLiked 
                                   ? 'text-red-600 dark:text-red-400' 
                                   : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
@@ -1136,12 +1155,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                     <div className="mb-4">
                       <div className="grid grid-cols-2 gap-2">
                         {post.images.map((image, index) => (
-                          <img
-                            key={index}
-                            src={image}
-                            alt={`帖子图片 ${index + 1}`}
-                            className="rounded-lg object-cover w-full h-48"
-                          />
+                          <div key={index} className="aspect-square">
+                            <img
+                              src={image}
+                              alt={`帖子图片 ${index + 1}`}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          </div>
                         ))}
                       </div>
                     </div>

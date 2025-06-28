@@ -367,12 +367,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                             <div className="mb-3">
                               <div className="grid grid-cols-2 gap-2">
                                 {post.images.map((image, index) => (
-                                  <img
-                                    key={index}
-                                    src={image}
-                                    alt=""
-                                    className="rounded object-cover w-full h-32"
-                                  />
+                                  <div key={index} className="aspect-square">
+                                    <img
+                                      src={image}
+                                      alt=""
+                                      className="w-full h-full object-cover rounded"
+                                    />
+                                  </div>
                                 ))}
                               </div>
                             </div>

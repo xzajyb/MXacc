@@ -327,7 +327,24 @@ module.exports = async function handler(req, res) {
 
     // POST: 创建内容和互动
     if (req.method === 'POST') {
-      const { action, postId, commentId, content, images, parentId, replyTo } = req.body
+      // 处理不同的内容类型
+      let body = req.body
+      
+      // 如果是multipart/form-data（有图片上传）
+      if (req.headers['content-type']?.includes('multipart/form-data')) {
+        // 这里需要处理文件上传，但Vercel函数有限制
+        // 暂时先解析formdata字段
+        console.log('检测到文件上传请求')
+        // 简单处理：提取text字段
+        const formData = req.body
+        body = {
+          action: formData.action,
+          content: formData.content,
+          images: [] // 暂时先设为空数组，后续可以集成文件存储服务
+        }
+      }
+      
+      const { action, postId, commentId, content, images, parentId, replyTo } = body
 
       // 创建帖子
       if (action === 'create-post') {
