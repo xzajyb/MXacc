@@ -143,7 +143,7 @@ const CommentTree: React.FC<CommentTreeProps> = ({
       lines.push(
         <div 
           key={i}
-          className="absolute top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-600"
+          className="absolute top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-500"
           style={{ left: `${(i - 1) * 24 + 20}px` }}
         />
       )
@@ -172,12 +172,12 @@ const CommentTree: React.FC<CommentTreeProps> = ({
             {getIndentLines(comment.level)}
             {/* 当前级别的连接线 */}
             <div 
-              className="absolute top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-600"
+              className="absolute top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-500"
               style={{ left: `${indentWidth + 20}px` }}
             />
             {/* 水平连接线 */}
             <div 
-              className="absolute top-6 w-3 h-px bg-gray-200 dark:bg-gray-600"
+              className="absolute top-6 w-3 h-0.5 bg-gray-300 dark:bg-gray-500"
               style={{ left: `${indentWidth + 20}px` }}
             />
           </>
