@@ -370,6 +370,45 @@ module.exports = async function handler(req, res) {
           updateData['profile.bio'] = bio || ''
         }
 
+        // 处理其他资料字段
+        const { nickname, location, website } = req.body
+
+        // 验证昵称
+        if (nickname !== undefined) {
+          if (!nickname || nickname.trim().length === 0) {
+            return res.status(400).json({ message: '昵称不能为空' })
+          }
+
+          const trimmedNickname = nickname.trim()
+          if (trimmedNickname.length < 1 || trimmedNickname.length > 30) {
+            return res.status(400).json({ message: '昵称长度必须在1-30个字符之间' })
+          }
+
+          updateData['profile.nickname'] = trimmedNickname
+        }
+
+        // 验证所在地
+        if (location !== undefined) {
+          if (location && location.length > 100) {
+            return res.status(400).json({ message: '所在地不能超过100个字符' })
+          }
+          updateData['profile.location'] = location || ''
+        }
+
+        // 验证个人网站
+        if (website !== undefined) {
+          if (website && website.length > 200) {
+            return res.status(400).json({ message: '个人网站链接不能超过200个字符' })
+          }
+          
+          // 简单的URL格式验证
+          if (website && website.trim() && !website.match(/^https?:\/\/.+/)) {
+            return res.status(400).json({ message: '个人网站必须是有效的URL格式（以http://或https://开头）' })
+          }
+          
+          updateData['profile.website'] = website || ''
+        }
+
         if (Object.keys(updateData).length === 0) {
           return res.status(400).json({ message: '没有需要更新的数据' })
         }

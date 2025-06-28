@@ -19,7 +19,8 @@ import {
   Reply,
   User as UserIcon,
   MapPin,
-  Calendar
+  Calendar,
+  X
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -126,6 +127,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   // 私信状态
   const [conversations, setConversations] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  
+  // 图片查看状态
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState('')
   
   // 获取帖子列表
   const fetchPosts = async (type: 'feed' | 'following' = 'feed') => {
@@ -673,6 +678,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     }
   }
 
+  // 打开图片查看
+  const openImageModal = (imageUrl: string) => {
+    setSelectedImageUrl(imageUrl)
+    setShowImageModal(true)
+  }
+
   useEffect(() => {
     fetchPosts(activeTab === 'following' ? 'following' : 'feed')
   }, [activeTab])
@@ -913,7 +924,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {imagePreviewUrls.map((url, index) => (
                     <div key={index} className="relative aspect-square">
-                      <img src={url} alt={`预览 ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
+                      <img src={url} alt={`预览 ${index + 1}`} className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" onClick={() => openImageModal(url)} />
                       <button
                         onClick={() => removeImage(index)}
                         className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
@@ -930,7 +941,58 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
 
         {/* 帖子列表 */}
         <div className="space-y-6">
-          {activeTab === 'profile' ? (
+          {activeTab === 'messages' ? (
+            // 私信内容
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">我的私信</h3>
+              {conversations.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400">暂无私信</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                    通过搜索用户功能找到朋友开始聊天吧
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {conversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setTargetUser(conv.user)
+                        setShowMessaging(true)
+                      }}
+                    >
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
+                        {conv.user.avatar ? (
+                          <img src={conv.user.avatar} alt={conv.user.nickname} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                            <span className="text-white font-bold">{conv.user.nickname.charAt(0).toUpperCase()}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-gray-900 dark:text-white truncate">{conv.user.nickname}</h4>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatDate(conv.lastMessage.timestamp, 'datetime')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{conv.lastMessage.content}</p>
+                      </div>
+                      {conv.unreadCount > 0 && (
+                        <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'profile' ? (
             // 个人主页内容
             profileLoading ? (
               <div className="text-center py-8">
@@ -1046,7 +1108,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                                     <img
                                       src={image}
                                       alt={`帖子图片 ${index + 1}`}
-                                      className="w-full h-full object-cover rounded-lg"
+                                      className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => openImageModal(image)}
                                     />
                                   </div>
                                 ))}
@@ -1159,7 +1222,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                             <img
                               src={image}
                               alt={`帖子图片 ${index + 1}`}
-                              className="w-full h-full object-cover rounded-lg"
+                              className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => openImageModal(image)}
                             />
                           </div>
                         ))}
@@ -1174,7 +1238,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                         onClick={() => handleLike(post.id)}
                         className={`flex items-center space-x-2 transition-colors ${
                           post.isLiked 
-                            ? 'text-red-600' 
+                            ? 'text-red-600 dark:text-red-400' 
                             : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
                         }`}
                       >
@@ -1313,6 +1377,29 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
         onConfirm={executeDelete}
         onClose={cancelDelete}
       />
+
+      {/* 图片查看模态框 */}
+      {showImageModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            <img 
+              src={selectedImageUrl} 
+              alt="查看图片" 
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
