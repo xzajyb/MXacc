@@ -136,27 +136,13 @@ const CommentTree: React.FC<CommentTreeProps> = ({
     }
   }
 
-  // 计算缩进级别的连接线
-  const getIndentLines = (level: number) => {
-    const lines = []
-    for (let i = 1; i < level; i++) {
-      lines.push(
-        <div 
-          key={i}
-          className="absolute top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-500"
-          style={{ left: `${(i - 1) * 24 + 20}px` }}
-        />
-      )
-    }
-    return lines
-  }
+
 
   // 渲染单个评论
   const renderComment = (comment: TreeComment): React.ReactNode => {
     const isExpanded = expandedComments.has(comment.id)
     const hasChildren = comment.children.length > 0
     const shouldShowExpander = hasChildren || comment.repliesCount > comment.children.length
-    const indentWidth = Math.min(comment.level - 1, maxDepth - 1) * 24
 
     return (
       <motion.div
@@ -166,26 +152,17 @@ const CommentTree: React.FC<CommentTreeProps> = ({
         exit={{ opacity: 0, y: -10 }}
         className="relative"
       >
-        {/* 连接线 */}
+        {/* 简化连接线 - 只有一条 */}
         {comment.level > 1 && (
-          <>
-            {getIndentLines(comment.level)}
-            {/* 当前级别的连接线 */}
-            <div 
-              className="absolute top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-500"
-              style={{ left: `${indentWidth + 20}px` }}
-            />
-            {/* 水平连接线 */}
-            <div 
-              className="absolute top-6 w-3 h-0.5 bg-gray-300 dark:bg-gray-500"
-              style={{ left: `${indentWidth + 20}px` }}
-            />
-          </>
+          <div 
+            className="absolute top-6 w-3 h-0.5 bg-gray-300 dark:bg-gray-500"
+            style={{ left: `${Math.min(comment.level - 1, maxDepth - 1) * 24 + 17}px` }}
+          />
         )}
 
         <div 
           className="flex space-x-3 py-2"
-          style={{ marginLeft: `${indentWidth}px` }}
+          style={{ marginLeft: `${Math.min(comment.level - 1, maxDepth - 1) * 24}px` }}
         >
           {/* 展开/折叠按钮 */}
           {shouldShowExpander && (
