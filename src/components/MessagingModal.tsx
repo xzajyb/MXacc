@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, User, Trash2 } from 'lucide-react'
+import { X, Send, User, RotateCcw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 
@@ -287,7 +287,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       const data = await response.json()
       if (data.success) {
         showSuccess('消息已撤回')
-        // 刷新消息列表
+        // 刷新消息列表 - 确保显示加载动画
         if (targetUser) {
           await fetchMessages(undefined, targetUser.id)
         } else if (selectedConversation) {
@@ -499,13 +499,15 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                                     
                                     {/* 撤回按钮 */}
                                     {canRecallMessage(message.createdAt, message.senderId) && (
-                                      <button
-                                        onClick={() => recallMessage(message.id)}
-                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                        title="撤回消息"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
+                                      <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                        <button
+                                          onClick={() => recallMessage(message.id)}
+                                          className="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-all duration-200 hover:scale-110"
+                                          title="撤回消息 (3分钟内可撤回)"
+                                        >
+                                          <RotateCcw className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
