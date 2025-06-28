@@ -38,7 +38,7 @@ interface Post {
     username: string
     nickname: string
     avatar: string
-    role: string
+    role?: string
   }
   likesCount: number
   commentsCount: number
@@ -677,13 +677,6 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               >
                 {comment.author.nickname}
               </span>
-              {/* 管理员标签 */}
-              {comment.author.role === 'admin' && (
-                <span className="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                  <Shield className="w-3 h-3 mr-1" />
-                  管理员
-                </span>
-              )}
               <span className="text-gray-500 dark:text-gray-400">·</span>
               <span className="text-gray-500 dark:text-gray-400">
                 {formatDate(comment.createdAt, 'datetime')}
@@ -1256,24 +1249,18 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                   </div>
                                 )}
                               </div>
-                              <div>
-                                <span 
-                                  className="font-medium text-gray-900 dark:text-white cursor-pointer hover:underline"
-                                  onClick={() => handleViewProfile(post.author.id)}
-                                >
-                                  {post.author.nickname}
-                                </span>
+                              <div className="cursor-pointer flex items-center space-x-2" onClick={() => handleViewProfile(post.author.id)}>
+                                <div>
+                                  <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                                </div>
                                 {/* 管理员标签 */}
                                 {post.author.role === 'admin' && (
-                                  <span className="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                  <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
                                     <Shield className="w-3 h-3 mr-1" />
                                     管理员
-                                  </span>
+                                  </div>
                                 )}
-                                <span className="text-gray-500 dark:text-gray-400">·</span>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  {formatDate(post.createdAt, 'datetime')}
-                                </span>
                               </div>
                             </div>
                             {post.canDelete && (
@@ -1382,18 +1369,18 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                           </div>
                         )}
                       </div>
-                      <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                        <div className="flex items-center space-x-2">
+                      <div className="cursor-pointer flex items-center space-x-2" onClick={() => handleViewProfile(post.author.id)}>
+                        <div>
                           <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
-                          {/* 管理员标签 */}
-                          {post.author.role === 'admin' && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                              <Shield className="w-3 h-3 mr-1" />
-                              管理员
-                            </span>
-                          )}
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                        {/* 管理员标签 */}
+                        {post.author.role === 'admin' && (
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                            <Shield className="w-3 h-3 mr-1" />
+                            管理员
+                          </div>
+                        )}
                       </div>
                     </div>
                     {post.canDelete && (

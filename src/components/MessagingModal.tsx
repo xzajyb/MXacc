@@ -183,7 +183,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         setNewMessage('')
         showSuccess('消息发送成功')
         
-        // 刷新消息列表（不显示加载动画）
+        // 刷新消息列表 - 不显示加载动画
         if (targetUser) {
           await fetchMessages(undefined, targetUser.id, false)
         } else if (selectedConversation) {
@@ -289,7 +289,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       const data = await response.json()
       if (data.success) {
         showSuccess('消息已撤回')
-        // 刷新消息列表（不显示加载动画）
+        // 刷新消息列表 - 不显示加载动画
         if (targetUser) {
           await fetchMessages(undefined, targetUser.id, false)
         } else if (selectedConversation) {

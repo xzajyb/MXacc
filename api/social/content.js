@@ -139,7 +139,8 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role || 'user'
             },
             likesCount,
             commentsCount,
