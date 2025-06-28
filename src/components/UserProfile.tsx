@@ -201,7 +201,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden"
+          className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl h-[90vh] overflow-hidden"
         >
           {loading ? (
             <div className="p-8 text-center">
@@ -211,7 +211,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
           ) : user ? (
             <div className="flex flex-col h-full">
               {/* 用户信息头部 */}
-              <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-600 flex-shrink-0">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">个人主页</h2>
                   <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -317,7 +317,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
               </div>
 
               {/* 标签导航 */}
-              <div className="border-b border-gray-200 dark:border-gray-600">
+              <div className="border-b border-gray-200 dark:border-gray-600 flex-shrink-0">
                 <div className="flex space-x-8 px-6">
                   <button
                     onClick={() => setActiveTab('posts')}
@@ -333,7 +333,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
               </div>
 
               {/* 内容区域 */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-6 min-h-0">
                 {activeTab === 'posts' && (
                   <div className="space-y-4">
                     {posts.length === 0 ? (
