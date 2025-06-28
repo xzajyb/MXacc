@@ -236,7 +236,7 @@ const sendWelcomeEmail = async (email, username) => {
               <span class="icon sparkle-icon"></span>为您提供的核心功能
             </div>
             <div class="features-grid">
-              <div class="feature-item">
+            <div class="feature-item">
                 <div class="feature-icon">
                   <span class="feature-svg shield-icon"></span>
                 </div>
@@ -250,17 +250,17 @@ const sendWelcomeEmail = async (email, username) => {
                 </div>
                 <div class="feature-title">高效管理</div>
                 <div class="feature-desc">统一账号体系，一键登录所有服务</div>
-              </div>
-              
-              <div class="feature-item">
+            </div>
+            
+            <div class="feature-item">
                 <div class="feature-icon">
                   <span class="feature-svg palette-icon"></span>
                 </div>
                 <div class="feature-title">现代界面</div>
                 <div class="feature-desc">精美设计，支持深色模式和国际化</div>
-              </div>
-              
-              <div class="feature-item">
+            </div>
+            
+            <div class="feature-item">
                 <div class="feature-icon">
                   <span class="feature-svg cog-icon"></span>
                 </div>

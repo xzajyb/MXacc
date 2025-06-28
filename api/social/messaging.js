@@ -268,6 +268,7 @@ module.exports = async function handler(req, res) {
             avatar: user.profile?.avatar,
             bio: user.profile?.bio,
             location: user.profile?.location,
+            role: user.role,
             isFollowing: !!isFollowing,
             followersCount,
             followingCount,
@@ -336,6 +337,7 @@ module.exports = async function handler(req, res) {
             avatar: user.profile?.avatar,
             bio: user.profile?.bio,
             location: user.profile?.location,
+            role: user.role,
             isFollowing: !!isFollowing,
             followersCount,
             followingCount,
@@ -377,6 +379,7 @@ module.exports = async function handler(req, res) {
             nickname: user.profile?.nickname || user.username,
             avatar: user.profile?.avatar,
             bio: user.profile?.bio,
+            role: user.role,
             isFollowing: !!isFollowing,
             followedAt: follow.createdAt
           }
@@ -429,6 +432,7 @@ module.exports = async function handler(req, res) {
             nickname: user.profile?.nickname || user.username,
             avatar: user.profile?.avatar,
             bio: user.profile?.bio,
+            role: user.role,
             isFollowing: !!isFollowing,
             followedAt: follow.createdAt
           }
