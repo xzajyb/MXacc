@@ -38,7 +38,7 @@ interface Post {
     username: string
     nickname: string
     avatar: string
-    role?: string
+    role: string
   }
   likesCount: number
   commentsCount: number
@@ -57,7 +57,6 @@ interface Comment {
     username: string
     nickname: string
     avatar: string
-    role?: string
   }
   replyTo?: {
     id: string
@@ -83,10 +82,6 @@ interface User {
   followingCount: number
   postsCount: number
   joinedAt: string
-  role?: string
-  profileVisible?: boolean
-  showFollowers?: boolean
-  showFollowing?: boolean
 }
 
 interface SocialPageProps {
@@ -682,9 +677,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               >
                 {comment.author.nickname}
               </span>
+              {/* 管理员标签 */}
               {comment.author.role === 'admin' && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                  <Shield className="w-2.5 h-2.5 mr-1" />
+                <span className="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                  <Shield className="w-3 h-3 mr-1" />
                   管理员
                 </span>
               )}
@@ -1260,17 +1256,24 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                   </div>
                                 )}
                               </div>
-                              <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                                <div className="flex items-center space-x-2">
-                                  <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
-                                  {post.author.role === 'admin' && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                                      <Shield className="w-3 h-3 mr-1" />
-                                      管理员
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                              <div>
+                                <span 
+                                  className="font-medium text-gray-900 dark:text-white cursor-pointer hover:underline"
+                                  onClick={() => handleViewProfile(post.author.id)}
+                                >
+                                  {post.author.nickname}
+                                </span>
+                                {/* 管理员标签 */}
+                                {post.author.role === 'admin' && (
+                                  <span className="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                    <Shield className="w-3 h-3 mr-1" />
+                                    管理员
+                                  </span>
+                                )}
+                                <span className="text-gray-500 dark:text-gray-400">·</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {formatDate(post.createdAt, 'datetime')}
+                                </span>
                               </div>
                             </div>
                             {post.canDelete && (
@@ -1382,8 +1385,9 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                       <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
                         <div className="flex items-center space-x-2">
                           <h4 className="font-medium text-gray-900 dark:text-white">{post.author.nickname}</h4>
+                          {/* 管理员标签 */}
                           {post.author.role === 'admin' && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
                               <Shield className="w-3 h-3 mr-1" />
                               管理员
                             </span>
@@ -1545,15 +1549,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       {/* 私信模态框 */}
       <MessagingModal
         isOpen={showMessaging}
+        targetUser={targetUser}
         onClose={() => {
           setShowMessaging(false)
           setTargetUser(null)
-          // 立即刷新未读消息数量
-          if (isSocialFeatureEnabled) {
-            fetchUnreadCount()
-          }
         }}
-        targetUser={targetUser}
       />
 
       {/* 用户资料模态框 */}
