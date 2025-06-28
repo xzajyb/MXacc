@@ -1034,10 +1034,6 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
-                  {/* 调试信息 - 显示当前用户角色 */}
-                  <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">
-                    Role: {user?.role || 'undefined'}
-                  </span>
                   {/* 管理员标签 */}
                   {user?.role === 'admin' && (
                     <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
@@ -1186,10 +1182,6 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.profile?.nickname || user?.username}</h3>
-                        {/* 调试信息 - 显示当前用户角色 */}
-                        <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">
-                          Role: {user?.role || 'undefined'}
-                        </span>
                         {/* 管理员标签 */}
                         {user?.role === 'admin' && (
                           <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">

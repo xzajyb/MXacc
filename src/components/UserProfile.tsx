@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal } from 'lucide-react'
+import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -20,6 +20,7 @@ interface User {
   postsCount: number
   joinedAt: string
   isOwnProfile: boolean
+  role?: string
 }
 
 interface Post {
@@ -31,6 +32,7 @@ interface Post {
     username: string
     nickname: string
     avatar: string
+    role?: string
   }
   likesCount: number
   commentsCount: number
@@ -233,7 +235,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
 
                   {/* 用户信息 */}
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
+                      {/* 管理员标签 */}
+                      {user.role === 'admin' && (
+                        <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                          <Shield className="w-3 h-3 mr-1" />
+                          管理员
+                        </div>
+                      )}
+                    </div>
                     <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
                     
                     {user.bio && (
@@ -345,8 +356,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                 )}
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                                <div className="flex items-center space-x-2">
+                                  <div>
+                                    <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
+                                  </div>
+                                  {/* 管理员标签 */}
+                                  {post.author.role === 'admin' && (
+                                    <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                      <Shield className="w-2.5 h-2.5 mr-1" />
+                                      管理员
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             {post.canDelete && (
