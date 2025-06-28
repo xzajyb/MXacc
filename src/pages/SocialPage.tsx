@@ -1,22 +1,20 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Heart, 
-  MessageCircle, 
-  Send, 
-  Image as ImageIcon, 
-  Users, 
+import {
+  Users,
+  Heart,
+  MessageCircle,
+  Share,
   Search,
+  Send,
   UserPlus,
   UserMinus,
-  MoreHorizontal,
-  Edit3,
   Trash2,
-  X,
+  Image as ImageIcon,
   Plus,
   Reply,
   User as UserIcon
@@ -245,57 +243,58 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
     }
   }
 
-  // 删除帖子
-  const handleDeletePost = async (postId: string) => {
-    if (!confirm('确定要删除这条帖子吗？')) return
+  // 显示删除确认对话框
+  const showDeleteConfirmDialog = (type: 'post' | 'comment', id: string, postId?: string) => {
+    setDeleteTarget({ type, id, postId })
+    setShowDeleteConfirm(true)
+  }
+
+  // 执行删除操作
+  const executeDelete = async () => {
+    if (!deleteTarget) return
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/content?action=post&id=${postId}`, {
+      const { type, id, postId } = deleteTarget
+      
+      const response = await fetch(`/api/social/content?action=${type}&id=${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
       
       if (response.ok) {
-        setPosts(prev => prev.filter(post => post.id !== postId))
-        showSuccess('帖子删除成功')
+        if (type === 'post') {
+          setPosts(prev => prev.filter(post => post.id !== id))
+          showSuccess('帖子删除成功')
+        } else {
+          setComments(prev => ({
+            ...prev,
+            [postId!]: prev[postId!]?.filter(comment => comment.id !== id) || []
+          }))
+          setPosts(prev => prev.map(post => 
+            post.id === postId 
+              ? { ...post, commentsCount: Math.max(0, post.commentsCount - 1) }
+              : post
+          ))
+          showSuccess('评论删除成功')
+        }
       } else {
         const errorData = await response.json()
         throw new Error(errorData.message || '删除失败')
       }
     } catch (error: any) {
-      console.error('删除帖子失败:', error)
+      console.error('删除失败:', error)
       showError(error.message || '删除失败')
+    } finally {
+      setShowDeleteConfirm(false)
+      setDeleteTarget(null)
     }
   }
 
-  // 删除评论
-  const handleDeleteComment = async (commentId: string, postId: string) => {
-    if (!confirm('确定要删除这条评论吗？')) return
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/content?action=comment&id=${commentId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      
-      if (response.ok) {
-        setComments(prev => ({
-          ...prev,
-          [postId]: prev[postId]?.filter(comment => comment.id !== commentId) || []
-        }))
-        setPosts(prev => prev.map(post => 
-          post.id === postId 
-            ? { ...post, commentsCount: Math.max(0, post.commentsCount - 1) }
-            : post
-        ))
-        showSuccess('评论删除成功')
-      }
-    } catch (error) {
-      console.error('删除评论失败:', error)
-      showError('删除失败')
-    }
+  // 取消删除
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false)
+    setDeleteTarget(null)
   }
 
   // 获取评论
@@ -459,6 +458,89 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
   const handleGoToProfile = () => {
     navigate('/profile')
   }
+
+  // 组织评论为树状结构
+  const organizeComments = (comments: Comment[]) => {
+    const parentComments = comments.filter(comment => !comment.parentId)
+    const childComments = comments.filter(comment => comment.parentId)
+    
+    return parentComments.map(parent => ({
+      ...parent,
+      replies: childComments.filter(child => child.parentId === parent.id)
+    }))
+  }
+
+  // 渲染评论组件
+  const renderComment = (comment: Comment, postId: string, isReply = false) => (
+    <div key={comment.id} className={`${isReply ? 'ml-8 mt-3' : 'mt-4'} ${isReply ? 'border-l-2 border-gray-200 dark:border-gray-600 pl-4' : ''}`}>
+      <div className="flex space-x-3">
+        <div 
+          className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 cursor-pointer flex-shrink-0"
+          onClick={() => handleViewProfile(comment.author.id)}
+        >
+          {comment.author.avatar ? (
+            <img src={comment.author.avatar} alt={comment.author.nickname} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <span className="text-white font-bold text-xs">{comment.author.nickname.charAt(0).toUpperCase()}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex-1">
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-1">
+              <span 
+                className="font-medium text-gray-900 dark:text-white cursor-pointer text-sm"
+                onClick={() => handleViewProfile(comment.author.id)}
+              >
+                {comment.author.nickname}
+              </span>
+              {comment.replyTo && (
+                <span className="text-xs text-gray-500">
+                  回复 @{comment.replyTo.nickname}
+                </span>
+              )}
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {formatDate(comment.createdAt, 'datetime')}
+              </span>
+              {comment.canDelete && (
+                <button 
+                  onClick={() => showDeleteConfirmDialog('comment', comment.id, postId)}
+                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                  title="删除评论"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <p className="text-gray-900 dark:text-white text-sm whitespace-pre-wrap">{comment.content}</p>
+          </div>
+          <div className="flex items-center space-x-4 mt-2">
+            <button
+              onClick={() => handleCommentLike(comment.id, postId)}
+              className={`flex items-center space-x-1 text-xs transition-colors ${
+                comment.isLiked 
+                  ? 'text-red-600' 
+                  : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
+              }`}
+            >
+              <Heart className={`w-3 h-3 ${comment.isLiked ? 'fill-current' : ''}`} />
+              {comment.likesCount > 0 && <span>{comment.likesCount}</span>}
+            </button>
+            {!isReply && (
+              <button
+                onClick={() => handleReply(postId, comment.id, comment.author.nickname)}
+                className="flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              >
+                <Reply className="w-3 h-3" />
+                <span>回复</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   useEffect(() => {
     fetchPosts(activeTab === 'following' ? 'following' : 'feed')
@@ -712,15 +794,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                     </div>
                   </div>
                   {post.canDelete && (
-                    <div className="relative">
-                      <button 
-                        onClick={() => handleDeletePost(post.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                        title="删除帖子"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
+                    <button 
+                      onClick={() => showDeleteConfirmDialog('post', post.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      title="删除帖子"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
 
@@ -746,13 +826,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                 )}
 
                 {/* 帖子操作 */}
-                <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-600 pt-4">
-                  <div className="flex space-x-6">
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
                       className={`flex items-center space-x-2 transition-colors ${
                         post.isLiked 
-                          ? 'text-red-600 dark:text-red-400' 
+                          ? 'text-red-600' 
                           : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
                       }`}
                     >
@@ -766,6 +846,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                       <MessageCircle className="w-5 h-5" />
                       <span>{post.commentsCount}</span>
                     </button>
+                    <button className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors">
+                      <Share className="w-5 h-5" />
+                      <span>分享</span>
+                    </button>
                   </div>
                 </div>
 
@@ -778,45 +862,48 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="border-t border-gray-200 dark:border-gray-600 pt-4 mt-4">
-                        {/* 评论输入 */}
+                      <div className="mt-6 border-t border-gray-200 dark:border-gray-600 pt-4">
+                        {/* 评论输入框 */}
                         <div className="flex space-x-3 mb-4">
                           <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
                             {user?.profile?.avatar ? (
                               <img src={user.profile.avatar} alt={user.username} className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                <span className="text-xs text-white font-bold">{user?.username?.charAt(0).toUpperCase()}</span>
+                                <span className="text-white font-bold text-xs">{user?.username?.charAt(0).toUpperCase()}</span>
                               </div>
                             )}
                           </div>
                           <div className="flex-1">
                             {replyingTo[post.id] && (
-                              <div className="flex items-center space-x-2 mb-2 text-sm text-gray-500 dark:text-gray-400">
-                                <Reply className="w-3 h-3" />
-                                <span>回复 @{replyingTo[post.id].username}</span>
+                              <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  回复 @{replyingTo[post.id]?.username}
+                                </span>
                                 <button
                                   onClick={() => {
-                                    setReplyingTo(prev => {
-                                      const { [post.id]: _, ...rest } = prev
-                                      return rest
-                                    })
+                                    const { [post.id]: _, ...rest } = replyingTo
+                                    setReplyingTo(rest)
                                     setCommentContent(prev => ({ ...prev, [post.id]: '' }))
                                   }}
-                                  className="text-red-500 hover:text-red-600"
+                                  className="ml-2 text-gray-500 hover:text-red-600"
                                 >
-                                  <X className="w-3 h-3" />
+                                  取消
                                 </button>
                               </div>
                             )}
                             <div className="flex space-x-2">
                               <input
                                 type="text"
-                                placeholder={replyingTo[post.id] ? `回复 @${replyingTo[post.id].username}` : "写评论..."}
+                                placeholder="写评论..."
                                 value={commentContent[post.id] || ''}
                                 onChange={(e) => setCommentContent(prev => ({ ...prev, [post.id]: e.target.value }))}
-                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                maxLength={500}
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleComment(post.id)
+                                  }
+                                }}
                               />
                               <button
                                 onClick={() => handleComment(post.id)}
@@ -830,70 +917,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
                         </div>
 
                         {/* 评论列表 */}
-                        <div className="space-y-3">
-                          {comments[post.id]?.map((comment) => (
-                            <div key={comment.id} className="flex space-x-3">
-                              <div 
-                                className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0 cursor-pointer"
-                                onClick={() => handleViewProfile(comment.author.id)}
-                              >
-                                {comment.author.avatar ? (
-                                  <img src={comment.author.avatar} alt={comment.author.nickname} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                    <span className="text-xs text-white font-bold">{comment.author.nickname.charAt(0).toUpperCase()}</span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1">
-                                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <div className="flex items-center space-x-2">
-                                      <span 
-                                        className="font-medium text-sm text-gray-900 dark:text-white cursor-pointer"
-                                        onClick={() => handleViewProfile(comment.author.id)}
-                                      >
-                                        {comment.author.nickname}
-                                      </span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(comment.createdAt, 'datetime')}</span>
-                                    </div>
-                                    {comment.canDelete && (
-                                      <button
-                                        onClick={() => handleDeleteComment(comment.id, post.id)}
-                                        className="text-gray-400 hover:text-red-600 transition-colors"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                                    {comment.replyTo && (
-                                      <span className="text-blue-600 dark:text-blue-400">@{comment.replyTo.nickname} </span>
-                                    )}
-                                    {comment.content}
-                                  </p>
-                                </div>
-                                <div className="flex items-center space-x-4 mt-2 text-xs">
-                                  <button
-                                    onClick={() => handleCommentLike(comment.id, post.id)}
-                                    className={`flex items-center space-x-1 transition-colors ${
-                                      comment.isLiked 
-                                        ? 'text-red-600 dark:text-red-400' 
-                                        : 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
-                                    }`}
-                                  >
-                                    <Heart className={`w-3 h-3 ${comment.isLiked ? 'fill-current' : ''}`} />
-                                    <span>{comment.likesCount}</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleReply(post.id, comment.id, comment.author.nickname)}
-                                    className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-                                  >
-                                    <Reply className="w-3 h-3" />
-                                    <span>回复</span>
-                                  </button>
-                                </div>
-                              </div>
+                        <div className="space-y-1">
+                          {comments[post.id] && organizeComments(comments[post.id]).map((comment) => (
+                            <div key={comment.id}>
+                              {renderComment(comment, post.id)}
+                              {comment.replies && comment.replies.map((reply) => 
+                                renderComment(reply, post.id, true)
+                              )}
                             </div>
                           ))}
                         </div>
@@ -910,15 +940,32 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       {/* 私信模态框 */}
       <MessagingModal
         isOpen={showMessaging}
-        onClose={() => setShowMessaging(false)}
         targetUser={targetUser}
+        onClose={() => {
+          setShowMessaging(false)
+          setTargetUser(null)
+        }}
       />
 
       {/* 用户资料模态框 */}
       <UserProfile
         isOpen={showUserProfile}
-        onClose={() => setShowUserProfile(false)}
         userId={selectedUserId}
+        onClose={() => {
+          setShowUserProfile(false)
+          setSelectedUserId(null)
+        }}
+      />
+
+      {/* 删除确认对话框 */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="确认删除"
+        message={`确定要删除这条${deleteTarget?.type === 'post' ? '帖子' : '评论'}吗？`}
+        confirmText="删除"
+        type="danger"
+        onConfirm={executeDelete}
+        onClose={cancelDelete}
       />
     </div>
   )
