@@ -1419,51 +1419,35 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false }) => {
       {/* 图片查看模态框 */}
       <AnimatePresence>
         {showImageModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4"
-            onClick={() => setShowImageModal(false)}
-          >
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* 模态框头部 */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-600">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">查看图片</h3>
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">查看图片</h2>
                 <button
                   onClick={() => setShowImageModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
               {/* 图片内容 */}
-              <div className="p-6 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+              <div className="flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-900">
                 <img
                   src={selectedImageUrl}
                   alt="查看图片"
                   className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
                 />
               </div>
-
-              {/* 模态框底部 */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-600">
-                <div className="flex items-center justify-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    点击图片外部区域关闭
-                  </p>
-                </div>
-              </div>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
