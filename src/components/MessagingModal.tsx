@@ -48,6 +48,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   const [loading, setLoading] = useState(false)
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 滚动到最新消息
@@ -76,6 +77,10 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (data.success) {
         setConversations(data.data.conversations)
         console.log('设置会话列表:', data.data.conversations.length, '个会话')
+        // 会话列表加载完成后标记为已初始化
+        if (!hasInitiallyLoaded) {
+          setHasInitiallyLoaded(true)
+        }
       }
     } catch (error) {
       console.error('获取会话列表失败:', error)
@@ -86,9 +91,13 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
 
   // 获取特定会话的消息
   const fetchMessages = async (conversationId?: string, otherUserId?: string, showLoading: boolean = true) => {
-    if (showLoading) {
-      setMessagesLoading(true)  // 只在需要时显示加载动画
+    // 只在第一次加载或明确要求时显示加载动画
+    const shouldShowLoading = showLoading && !hasInitiallyLoaded
+    
+    if (shouldShowLoading) {
+      setMessagesLoading(true)
     }
+    
     try {
       let url = '/api/social/messaging'
       const params = new URLSearchParams()
@@ -118,12 +127,16 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (data.success) {
         setMessages(data.data.messages || [])
         setTimeout(scrollToBottom, 100)
+        // 标记已完成初始加载
+        if (!hasInitiallyLoaded) {
+          setHasInitiallyLoaded(true)
+        }
       }
     } catch (error) {
       console.error('获取消息失败:', error)
     } finally {
-      if (showLoading) {
-        setMessagesLoading(false)  // 只在显示了加载动画时才关闭
+      if (shouldShowLoading) {
+        setMessagesLoading(false)
       }
     }
   }
@@ -206,10 +219,13 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   // 组件挂载时获取数据
   useEffect(() => {
     if (isOpen) {
+      // 重置加载状态，这样每次打开聊天都会显示第一次加载动画
+      setHasInitiallyLoaded(false)
+      
       if (targetUser) {
         // 通过主页私信：直接获取与目标用户的消息，不显示会话列表
         console.log('通过主页私信模式，目标用户:', targetUser.nickname)
-        fetchMessages(undefined, targetUser.id)
+        fetchMessages(undefined, targetUser.id, true) // 第一次加载显示动画
       } else {
         // 通过私信选项卡：显示会话列表
         console.log('通过私信选项卡模式，获取会话列表')
@@ -218,12 +234,24 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     }
   }, [isOpen, targetUser])
 
-  // 当选择会话时获取消息
+  // 当选择会话时获取消息 - 不显示加载动画，因为已经初始化过了
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id)
+    if (selectedConversation && hasInitiallyLoaded) {
+      fetchMessages(selectedConversation.id, undefined, false) // 切换会话不显示动画
+    } else if (selectedConversation && !hasInitiallyLoaded) {
+      fetchMessages(selectedConversation.id, undefined, true) // 第一次选择会话显示动画
     }
   }, [selectedConversation])
+
+  // 组件关闭时清理状态
+  useEffect(() => {
+    if (!isOpen) {
+      setMessages([])
+      setSelectedConversation(null)
+      setHasInitiallyLoaded(false)
+      setMessagesLoading(false)
+    }
+  }, [isOpen])
 
   // 格式化时间 - 智能显示
   const formatTime = (dateString: string) => {
