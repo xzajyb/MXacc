@@ -77,75 +77,94 @@ const MessagingModal: React.FC<MessagingModalProps> = ({ isOpen, onClose, target
 
   // 发送消息
   const sendMessage = async () => {
-    if (!newMessage.trim()) return
+    if (!newMessage.trim()) {
+      alert('请输入消息内容')
+      return
+    }
+
+    // 检查是否有目标用户或选中的会话
+    if (!targetUser && !selectedConversation) {
+      alert('请选择一个用户或会话')
+      return
+    }
 
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
       
-      // 如果有目标用户但没有选中会话，创建新会话
+      console.log('发送消息 - 调试信息:', {
+        hasTargetUser: !!targetUser,
+        targetUserId: targetUser?.id,
+        hasSelectedConversation: !!selectedConversation,
+        selectedConversation,
+        messageContent: newMessage.trim()
+      })
+      
+      // 准备请求数据
+      const requestData: any = {
+        action: 'send-message',
+        content: newMessage.trim()
+      }
+      
+      // 根据情况添加接收者ID或会话ID
       if (targetUser && !selectedConversation) {
-        const response = await fetch('/api/social/messaging', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            action: 'send-message',
-            receiverId: targetUser.id,
-            content: newMessage.trim()
-          })
-        })
+        requestData.receiverId = targetUser.id
+        console.log('新会话，发送给用户:', targetUser.id)
+      } else if (selectedConversation && !selectedConversation.startsWith('temp-')) {
+        requestData.conversationId = selectedConversation
+        console.log('现有会话，会话ID:', selectedConversation)
+      } else if (targetUser) {
+        // 临时会话，使用receiverId
+        requestData.receiverId = targetUser.id
+        console.log('临时会话，发送给用户:', targetUser.id)
+      }
+      
+      console.log('发送请求数据:', requestData)
+      
+      const response = await fetch('/api/social/messaging', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-          // 添加消息到当前列表
-          setMessages(prev => [...prev, {
-            id: data.data.id,
-            content: newMessage.trim(),
-            sender: { id: '', username: '', nickname: '我', avatar: '' },
-            isOwnMessage: true,
-            createdAt: new Date().toISOString()
-          }])
-          setNewMessage('')
-          // 刷新会话列表
-          await fetchConversations()
-          
-          // 如果创建了新会话，自动选中
-          if (data.data.conversationId) {
-            setSelectedConversation(data.data.conversationId)
-          }
-        }
-      } else if (selectedConversation) {
-        // 发送到现有会话
-        const response = await fetch('/api/social/messaging', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            action: 'send-message',
-            conversationId: selectedConversation,
-            content: newMessage.trim()
-          })
-        })
+      const data = await response.json()
+      console.log('API响应:', data)
 
-        if (response.ok) {
-          const data = await response.json()
-          setMessages(prev => [...prev, {
-            id: data.data.id,
-            content: newMessage.trim(),
-            sender: { id: '', username: '', nickname: '我', avatar: '' },
-            isOwnMessage: true,
-            createdAt: new Date().toISOString()
-          }])
-          setNewMessage('')
+      if (response.ok && data.success) {
+        // 成功发送消息
+        setMessages(prev => [...prev, {
+          id: data.data.id || Date.now().toString(),
+          content: newMessage.trim(),
+          sender: { 
+            id: '', 
+            username: '', 
+            nickname: '我', 
+            avatar: '' 
+          },
+          isOwnMessage: true,
+          createdAt: data.data.createdAt || new Date().toISOString()
+        }])
+        
+        setNewMessage('')
+        
+        // 如果创建了新会话，更新选中的会话
+        if (data.data.conversationId && selectedConversation?.startsWith('temp-')) {
+          setSelectedConversation(data.data.conversationId)
         }
+        
+        // 刷新会话列表
+        await fetchConversations()
+        
+      } else {
+        console.error('发送消息失败:', data)
+        alert(`发送失败: ${data.message || '未知错误'}`)
       }
     } catch (error) {
-      console.error('发送消息失败:', error)
+      console.error('发送消息异常:', error)
+      alert('发送消息时发生网络错误，请稍后重试')
     } finally {
       setLoading(false)
     }
