@@ -13,6 +13,8 @@ import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import DebugPage from './pages/DebugPage'
+import SocialPage from './pages/SocialPage'
+import PromoPage from './pages/PromoPage'
 import LoadingSpinner from './components/LoadingSpinner'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -55,6 +57,7 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/debug" element={<DebugPage />} />
+          <Route path="/promo" element={<PromoPage />} />
           
           {/* 受保护的路由 */}
           <Route path="/dashboard" element={
@@ -77,6 +80,11 @@ function App() {
               <SecurityPage />
             </ProtectedRoute>
           } />
+          <Route path="/social" element={
+            <ProtectedRoute>
+              <SocialPage />
+            </ProtectedRoute>
+          } />
           
           {/* 管理员路由 */}
           <Route path="/admin" element={
@@ -86,7 +94,7 @@ function App() {
           } />
           
           {/* 重定向 */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/promo" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AnimatePresence>
