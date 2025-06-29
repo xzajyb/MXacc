@@ -102,6 +102,15 @@ const BanNotice: React.FC<BanNoticeProps> = ({ ban, onClose }) => {
 
   useEffect(() => {
     loadMyAppeals()
+    
+    // 阻止背景滚动
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    
+    return () => {
+      // 恢复背景滚动
+      document.body.style.overflow = originalOverflow
+    }
   }, [])
 
   return createPortal(
@@ -109,6 +118,7 @@ const BanNotice: React.FC<BanNoticeProps> = ({ ban, onClose }) => {
       <div 
         className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto shadow-2xl"
         style={{ position: 'relative', zIndex: 1 }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
         <div className="bg-red-600 text-white p-6 rounded-t-lg">
