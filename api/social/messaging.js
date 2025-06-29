@@ -148,17 +148,22 @@ module.exports = async function handler(req, res) {
           }
         }))
 
-        // 标记来自对方的消息为已读（排除系统消息）
-        await messages.updateMany(
+        // 标记来自对方的消息为已读（排除系统消息和已删除消息）
+        const markReadResult = await messages.updateMany(
           {
             conversationId: conversation._id,
             senderId: new ObjectId(otherUserId),
-            readAt: { $exists: false }
+            readAt: { $exists: false },
+            $or: [
+              { deletedBy: { $exists: false } },
+              { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+            ]
           },
           {
             $set: { readAt: new Date() }
           }
         )
+        console.log(`🔵 otherUserId路径: 标记${markReadResult.modifiedCount}条消息为已读`)
 
         const total = await messages.countDocuments({
           conversationId: conversation._id
@@ -616,7 +621,7 @@ module.exports = async function handler(req, res) {
         }))
 
         // 标记消息为已读（排除被当前用户删除的消息和系统消息）
-        await messages.updateMany(
+        const markReadResult = await messages.updateMany(
           {
             conversationId: new ObjectId(conversationId),
             senderId: { 
@@ -632,6 +637,7 @@ module.exports = async function handler(req, res) {
             $set: { readAt: new Date() }
           }
         )
+        console.log(`🔵 conversationId路径: 标记${markReadResult.modifiedCount}条消息为已读`)
 
         const total = await messages.countDocuments({
           conversationId: new ObjectId(conversationId),
