@@ -124,6 +124,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     postId?: string
   } | null>(null)
   
+  // 删除会话对话框状态
+  const [showDeleteConversationDialog, setShowDeleteConversationDialog] = useState(false)
+  const [conversationToDelete, setConversationToDelete] = useState<{
+    id: string
+    nickname: string
+  } | null>(null)
+  const [deletingConversation, setDeletingConversation] = useState(false)
+  
   // 个人主页状态
   const [myProfile, setMyProfile] = useState<any>(null)
   const [myPosts, setMyPosts] = useState<Post[]>([])
@@ -973,10 +981,17 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     }
   }
 
-  // 删除会话（从私信列表中隐藏）
-  const handleDeleteConversation = async (conversationId: string, nickname: string) => {
-    if (!confirm(`确定要删除与 ${nickname} 的私信会话吗？\n\n聊天记录不会被删除，当对方再次发送消息或您通过主页发送消息时会重新显示。`)) return
+  // 显示删除会话确认对话框
+  const handleDeleteConversation = (conversationId: string, nickname: string) => {
+    setConversationToDelete({ id: conversationId, nickname })
+    setShowDeleteConversationDialog(true)
+  }
 
+  // 执行删除会话（从私信列表中隐藏）
+  const executeDeleteConversation = async () => {
+    if (!conversationToDelete) return
+
+    setDeletingConversation(true)
     try {
       const token = localStorage.getItem('token')
       const response = await fetch('/api/social/messaging', {
@@ -987,16 +1002,19 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         },
         body: JSON.stringify({
           action: 'hide-conversation',
-          conversationId
+          conversationId: conversationToDelete.id
         })
       })
       
       if (response.ok) {
         // 从会话列表中移除
-        setConversations(prev => prev.filter(conv => conv.id !== conversationId))
-        showSuccess('私信会话已删除')
+        setConversations(prev => prev.filter(conv => conv.id !== conversationToDelete.id))
+        showSuccess('✅ 私信会话已删除，聊天记录已保留')
         // 刷新未读计数
         setTimeout(fetchUnreadCount, 100)
+        // 关闭对话框
+        setShowDeleteConversationDialog(false)
+        setConversationToDelete(null)
       } else {
         const errorData = await response.json()
         throw new Error(errorData.message || '删除失败')
@@ -1004,6 +1022,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     } catch (error: any) {
       console.error('删除会话失败:', error)
       showError(error.message || '删除会话失败')
+    } finally {
+      setDeletingConversation(false)
     }
   }
 
@@ -2034,6 +2054,32 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         type="danger"
         onConfirm={executeDelete}
         onClose={cancelDelete}
+      />
+
+      {/* 删除会话确认对话框 */}
+      <ConfirmDialog
+        isOpen={showDeleteConversationDialog}
+        onClose={() => setShowDeleteConversationDialog(false)}
+        onConfirm={executeDeleteConversation}
+        title="删除私信会话"
+        confirmText="确认删除"
+        cancelText="取消"
+        type="warning"
+        loading={deletingConversation}
+        customContent={
+          <div className="space-y-3">
+            <p className="text-gray-700 dark:text-gray-300">
+              确定要删除与 <span className="font-medium text-gray-900 dark:text-white">
+                {conversationToDelete?.nickname}
+              </span> 的私信会话吗？
+            </p>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <span className="font-medium">说明：</span>聊天记录不会被删除，当对方再次发送消息或您通过主页发送消息时会重新显示。
+              </p>
+            </div>
+          </div>
+        }
       />
 
       {/* 图片查看模态框 */}

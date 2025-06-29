@@ -557,6 +557,19 @@ module.exports = async function handler(req, res) {
           .toArray()
 
         const messagesWithSenders = await Promise.all(messagesList.map(async (message) => {
+          // 检查是否为系统消息
+          if (message.isSystemMessage || message.senderId.toString() === '000000000000000000000000') {
+            return {
+              id: message._id,
+              content: message.content,
+              sender: null,
+              isSystemMessage: true,
+              isOwnMessage: false,
+              readAt: message.readAt,
+              createdAt: message.createdAt
+            }
+          }
+
           const sender = await getUserById(users, message.senderId)
           return {
             id: message._id,
@@ -568,6 +581,7 @@ module.exports = async function handler(req, res) {
               avatar: sender.profile?.avatar
             },
             isOwnMessage: message.senderId.toString() === decoded.userId,
+            isSystemMessage: false,
             readAt: message.readAt,
             createdAt: message.createdAt
           }
@@ -865,8 +879,32 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        // 删除消息
+        // 获取撤回者信息
+        const recaller = await getUserById(users, decoded.userId)
+        const recipientId = message.recipientId
+
+        // 删除原消息
         await messages.deleteOne({ _id: new ObjectId(messageId) })
+
+        // 发送撤回通知消息
+        const recallNotificationMessage = {
+          conversationId: message.conversationId,
+          senderId: new ObjectId('000000000000000000000000'), // 使用特殊ID表示系统消息
+          recipientId: recipientId,
+          content: `${recaller.profile?.nickname || recaller.username} 撤回了一条消息`,
+          isSystemMessage: true, // 标记为系统消息
+          createdAt: new Date()
+        }
+
+        await messages.insertOne(recallNotificationMessage)
+
+        // 更新会话的最后消息时间
+        await conversations.updateOne(
+          { _id: message.conversationId },
+          { 
+            $set: { lastMessageAt: new Date() }
+          }
+        )
 
         return res.status(200).json({
           success: true,

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, User, RotateCcw, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
+import ConfirmDialog from './ConfirmDialog'
 
 interface User {
   id: string
@@ -19,6 +20,13 @@ interface Message {
   recipientId: string
   createdAt: string
   isRead: boolean
+  isSystemMessage?: boolean
+  sender?: {
+    id: string
+    username: string
+    nickname: string
+    avatar: string
+  } | null
 }
 
 interface Conversation {
@@ -52,6 +60,8 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   const [sendingMessage, setSendingMessage] = useState(false)
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
   const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const [showDeleteHistoryDialog, setShowDeleteHistoryDialog] = useState(false)
+  const [deletingChatHistory, setDeletingChatHistory] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 滚动到最新消息
@@ -365,11 +375,15 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     }
   }
 
+  // 显示删除聊天记录确认对话框
+  const showDeleteChatHistoryDialog = () => {
+    setShowDeleteHistoryDialog(true)
+    setShowMoreMenu(false)
+  }
+
   // 删除聊天记录
   const deleteChatHistory = async () => {
-    const nickname = targetUser?.nickname || selectedConversation?.otherUser.nickname
-    
-    if (!confirm(`确定要删除与 ${nickname} 的聊天记录吗？\n\n此操作只会删除您这边的聊天记录，不会影响对方的记录。删除后无法恢复。`)) return
+    setDeletingChatHistory(true)
     
     try {
       let conversationId: string | undefined
@@ -410,13 +424,13 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       })
       
       if (deleteResponse.ok) {
-        showSuccess('聊天记录已删除')
+        showSuccess('✅ 聊天记录已删除，对方的记录不受影响')
         // 清空消息列表
         setMessages([])
         // 刷新会话列表
         await fetchConversations()
-        // 关闭更多菜单
-        setShowMoreMenu(false)
+        // 关闭对话框
+        setShowDeleteHistoryDialog(false)
       } else {
         const errorData = await deleteResponse.json()
         throw new Error(errorData.message || '删除失败')
@@ -424,6 +438,8 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     } catch (error: any) {
       console.error('删除聊天记录失败:', error)
       showError(error.message || '删除聊天记录失败')
+    } finally {
+      setDeletingChatHistory(false)
     }
   }
 
@@ -598,7 +614,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                             {showMoreMenu && (
                               <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-10">
                                 <button
-                                  onClick={deleteChatHistory}
+                                  onClick={showDeleteChatHistoryDialog}
                                   className="w-full px-4 py-3 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center space-x-2 rounded-lg"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -638,39 +654,49 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                                 )}
                                 
                                 {/* 消息内容 */}
-                                <div className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
-                                  <div className="relative group">
-                                    <div
-                                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                                        message.senderId === user?.id
-                                          ? 'bg-blue-600 text-white'
-                                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                                      }`}
-                                    >
-                                      <p className="text-sm">{message.content}</p>
-                                      <p className={`text-xs mt-1 ${
-                                        message.senderId === user?.id
-                                          ? 'text-blue-100'
-                                          : 'text-gray-500 dark:text-gray-400'
-                                      }`}>
-                                        {formatTime(message.createdAt)}
-                                      </p>
+                                {message.isSystemMessage ? (
+                                  // 系统消息样式
+                                  <div className="flex justify-center">
+                                    <div className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs px-3 py-1 rounded-full max-w-xs text-center">
+                                      <p>{message.content}</p>
                                     </div>
-                                    
-                                    {/* 撤回按钮 */}
-                                    {canRecallMessage(message.createdAt, message.senderId) && (
-                                      <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                        <button
-                                          onClick={() => recallMessage(message.id)}
-                                          className="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-all duration-200 hover:scale-110"
-                                          title="撤回消息 (3分钟内可撤回)"
-                                        >
-                                          <RotateCcw className="w-3.5 h-3.5" />
-                                        </button>
-                                      </div>
-                                    )}
                                   </div>
-                                </div>
+                                ) : (
+                                  // 普通消息样式
+                                  <div className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                                    <div className="relative group">
+                                      <div
+                                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                                          message.senderId === user?.id
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                                        }`}
+                                      >
+                                        <p className="text-sm">{message.content}</p>
+                                        <p className={`text-xs mt-1 ${
+                                          message.senderId === user?.id
+                                            ? 'text-blue-100'
+                                            : 'text-gray-500 dark:text-gray-400'
+                                        }`}>
+                                          {formatTime(message.createdAt)}
+                                        </p>
+                                      </div>
+                                      
+                                      {/* 撤回按钮 */}
+                                      {canRecallMessage(message.createdAt, message.senderId) && (
+                                        <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                          <button
+                                            onClick={() => recallMessage(message.id)}
+                                            className="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-all duration-200 hover:scale-110"
+                                            title="撤回消息 (3分钟内可撤回)"
+                                          >
+                                            <RotateCcw className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )
                           })
@@ -739,6 +765,32 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         </AnimatePresence>,
         document.body
       )}
+
+      {/* 删除聊天记录确认对话框 */}
+      <ConfirmDialog
+        isOpen={showDeleteHistoryDialog}
+        onClose={() => setShowDeleteHistoryDialog(false)}
+        onConfirm={deleteChatHistory}
+        title="删除聊天记录"
+        confirmText="确认删除"
+        cancelText="取消"
+        type="danger"
+        loading={deletingChatHistory}
+        customContent={
+          <div className="space-y-3">
+            <p className="text-gray-700 dark:text-gray-300">
+              确定要删除与 <span className="font-medium text-gray-900 dark:text-white">
+                {targetUser?.nickname || selectedConversation?.otherUser.nickname}
+              </span> 的聊天记录吗？
+            </p>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <span className="font-medium">注意：</span>此操作只会删除您这边的聊天记录，不会影响对方的记录。删除后无法恢复。
+              </p>
+            </div>
+          </div>
+        }
+      />
     </>
   )
 }
