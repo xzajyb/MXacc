@@ -13,7 +13,6 @@ import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import DebugPage from './pages/DebugPage'
-import SocialPage from './pages/SocialPage'
 import PromoPage from './pages/PromoPage'
 import LoadingSpinner from './components/LoadingSpinner'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -48,6 +47,9 @@ function App() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <AnimatePresence mode="wait">
         <Routes>
+          {/* 宣传页面 */}
+          <Route path="/promo" element={<PromoPage />} />
+          
           {/* 公开路由 */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -57,7 +59,6 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/debug" element={<DebugPage />} />
-          <Route path="/promo" element={<PromoPage />} />
           
           {/* 受保护的路由 */}
           <Route path="/dashboard" element={
@@ -80,11 +81,6 @@ function App() {
               <SecurityPage />
             </ProtectedRoute>
           } />
-          <Route path="/social" element={
-            <ProtectedRoute>
-              <SocialPage />
-            </ProtectedRoute>
-          } />
           
           {/* 管理员路由 */}
           <Route path="/admin" element={
@@ -93,9 +89,9 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* 重定向 */}
+          {/* 重定向 - 主页指向宣传页面 */}
           <Route path="/" element={<Navigate to="/promo" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/promo" replace />} />
         </Routes>
       </AnimatePresence>
     </div>
