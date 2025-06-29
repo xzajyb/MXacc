@@ -880,6 +880,30 @@ module.exports = async function handler(req, res) {
 
         const result = await db.collection('ban_appeals').insertOne(appealData)
 
+        // 发送申述接收确认通知给用户
+        try {
+          const systemMessages = db.collection('system_messages')
+          
+          const notificationData = {
+            title: '申述已接收',
+            content: `我们已收到您的申述请求。\n\n申述原因：${reason.trim()}\n\n我们会在48小时内处理您的申述，请耐心等待。如有任何疑问，请联系客服。`,
+            type: 'info',
+            priority: 'normal',
+            autoRead: false,
+            targetUserId: new ObjectId(decoded.userId), // 个人专属消息
+            authorId: new ObjectId(decoded.userId), // 系统自动发送，设置为用户自己
+            authorName: '系统通知',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+
+          await systemMessages.insertOne(notificationData)
+          console.log('申述接收确认通知已发送给用户:', decoded.userId)
+        } catch (notificationError) {
+          console.error('发送申述确认通知失败:', notificationError)
+          // 不阻断主流程
+        }
+
         return res.status(201).json({
           success: true,
           message: '申述提交成功，请等待管理员处理',

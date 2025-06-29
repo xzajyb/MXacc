@@ -312,29 +312,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         headers: { Authorization: `Bearer ${token}` }
       })
 
-      // 发送申述接收确认通知给用户
-      try {
-        const notificationPayload = {
-          action: 'create',
-          title: '申述已接收',
-          content: `我们已收到您的申述请求。\n\n申述原因：${appealReason.trim()}\n\n我们会在48小时内处理您的申述，请耐心等待。如有任何疑问，请联系客服。`,
-          type: 'info',
-          priority: 'normal',
-          autoRead: false,
-          targetUserId: user?.id
-        }
-
-        await axios.post('/api/admin/system-messages', notificationPayload, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-
-        console.log('申述接收确认通知已发送')
-      } catch (notificationError) {
-        console.error('发送确认通知失败:', notificationError)
-        // 不阻断主流程
-      }
-
-      showSuccess('申述已提交，我们会尽快处理')
+      showSuccess('申述已提交，我们会尽快处理，请查看系统通知获取更新')
       setAppealReason('')
       setAppealDescription('')
       
