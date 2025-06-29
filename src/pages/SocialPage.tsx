@@ -202,10 +202,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       
       if (response.ok) {
         const data = await response.json()
-        const conversations = data.data.conversations
-        const totalUnread = conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
-        console.log('📊 fetchUnreadCount: 会话数量=', conversations.length, '总未读数=', totalUnread)
+        const conversationsData = data.data.conversations
+        const totalUnread = conversationsData.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
+        console.log('📊 fetchUnreadCount: 会话数量=', conversationsData.length, '总未读数=', totalUnread)
         setUnreadCount(totalUnread)
+        // 更新会话列表，确保每个会话的未读计数也被更新
+        setConversations(conversationsData)
       } else {
         console.log('📊 fetchUnreadCount: API响应失败，状态码=', response.status)
       }

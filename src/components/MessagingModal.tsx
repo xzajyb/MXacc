@@ -90,10 +90,6 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (data.success) {
         setConversations(data.data.conversations)
         console.log('设置会话列表:', data.data.conversations.length, '个会话')
-        // 打印每个会话的未读数
-        data.data.conversations.forEach((conv: any) => {
-          console.log(`会话 ${conv.otherUser.nickname}: unreadCount=${conv.unreadCount}`)
-        })
         // 会话列表加载完成后标记为已初始化
         if (!hasInitiallyLoaded) {
           setHasInitiallyLoaded(true)
@@ -261,35 +257,12 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (data.success) {
         console.log(`📖 成功标记${data.data.markedCount}条消息为已读`)
         
-        // 立即更新前端会话列表中的未读计数
-        if (conversationId) {
-          setConversations(prev => prev.map(conv => 
-            conv.id === conversationId 
-              ? { ...conv, unreadCount: 0 }
-              : conv
-          ))
-          console.log(`📖 立即更新会话 ${conversationId} 的未读计数为0`)
-        } else if (otherUserId) {
-          setConversations(prev => prev.map(conv => 
-            conv.otherUser.id === otherUserId 
-              ? { ...conv, unreadCount: 0 }
-              : conv
-          ))
-          console.log(`📖 立即更新与用户 ${otherUserId} 的会话未读计数为0`)
-        }
-        
         // 立即刷新会话列表和未读计数
         await fetchConversations()
-        
-        // 强制刷新：等待50ms再次刷新，确保数据一致性
-        setTimeout(async () => {
-          console.log('📱 执行延迟刷新会话列表...')
-          await fetchConversations()
-          if (onUnreadCountChange) {
-            console.log('📱 MessagingModal: 调用 onUnreadCountChange (标记已读后)')
-            onUnreadCountChange()
-          }
-        }, 50)
+        if (onUnreadCountChange) {
+          console.log('📱 MessagingModal: 调用 onUnreadCountChange (标记已读后)')
+          onUnreadCountChange()
+        }
       } else {
         console.error('📖 标记已读失败:', data.message)
       }
