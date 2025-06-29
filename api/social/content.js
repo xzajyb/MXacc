@@ -872,6 +872,7 @@ module.exports = async function handler(req, res) {
           description: description ? description.trim() : null,
           status: 'pending',
           submittedAt: new Date(),
+          createdAt: new Date(), // 添加createdAt字段保持一致性
           processedAt: null,
           processedBy: null,
           adminReply: null

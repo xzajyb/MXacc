@@ -267,12 +267,17 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       })
       
       if (response.data.success) {
-        const appeals = response.data.data.appeals || []
-        setAppealHistory(appeals)
+        const allAppeals = response.data.data.appeals || []
+        
+        // 只保留与当前封禁相关的申述记录
+        const currentBanAppeals = allAppeals.filter((appeal: any) => 
+          appeal.banId === userBan.banId
+        )
+        setAppealHistory(currentBanAppeals)
         
         // 查找当前待处理的申述
-        const pendingAppeal = appeals.find((appeal: any) => 
-          appeal.banId === userBan.banId && appeal.status === 'pending'
+        const pendingAppeal = currentBanAppeals.find((appeal: any) => 
+          appeal.status === 'pending'
         )
         setCurrentAppeal(pendingAppeal || null)
       }
@@ -2449,7 +2454,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                         )}
                         <div>
                           <span className="font-medium text-gray-700 dark:text-gray-300">提交时间：</span>
-                          <span className="text-gray-900 dark:text-white">{new Date(currentAppeal.submittedAt).toLocaleString('zh-CN')}</span>
+                          <span className="text-gray-900 dark:text-white">{new Date(currentAppeal.submittedAt || currentAppeal.createdAt).toLocaleString('zh-CN')}</span>
                         </div>
                       </div>
                       <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded">
@@ -2555,10 +2560,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                   <p className="text-gray-900 dark:text-white">{appeal.description}</p>
                                 </div>
                               )}
-                              <div>
-                                <span className="font-medium text-gray-600 dark:text-gray-300">提交时间：</span>
-                                <span className="text-gray-900 dark:text-white">{new Date(appeal.submittedAt).toLocaleString('zh-CN')}</span>
-                              </div>
+                                                    <div>
+                        <span className="font-medium text-gray-600 dark:text-gray-300">提交时间：</span>
+                        <span className="text-gray-900 dark:text-white">{new Date(appeal.submittedAt || appeal.createdAt).toLocaleString('zh-CN')}</span>
+                      </div>
                               {appeal.processedAt && (
                                 <div>
                                   <span className="font-medium text-gray-600 dark:text-gray-300">处理时间：</span>

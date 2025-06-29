@@ -109,6 +109,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [selectedAppeal, setSelectedAppeal] = useState<any>(null)
   const [appealResponse, setAppealResponse] = useState('')
   const [sendNotificationToUser, setSendNotificationToUser] = useState(true)
+  const [sendBanNotification, setSendBanNotification] = useState(true) // 封禁时是否发送通知
 
   // 检查管理员权限
   if (!user || user.role !== 'admin') {
@@ -415,9 +416,38 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
         payload.durationType = 'permanent'
       }
 
-      await axios.post('/api/social/content', payload, {
+      const response = await axios.post('/api/social/content', payload, {
         headers: { Authorization: `Bearer ${token}` }
       })
+
+      // 发送封禁通知给被封禁用户（如果选择了）
+      if (sendBanNotification && selectedBanUser) {
+        try {
+          const bannedUser = users.find(u => u._id === selectedBanUser)
+          const durationText = banDuration && parseInt(banDuration) > 0 
+            ? `${banDuration}${banDurationType === 'hours' ? '小时' : banDurationType === 'days' ? '天' : banDurationType === 'weeks' ? '周' : '个月'}` 
+            : '永久'
+          
+          const notificationPayload = {
+            action: 'create',
+            title: '账户封禁通知',
+            content: `您的账户已被管理员封禁。\n\n封禁原因：${banReason.trim()}\n封禁时长：${durationText}\n\n如对此有异议，您可以在登录后通过社交页面提交申述。我们会认真处理您的申述。`,
+            type: 'warning',
+            priority: 'high',
+            autoRead: false,
+            targetUserId: selectedBanUser
+          }
+
+          await axios.post('/api/admin/system-messages', notificationPayload, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          console.log('封禁通知已发送给用户')
+        } catch (notificationError) {
+          console.error('发送封禁通知失败:', notificationError)
+          // 不阻断主流程，只是记录错误
+        }
+      }
 
       showToast('用户封禁成功', 'success')
       setShowBanDialog(false)
@@ -425,6 +455,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       setBanReason('')
       setBanDuration('')
       setBanNotes('')
+      setSendBanNotification(true) // 重置为默认值
       loadBanList()
     } catch (error: any) {
       console.error('封禁用户失败:', error)
@@ -1769,6 +1800,24 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                           rows={3}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                         />
+                      </div>
+
+                      {/* 系统通知选项 */}
+                      <div>
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={sendBanNotification}
+                            onChange={(e) => setSendBanNotification(e.target.checked)}
+                            className="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            发送封禁通知给用户
+                          </span>
+                        </label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          选中后将向用户发送系统通知，告知封禁详情和申述方式
+                        </p>
                       </div>
 
                       {/* 封禁按钮 */}
