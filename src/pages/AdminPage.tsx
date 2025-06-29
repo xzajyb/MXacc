@@ -360,7 +360,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     
     setBanLoading(true)
     try {
-      const response = await axios.get(`/api/admin/ban-management?action=bans&status=${banFilter}`, {
+      const response = await axios.get(`/api/social/content?action=ban-management&subAction=bans&status=${banFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setBanList(response.data.data.bans)
@@ -378,7 +378,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     
     setAppealLoading(true)
     try {
-      const response = await axios.get(`/api/admin/ban-management?action=appeals&status=${appealFilter}`, {
+      const response = await axios.get(`/api/social/content?action=ban-management&subAction=appeals&status=${appealFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setAppealsList(response.data.data.appeals)
@@ -400,18 +400,20 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     setProcessingBan(true)
     try {
       const payload: any = {
-        action: 'ban',
+        action: 'ban-user',
         userId: selectedBanUser,
         reason: banReason.trim(),
         notes: banNotes.trim()
       }
 
       if (banDuration && parseInt(banDuration) > 0) {
-        payload.duration = parseInt(banDuration)
+        payload.durationValue = parseInt(banDuration)
         payload.durationType = banDurationType
+      } else {
+        payload.durationType = 'permanent'
       }
 
-      await axios.post('/api/admin/ban-management', payload, {
+      await axios.post('/api/social/content', payload, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
@@ -437,10 +439,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     }
 
     try {
-      await axios.put('/api/admin/ban-management', {
-        action: 'unban',
-        id: banId,
-        notes: '管理员手动解除封禁'
+      await axios.put('/api/social/content', {
+        action: 'unban-user',
+        banId: banId
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -458,11 +459,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     if (!selectedAppeal) return
 
     try {
-      await axios.put('/api/admin/ban-management', {
-        action: 'handle-appeal',
-        id: selectedAppeal._id,
-        response: approved ? 'approved' : 'rejected',
-        notes: appealResponse.trim()
+      await axios.put('/api/social/content', {
+        action: 'process-appeal',
+        appealId: selectedAppeal._id,
+        decision: approved ? 'approved' : 'rejected',
+        adminReply: appealResponse.trim()
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })

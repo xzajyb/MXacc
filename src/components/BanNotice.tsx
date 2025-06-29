@@ -29,7 +29,7 @@ const BanNotice: React.FC<BanNoticeProps> = ({ ban, onClose }) => {
     setLoadingAppeals(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get('/api/admin/ban-management?action=my-appeals', {
+      const response = await axios.get('/api/social/content?action=ban-management&subAction=my-appeals', {
         headers: { Authorization: `Bearer ${token}` }
       })
       setMyAppeals(response.data.data.appeals || [])
@@ -50,11 +50,11 @@ const BanNotice: React.FC<BanNoticeProps> = ({ ban, onClose }) => {
     setSubmittingAppeal(true)
     try {
       const token = localStorage.getItem('token')
-      await axios.post('/api/admin/ban-management', {
-        action: 'appeal',
+      await axios.post('/api/social/content', {
+        action: 'submit-appeal',
         banId: ban.banId,
         reason: appealReason.trim(),
-        details: appealDetails.trim()
+        description: appealDetails.trim()
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })

@@ -333,6 +333,180 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      // 封禁管理相关功能
+      if (action === 'ban-management') {
+        const { subAction, page = 1, limit = 20, status, targetUserId } = req.query
+
+        if (subAction === 'bans') {
+          // 管理员获取封禁列表
+          if (currentUser.role !== 'admin') {
+            return res.status(403).json({ success: false, message: '需要管理员权限' })
+          }
+
+          const skip = (parseInt(page) - 1) * parseInt(limit)
+          const filter = {}
+          
+          if (status && status !== 'all') {
+            if (status === 'active') {
+              filter.$or = [
+                { status: 'active' },
+                { status: 'active', expiresAt: { $gt: new Date() } }
+              ]
+            } else {
+              filter.status = status
+            }
+          }
+
+          const bans = await db.collection('user_bans')
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray()
+
+          // 获取被封禁用户信息
+          const userIds = bans.map(ban => new ObjectId(ban.userId))
+          const banUsers = await users.find({ _id: { $in: userIds } })
+            .project({ username: 1, email: 1, profile: 1 })
+            .toArray()
+
+          const userMap = {}
+          banUsers.forEach(user => {
+            userMap[user._id.toString()] = user
+          })
+
+          const bansWithUserInfo = bans.map(ban => ({
+            ...ban,
+            _id: ban._id.toString(),
+            userId: ban.userId.toString(),
+            user: userMap[ban.userId.toString()] || null
+          }))
+
+          const total = await db.collection('user_bans').countDocuments(filter)
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              bans: bansWithUserInfo,
+              pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+              }
+            }
+          })
+        } else if (subAction === 'appeals') {
+          // 管理员获取申述列表
+          if (currentUser.role !== 'admin') {
+            return res.status(403).json({ success: false, message: '需要管理员权限' })
+          }
+
+          const skip = (parseInt(page) - 1) * parseInt(limit)
+          const filter = {}
+          
+          if (status && status !== 'all') {
+            filter.status = status
+          }
+
+          const appeals = await db.collection('ban_appeals')
+            .find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray()
+
+          // 获取申述用户信息和对应的封禁信息
+          const userIds = appeals.map(appeal => new ObjectId(appeal.userId))
+          const banIds = appeals.map(appeal => new ObjectId(appeal.banId))
+
+          const [appealUsers, bans] = await Promise.all([
+            users.find({ _id: { $in: userIds } })
+              .project({ username: 1, email: 1, profile: 1 })
+              .toArray(),
+            db.collection('user_bans')
+              .find({ _id: { $in: banIds } })
+              .toArray()
+          ])
+
+          const userMap = {}
+          const banMap = {}
+          appealUsers.forEach(user => {
+            userMap[user._id.toString()] = user
+          })
+          bans.forEach(ban => {
+            banMap[ban._id.toString()] = ban
+          })
+
+          const appealsWithInfo = appeals.map(appeal => ({
+            ...appeal,
+            _id: appeal._id.toString(),
+            userId: appeal.userId.toString(),
+            banId: appeal.banId.toString(),
+            user: userMap[appeal.userId.toString()] || null,
+            ban: banMap[appeal.banId.toString()] || null
+          }))
+
+          const total = await db.collection('ban_appeals').countDocuments(filter)
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              appeals: appealsWithInfo,
+              pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+              }
+            }
+          })
+        } else if (subAction === 'check') {
+          // 检查用户是否被封禁
+          const checkUserId = targetUserId || decoded.userId
+
+          const activeBan = await db.collection('user_bans').findOne({
+            userId: new ObjectId(checkUserId),
+            status: 'active',
+            $or: [
+              { expiresAt: null }, // 永久封禁
+              { expiresAt: { $gt: new Date() } } // 临时封禁未到期
+            ]
+          })
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              isBanned: !!activeBan,
+              ban: activeBan ? {
+                ...activeBan,
+                _id: activeBan._id.toString(),
+                userId: activeBan.userId.toString()
+              } : null
+            }
+          })
+        } else if (subAction === 'my-appeals') {
+          // 用户查看自己的申述记录
+          const appeals = await db.collection('ban_appeals')
+            .find({ userId: new ObjectId(decoded.userId) })
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .toArray()
+
+          const appealsWithInfo = appeals.map(appeal => ({
+            ...appeal,
+            _id: appeal._id.toString(),
+            userId: appeal.userId.toString(),
+            banId: appeal.banId.toString()
+          }))
+
+          return res.status(200).json({
+            success: true,
+            data: { appeals: appealsWithInfo }
+          })
+        }
+      }
+
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
@@ -556,6 +730,265 @@ module.exports = async function handler(req, res) {
             data: { isLiked: true, likesCount }
           })
         }
+      }
+
+      // 封禁管理操作
+      if (action === 'ban-user') {
+        // 管理员封禁用户
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const { userId, reason, durationType, durationValue, notes } = body
+
+        if (!userId || !reason) {
+          return res.status(400).json({ success: false, message: '用户ID和封禁原因不能为空' })
+        }
+
+        // 检查目标用户是否存在
+        const targetUser = await getUserById(users, userId)
+        if (!targetUser) {
+          return res.status(404).json({ success: false, message: '目标用户不存在' })
+        }
+
+        // 不能封禁管理员
+        if (targetUser.role === 'admin') {
+          return res.status(403).json({ success: false, message: '不能封禁管理员用户' })
+        }
+
+        // 检查是否已有活跃封禁
+        const existingBan = await db.collection('user_bans').findOne({
+          userId: new ObjectId(userId),
+          status: 'active',
+          $or: [
+            { expiresAt: null },
+            { expiresAt: { $gt: new Date() } }
+          ]
+        })
+
+        if (existingBan) {
+          return res.status(400).json({ success: false, message: '用户已被封禁' })
+        }
+
+        // 计算到期时间
+        let expiresAt = null
+        if (durationType !== 'permanent' && durationValue) {
+          const now = new Date()
+          const value = parseInt(durationValue)
+          
+          switch (durationType) {
+            case 'hours':
+              expiresAt = new Date(now.getTime() + value * 60 * 60 * 1000)
+              break
+            case 'days':
+              expiresAt = new Date(now.getTime() + value * 24 * 60 * 60 * 1000)
+              break
+            case 'weeks':
+              expiresAt = new Date(now.getTime() + value * 7 * 24 * 60 * 60 * 1000)
+              break
+            case 'months':
+              expiresAt = new Date(now.getTime() + value * 30 * 24 * 60 * 60 * 1000)
+              break
+          }
+        }
+
+        // 创建封禁记录
+        const banData = {
+          userId: new ObjectId(userId),
+          reason: reason.trim(),
+          durationType: durationType || 'permanent',
+          durationValue: durationType === 'permanent' ? null : parseInt(durationValue),
+          expiresAt,
+          notes: notes ? notes.trim() : null,
+          status: 'active',
+          bannedBy: new ObjectId(decoded.userId),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+
+        const result = await db.collection('user_bans').insertOne(banData)
+
+        return res.status(201).json({
+          success: true,
+          message: '用户封禁成功',
+          data: {
+            banId: result.insertedId.toString(),
+            userId: userId,
+            reason: banData.reason,
+            type: durationType === 'permanent' ? '永久封禁' : `临时封禁${durationValue}${
+              durationType === 'hours' ? '小时' :
+              durationType === 'days' ? '天' :
+              durationType === 'weeks' ? '周' : '月'
+            }`,
+            expiresAt: expiresAt
+          }
+        })
+      }
+
+      if (action === 'submit-appeal') {
+        // 用户提交申述
+        const { banId, reason, description } = body
+
+        if (!banId || !reason) {
+          return res.status(400).json({ success: false, message: '封禁ID和申述原因不能为空' })
+        }
+
+        // 验证封禁记录是否存在且属于当前用户
+        const ban = await db.collection('user_bans').findOne({
+          _id: new ObjectId(banId),
+          userId: new ObjectId(decoded.userId),
+          status: 'active'
+        })
+
+        if (!ban) {
+          return res.status(404).json({ success: false, message: '封禁记录不存在或已解除' })
+        }
+
+        // 检查是否已有待处理的申述
+        const existingAppeal = await db.collection('ban_appeals').findOne({
+          banId: new ObjectId(banId),
+          userId: new ObjectId(decoded.userId),
+          status: 'pending'
+        })
+
+        if (existingAppeal) {
+          return res.status(400).json({ success: false, message: '已有待处理的申述，请勿重复提交' })
+        }
+
+        // 创建申述记录
+        const appealData = {
+          banId: new ObjectId(banId),
+          userId: new ObjectId(decoded.userId),
+          reason: reason.trim(),
+          description: description ? description.trim() : null,
+          status: 'pending',
+          submittedAt: new Date(),
+          processedAt: null,
+          processedBy: null,
+          adminReply: null
+        }
+
+        const result = await db.collection('ban_appeals').insertOne(appealData)
+
+        return res.status(201).json({
+          success: true,
+          message: '申述提交成功，请等待管理员处理',
+          data: {
+            appealId: result.insertedId.toString(),
+            status: 'pending',
+            submittedAt: appealData.submittedAt
+          }
+        })
+      }
+
+      return res.status(400).json({ 
+        success: false, 
+        message: '不支持的操作' 
+      })
+    }
+
+    // PUT: 更新操作（处理申述等）
+    if (req.method === 'PUT') {
+      const { action } = req.body
+
+      if (action === 'unban-user') {
+        // 管理员解除封禁
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const { banId } = req.body
+
+        if (!banId) {
+          return res.status(400).json({ success: false, message: '封禁ID不能为空' })
+        }
+
+        const ban = await db.collection('user_bans').findOne({ _id: new ObjectId(banId) })
+        if (!ban) {
+          return res.status(404).json({ success: false, message: '封禁记录不存在' })
+        }
+
+        if (ban.status !== 'active') {
+          return res.status(400).json({ success: false, message: '封禁已解除' })
+        }
+
+        // 更新封禁状态
+        await db.collection('user_bans').updateOne(
+          { _id: new ObjectId(banId) },
+          { 
+            $set: { 
+              status: 'lifted',
+              liftedBy: new ObjectId(decoded.userId),
+              liftedAt: new Date(),
+              updatedAt: new Date()
+            } 
+          }
+        )
+
+        return res.status(200).json({
+          success: true,
+          message: '封禁解除成功'
+        })
+      }
+
+      if (action === 'process-appeal') {
+        // 管理员处理申述
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const { appealId, decision, adminReply } = req.body
+
+        if (!appealId || !decision) {
+          return res.status(400).json({ success: false, message: '申述ID和处理决定不能为空' })
+        }
+
+        if (!['approved', 'rejected'].includes(decision)) {
+          return res.status(400).json({ success: false, message: '处理决定只能是approved或rejected' })
+        }
+
+        const appeal = await db.collection('ban_appeals').findOne({ 
+          _id: new ObjectId(appealId),
+          status: 'pending'
+        })
+
+        if (!appeal) {
+          return res.status(404).json({ success: false, message: '申述记录不存在或已处理' })
+        }
+
+        // 更新申述状态
+        await db.collection('ban_appeals').updateOne(
+          { _id: new ObjectId(appealId) },
+          {
+            $set: {
+              status: decision,
+              processedAt: new Date(),
+              processedBy: new ObjectId(decoded.userId),
+              adminReply: adminReply ? adminReply.trim() : null
+            }
+          }
+        )
+
+        // 如果申述通过，自动解除封禁
+        if (decision === 'approved') {
+          await db.collection('user_bans').updateOne(
+            { _id: new ObjectId(appeal.banId) },
+            {
+              $set: {
+                status: 'lifted',
+                liftedBy: new ObjectId(decoded.userId),
+                liftedAt: new Date(),
+                updatedAt: new Date(),
+                liftReason: 'appeal_approved'
+              }
+            }
+          )
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: decision === 'approved' ? '申述通过，封禁已解除' : '申述已驳回'
+        })
       }
 
       return res.status(400).json({ 

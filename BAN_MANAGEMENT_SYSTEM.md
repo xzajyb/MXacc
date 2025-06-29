@@ -52,16 +52,15 @@
 
 ### 1. 后端API
 
-#### 封禁管理API (`/api/admin/ban-management`)
-- `GET ?action=bans` - 获取封禁列表
-- `GET ?action=appeals` - 获取申述列表  
-- `GET ?action=check` - 检查用户封禁状态
-- `GET ?action=my-appeals` - 获取用户申述记录
-- `POST action=ban` - 封禁用户
-- `POST action=appeal` - 提交申述
-- `PUT action=unban` - 解除封禁
-- `PUT action=handle-appeal` - 处理申述
-- `DELETE` - 删除封禁/申述记录
+#### 封禁管理API（已整合到 `/api/social/content`）
+- `GET ?action=ban-management&subAction=bans` - 获取封禁列表
+- `GET ?action=ban-management&subAction=appeals` - 获取申述列表  
+- `GET ?action=ban-management&subAction=check` - 检查用户封禁状态
+- `GET ?action=ban-management&subAction=my-appeals` - 获取用户申述记录
+- `POST action=ban-user` - 封禁用户
+- `POST action=submit-appeal` - 提交申述
+- `PUT action=unban-user` - 解除封禁
+- `PUT action=process-appeal` - 处理申述
 
 #### 封禁状态检查
 - 社交内容API：`/api/social/content` 
