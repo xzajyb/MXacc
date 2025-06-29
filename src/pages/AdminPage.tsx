@@ -4,6 +4,7 @@ import { useToast } from '../contexts/ToastContext'
 import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2 } from 'lucide-react'
 import axios from 'axios'
 import { motion } from 'framer-motion'
+import { createPortal } from 'react-dom'
 
 interface User {
   _id: string
@@ -107,6 +108,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [showAppealDialog, setShowAppealDialog] = useState(false)
   const [selectedAppeal, setSelectedAppeal] = useState<any>(null)
   const [appealResponse, setAppealResponse] = useState('')
+  const [sendNotificationToUser, setSendNotificationToUser] = useState(true)
 
   // 检查管理员权限
   if (!user || user.role !== 'admin') {
@@ -468,10 +470,37 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
         headers: { Authorization: `Bearer ${token}` }
       })
 
+      // 发送系统通知给用户（如果选择了）
+      if (sendNotificationToUser && selectedAppeal.userId) {
+        try {
+          const notificationPayload = {
+            action: 'create',
+            title: approved ? '申述结果：申述已通过' : '申述结果：申述已驳回',
+            content: approved 
+              ? `您的申述已通过，封禁已解除。${appealResponse.trim() ? '\n\n管理员回复：' + appealResponse.trim() : ''}`
+              : `您的申述已被驳回。${appealResponse.trim() ? '\n\n管理员回复：' + appealResponse.trim() : ''}`,
+            type: approved ? 'success' : 'info',
+            priority: 'high',
+            autoRead: false,
+            targetUserId: selectedAppeal.userId
+          }
+
+          await axios.post('/api/admin/system-messages', notificationPayload, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          console.log('申述结果通知已发送给用户')
+        } catch (notificationError) {
+          console.error('发送通知失败:', notificationError)
+          // 不阻断主流程，只是记录错误
+        }
+      }
+
       showToast(approved ? '申述已通过，封禁已解除' : '申述已驳回', 'success')
       setShowAppealDialog(false)
       setSelectedAppeal(null)
       setAppealResponse('')
+      setSendNotificationToUser(true) // 重置为默认值
       loadAppealsList()
       loadBanList()
     } catch (error: any) {
@@ -1920,7 +1949,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                   )}
                                   
                                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    申述时间: {new Date(appeal.createdAt).toLocaleString('zh-CN')}
+                                    申述时间: {new Date(appeal.submittedAt || appeal.createdAt).toLocaleString('zh-CN')}
                                   </div>
                                   
                                   {appeal.adminResponse && (
@@ -1957,9 +1986,20 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
         </div>
 
         {/* 申述处理对话框 */}
-        {showAppealDialog && selectedAppeal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
+        {showAppealDialog && selectedAppeal && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => {
+              setShowAppealDialog(false)
+              setSelectedAppeal(null)
+              setAppealResponse('')
+              setSendNotificationToUser(true)
+            }}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6 border-b border-gray-200 dark:border-gray-600">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -1986,7 +2026,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                     {selectedAppeal.details && (
                       <p><span className="font-medium">详细说明：</span>{selectedAppeal.details}</p>
                     )}
-                    <p><span className="font-medium">申述时间：</span>{new Date(selectedAppeal.createdAt).toLocaleString('zh-CN')}</p>
+                    <p><span className="font-medium">申述时间：</span>{new Date(selectedAppeal.submittedAt || selectedAppeal.createdAt).toLocaleString('zh-CN')}</p>
                   </div>
                 </div>
 
@@ -2016,6 +2056,24 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                   />
                 </div>
 
+                {/* 系统通知选项 */}
+                <div>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={sendNotificationToUser}
+                      onChange={(e) => setSendNotificationToUser(e.target.checked)}
+                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      发送处理结果通知给用户
+                    </span>
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    选中后将向用户发送系统通知，告知申述处理结果
+                  </p>
+                </div>
+
                 <div className="flex space-x-3">
                   <button
                     onClick={() => handleAppeal(true)}
@@ -2032,7 +2090,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 </div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* 模板预览模态框 */}
