@@ -162,8 +162,34 @@ const PromoPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      {/* 顶部导航 */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Shield className="w-8 h-8 text-blue-600 mr-3" />
+              <span className="text-xl font-bold text-gray-900 dark:text-white">梦锡工作室</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/login')}
+                className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 px-4 py-2 rounded-lg transition-colors"
+              >
+                登录
+              </button>
+              <button
+                onClick={() => navigate('/register')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                注册
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       {/* 英雄区域 */}
-      <div className="relative h-screen overflow-hidden">
+      <div className="relative h-screen overflow-hidden pt-16">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
