@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Shield,
   Lock,
-  MoreHorizontal
+  MoreHorizontal,
+  RefreshCw
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -205,7 +206,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         const conversations = data.data.conversations
         const totalUnread = conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
         console.log('📊 fetchUnreadCount: 会话数量=', conversations.length, '总未读数=', totalUnread)
+        console.log('📊 fetchUnreadCount: 每个会话的未读数=', conversations.map((c: any) => ({ id: c.id, nickname: c.otherUser.nickname, unreadCount: c.unreadCount })))
+        console.log('📊 fetchUnreadCount: 即将设置未读计数为', totalUnread)
         setUnreadCount(totalUnread)
+        
+        // 通知父组件未读计数变化
+        if (onUnreadCountChange) {
+          onUnreadCountChange(totalUnread)
+        }
       } else {
         console.log('📊 fetchUnreadCount: API响应失败，状态码=', response.status)
       }
@@ -979,7 +987,15 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         setConversations(data.data.conversations)
         // 计算未读消息数
         const unread = data.data.conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
+        console.log('📊 fetchConversations: 会话数量=', data.data.conversations.length, '总未读数=', unread)
+        console.log('📊 fetchConversations: 每个会话的未读数=', data.data.conversations.map((c: any) => ({ id: c.id, nickname: c.otherUser.nickname, unreadCount: c.unreadCount })))
+        console.log('📊 fetchConversations: 即将设置未读计数为', unread)
         setUnreadCount(unread)
+        
+        // 通知父组件未读计数变化
+        if (onUnreadCountChange) {
+          onUnreadCountChange(unread)
+        }
       }
     } catch (error) {
       console.error('获取会话列表失败:', error)
@@ -1172,10 +1188,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               }
               setActiveTab('messages')
               if (conversations.length === 0) {
-                fetchConversations()
+                // 如果没有会话数据，调用fetchConversations（它会同时更新未读计数）
+                await fetchConversations()
+              } else {
+                // 如果已有会话数据，只更新未读计数
+                await fetchUnreadCount()
               }
-              // 切换到私信选项卡时立即更新未读计数
-              await fetchUnreadCount()
             }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
                 !isSocialFeatureEnabled 
@@ -1194,6 +1212,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
+              {/* 调试：显示当前未读计数 */}
+              <span className="absolute top-0 right-0 bg-gray-500 text-white text-xs px-1 rounded" style={{fontSize: '10px', transform: 'translate(100%, -50%)'}}>
+                {unreadCount}
+              </span>
             </button>
           </div>
 
@@ -1373,7 +1395,19 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
           {activeTab === 'messages' ? (
             // 私信内容
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">我的私信</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">我的私信</h3>
+                <button
+                  onClick={async () => {
+                    console.log('🔄 手动刷新未读计数')
+                    await fetchUnreadCount()
+                  }}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="刷新未读计数"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              </div>
               {conversationsLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
