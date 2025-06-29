@@ -1997,6 +1997,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                     </p>
                                   )}
                                   
+                                  {appeal.images && appeal.images.length > 0 && (
+                                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                      <span className="font-medium">申述图片：</span>
+                                      <span className="inline-flex items-center ml-1 px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-xs">
+                                        {appeal.images.length} 张图片
+                                      </span>
+                                    </div>
+                                  )}
+                                  
                                   <div className="text-xs text-gray-500 dark:text-gray-400">
                                     申述时间: {new Date(appeal.submittedAt || appeal.createdAt).toLocaleString('zh-CN')}
                                   </div>
@@ -2074,6 +2083,22 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                     <p><span className="font-medium">申述原因：</span>{selectedAppeal.reason}</p>
                     {selectedAppeal.details && (
                       <p><span className="font-medium">详细说明：</span>{selectedAppeal.details}</p>
+                    )}
+                    {selectedAppeal.images && selectedAppeal.images.length > 0 && (
+                      <div>
+                        <p className="font-medium mb-2">申述图片：</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {selectedAppeal.images.map((image: string, index: number) => (
+                            <img
+                              key={index}
+                              src={image}
+                              alt={`申述图片 ${index + 1}`}
+                              className="w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => window.open(image, '_blank')}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     )}
                     <p><span className="font-medium">申述时间：</span>{new Date(selectedAppeal.submittedAt || selectedAppeal.createdAt).toLocaleString('zh-CN')}</p>
                   </div>

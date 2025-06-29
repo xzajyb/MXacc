@@ -836,7 +836,7 @@ module.exports = async function handler(req, res) {
 
       if (action === 'submit-appeal') {
         // 用户提交申述
-        const { banId, reason, description } = body
+        const { banId, reason, description, images } = body
 
         if (!banId || !reason) {
           return res.status(400).json({ success: false, message: '封禁ID和申述原因不能为空' })
@@ -864,12 +864,34 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ success: false, message: '已有待处理的申述，请勿重复提交' })
         }
 
+        // 验证图片数据
+        let validImages = []
+        if (images && Array.isArray(images)) {
+          // 限制最多3张图片
+          if (images.length > 3) {
+            return res.status(400).json({ success: false, message: '最多只能上传3张图片' })
+          }
+          
+          validImages = images.filter(img => {
+            if (typeof img === 'string' && img.startsWith('data:image/')) {
+              // 检查图片大小（base64编码后约为原始大小的1.33倍）
+              const sizeInBytes = (img.length * 3) / 4
+              if (sizeInBytes > 5 * 1024 * 1024) { // 5MB限制
+                return false
+              }
+              return true
+            }
+            return false
+          })
+        }
+
         // 创建申述记录
         const appealData = {
           banId: new ObjectId(banId),
           userId: new ObjectId(decoded.userId),
           reason: reason.trim(),
           description: description ? description.trim() : null,
+          images: validImages, // 存储图片的base64数据
           status: 'pending',
           submittedAt: new Date(),
           createdAt: new Date(), // 添加createdAt字段保持一致性

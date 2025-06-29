@@ -26,7 +26,8 @@ import {
   Shield,
   Lock,
   MoreHorizontal,
-  Clock
+  Clock,
+  Upload
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -176,6 +177,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   const [appealHistory, setAppealHistory] = useState<any[]>([])
   const [loadingAppealHistory, setLoadingAppealHistory] = useState(false)
   const [currentAppeal, setCurrentAppeal] = useState<any>(null)
+  const [appealImages, setAppealImages] = useState<File[]>([])
+  const [appealImagePreviews, setAppealImagePreviews] = useState<string[]>([])
   
   // 邮箱验证状态检查
   const isEmailVerified = user?.isEmailVerified || false
@@ -288,6 +291,48 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     }
   }
 
+  // 申述图片选择处理
+  const handleAppealImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    
+    // 限制最多3张图片
+    if (appealImages.length + files.length > 3) {
+      showError('最多只能上传3张图片')
+      return
+    }
+    
+    // 验证文件类型和大小
+    const validFiles = files.filter(file => {
+      if (!file.type.startsWith('image/')) {
+        showError(`文件 ${file.name} 不是有效的图片格式`)
+        return false
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB限制
+        showError(`文件 ${file.name} 超过5MB大小限制`)
+        return false
+      }
+      return true
+    })
+    
+    // 读取图片并生成预览
+    validFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setAppealImagePreviews(prev => [...prev, result])
+      }
+      reader.readAsDataURL(file)
+    })
+    
+    setAppealImages(prev => [...prev, ...validFiles])
+  }
+
+  // 移除申述图片
+  const removeAppealImage = (index: number) => {
+    setAppealImages(prev => prev.filter((_, i) => i !== index))
+    setAppealImagePreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
   // 提交申述
   const handleSubmitAppeal = async () => {
     if (!appealReason.trim()) {
@@ -307,7 +352,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         action: 'submit-appeal',
         banId: userBan.banId,
         reason: appealReason.trim(),
-        description: appealDescription.trim()
+        description: appealDescription.trim(),
+        images: appealImagePreviews // 发送base64图片数据
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -315,6 +361,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       showSuccess('申述已提交，我们会尽快处理，请查看系统通知获取更新')
       setAppealReason('')
       setAppealDescription('')
+      setAppealImages([])
+      setAppealImagePreviews([])
       
       // 重新获取申述历史
       await fetchAppealHistory()
@@ -330,6 +378,15 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   const handleOpenAppealModal = () => {
     setShowAppealModal(true)
     fetchAppealHistory()
+  }
+
+  // 关闭申述弹窗时清理状态
+  const handleCloseAppealModal = () => {
+    setShowAppealModal(false)
+    setAppealReason('')
+    setAppealDescription('')
+    setAppealImages([])
+    setAppealImagePreviews([])
   }
 
   // 获取未读消息数量
@@ -2349,7 +2406,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       {showAppealModal && createPortal(
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
-          onClick={() => setShowAppealModal(false)}
+          onClick={handleCloseAppealModal}
         >
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {/* 头部 */}
@@ -2360,7 +2417,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                   <h2 className="text-xl font-bold">申述封禁</h2>
                 </div>
                 <button
-                  onClick={() => setShowAppealModal(false)}
+                  onClick={handleCloseAppealModal}
                   className="text-blue-100 hover:text-white transition-colors"
                 >
                   <X className="w-6 h-6" />
@@ -2430,6 +2487,22 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                             <p className="text-gray-900 dark:text-white mt-1">{currentAppeal.description}</p>
                           </div>
                         )}
+                        {currentAppeal.images && currentAppeal.images.length > 0 && (
+                          <div>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">申述图片：</span>
+                            <div className="grid grid-cols-3 gap-2 mt-2">
+                              {currentAppeal.images.map((image: string, index: number) => (
+                                <img
+                                  key={index}
+                                  src={image}
+                                  alt={`申述图片 ${index + 1}`}
+                                  className="w-full h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => openImageModal(image)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div>
                           <span className="font-medium text-gray-700 dark:text-gray-300">提交时间：</span>
                           <span className="text-gray-900 dark:text-white">{new Date(currentAppeal.submittedAt || currentAppeal.createdAt).toLocaleString('zh-CN')}</span>
@@ -2474,6 +2547,62 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                         />
                       </div>
 
+                      {/* 申述图片上传 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          证据图片（可选，最多3张）
+                        </label>
+                        <div className="space-y-3">
+                          {/* 图片上传按钮 */}
+                          {appealImages.length < 3 && (
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleAppealImageSelect}
+                                className="hidden"
+                              />
+                              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
+                                <div className="flex items-center justify-center space-x-2 text-gray-500 dark:text-gray-400">
+                                  <Upload className="w-5 h-5" />
+                                  <span className="text-sm">
+                                    点击上传图片证据（{appealImages.length}/3）
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-400 text-center mt-1">
+                                  支持 JPG、PNG 格式，单个文件不超过5MB
+                                </p>
+                              </div>
+                            </label>
+                          )}
+
+                          {/* 图片预览 */}
+                          {appealImagePreviews.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2">
+                              {appealImagePreviews.map((preview, index) => (
+                                <div key={index} className="relative group">
+                                  <img
+                                    src={preview}
+                                    alt={`申述图片 ${index + 1}`}
+                                    className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                                  />
+                                  <button
+                                    onClick={() => removeAppealImage(index)}
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          可以上传聊天截图、相关证据等图片来支持您的申述
+                        </p>
+                      </div>
+
                       <div className="flex space-x-3">
                         <button
                           onClick={handleSubmitAppeal}
@@ -2493,7 +2622,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                           )}
                         </button>
                         <button
-                          onClick={() => setShowAppealModal(false)}
+                          onClick={handleCloseAppealModal}
                           className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           取消
@@ -2536,6 +2665,22 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                 <div>
                                   <span className="font-medium text-gray-600 dark:text-gray-300">详细说明：</span>
                                   <p className="text-gray-900 dark:text-white">{appeal.description}</p>
+                                </div>
+                              )}
+                              {appeal.images && appeal.images.length > 0 && (
+                                <div>
+                                  <span className="font-medium text-gray-600 dark:text-gray-300">申述图片：</span>
+                                  <div className="grid grid-cols-3 gap-2 mt-2">
+                                    {appeal.images.map((image: string, index: number) => (
+                                      <img
+                                        key={index}
+                                        src={image}
+                                        alt={`申述图片 ${index + 1}`}
+                                        className="w-full h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                        onClick={() => openImageModal(image)}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
                               )}
                                                     <div>
