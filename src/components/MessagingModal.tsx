@@ -332,6 +332,9 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   // 撤回消息
   const recallMessage = async (messageId: string) => {
     try {
+      // 先显示撤回中的提示
+      showSuccess('正在撤回消息...')
+      
       const response = await fetch('/api/social/messaging', {
         method: 'DELETE',
         headers: {
@@ -346,7 +349,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
 
       const data = await response.json()
       if (data.success) {
-        showSuccess('消息已撤回')
+        showSuccess('✅ 消息撤回成功！已从聊天记录中移除')
         // 刷新消息列表 - 不显示加载动画
         if (targetUser) {
           await fetchMessages(undefined, targetUser.id, false)
@@ -354,11 +357,11 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
           await fetchMessages(selectedConversation.id, undefined, false)
         }
       } else {
-        showError(data.message || '撤回失败')
+        showError(data.message || '❌ 撤回失败，请稍后重试')
       }
     } catch (error) {
       console.error('撤回消息失败:', error)
-      showError('撤回失败')
+      showError('❌ 网络错误，撤回失败')
     }
   }
 
