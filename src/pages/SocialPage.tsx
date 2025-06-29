@@ -11,6 +11,7 @@ import {
   Share,
   Search,
   Send,
+  MessageSquare,
   UserPlus,
   UserMinus,
   Trash2,
@@ -165,7 +166,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   
   // 封禁状态
   const [userBan, setUserBan] = useState<any>(null)
-  const [checkingBanStatus, setCheckingBanStatus] = useState(true)
+  
+  // 申述相关状态
+  const [showAppealModal, setShowAppealModal] = useState(false)
+  const [appealReason, setAppealReason] = useState('')
+  const [appealDescription, setAppealDescription] = useState('')
+  const [submittingAppeal, setSubmittingAppeal] = useState(false)
   
   // 邮箱验证状态检查
   const isEmailVerified = user?.isEmailVerified || false
@@ -197,10 +203,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     }
   }, [unreadCount, onUnreadCountChange])
 
-  // 初始化时检查封禁状态
+  // 静默检查封禁状态（不显示加载状态）
   useEffect(() => {
     if (user?.id) {
-      checkBanStatus()
+      checkBanStatusSilently()
     }
   }, [user?.id])
 
@@ -216,11 +222,10 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     }
   }, [isSocialFeatureEnabled])
 
-  // 检查用户封禁状态
-  const checkBanStatus = async () => {
+  // 静默检查用户封禁状态
+  const checkBanStatusSilently = async () => {
     if (!user?.id) return
     
-    setCheckingBanStatus(true)
     try {
       const token = localStorage.getItem('token')
       const response = await axios.get('/api/social/content?action=ban-management&subAction=check', {
@@ -243,8 +248,42 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     } catch (error) {
       console.error('检查封禁状态失败:', error)
       setUserBan(null)
+    }
+  }
+
+  // 提交申述
+  const handleSubmitAppeal = async () => {
+    if (!appealReason.trim()) {
+      showError('请填写申述原因')
+      return
+    }
+
+    if (!userBan?.banId) {
+      showError('封禁信息错误，无法提交申述')
+      return
+    }
+
+    setSubmittingAppeal(true)
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post('/api/social/content', {
+        action: 'submit-appeal',
+        banId: userBan.banId,
+        reason: appealReason.trim(),
+        description: appealDescription.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showSuccess('申述已提交，我们会尽快处理')
+      setShowAppealModal(false)
+      setAppealReason('')
+      setAppealDescription('')
+    } catch (error: any) {
+      console.error('提交申述失败:', error)
+      showError(error.response?.data?.message || '提交申述失败')
     } finally {
-      setCheckingBanStatus(false)
+      setSubmittingAppeal(false)
     }
   }
 
@@ -1200,23 +1239,6 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     ? "space-y-6" 
     : "min-h-screen bg-gray-50 dark:bg-gray-900 p-6"
 
-  // 如果用户被封禁，显示封禁通知
-  if (userBan) {
-    return <BanNotice ban={userBan} />
-  }
-
-  // 如果正在检查封禁状态，显示加载状态
-  if (checkingBanStatus) {
-    return (
-      <div className={containerClass}>
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">检查账户状态...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className={containerClass}>
       {/* 页面标题 */}
@@ -1233,6 +1255,37 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       )}
 
       <div className="max-w-4xl mx-auto">
+        {/* 封禁通知横幅 */}
+        {userBan && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-red-800 dark:text-red-200 font-semibold">账户已被封禁</h3>
+                  <p className="text-red-700 dark:text-red-300 text-sm mt-1">
+                    封禁原因：{userBan.reason}
+                  </p>
+                  {!userBan.isPermanent && userBan.expiresAt && (
+                    <p className="text-red-600 dark:text-red-400 text-sm">
+                      到期时间：{new Date(userBan.expiresAt).toLocaleString('zh-CN')}
+                    </p>
+                  )}
+                  {userBan.isPermanent && (
+                    <p className="text-red-600 dark:text-red-400 text-sm">永久封禁</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAppealModal(true)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                申述封禁
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 顶部导航和搜索 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
           {/* 标签导航 */}
@@ -2216,6 +2269,126 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
           </div>
         }
       />
+
+      {/* 申述模态框 */}
+      {showAppealModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full shadow-2xl">
+            {/* 头部 */}
+            <div className="bg-blue-600 text-white p-6 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <MessageSquare className="w-6 h-6" />
+                  <h2 className="text-xl font-bold">申述封禁</h2>
+                </div>
+                <button
+                  onClick={() => setShowAppealModal(false)}
+                  className="text-blue-100 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* 封禁信息 */}
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+                  <AlertCircle className="w-5 h-5 mr-2 text-red-600" />
+                  当前封禁信息
+                </h3>
+                <div className="space-y-1 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">封禁原因：</span>
+                    <span className="text-gray-900 dark:text-white">{userBan?.reason}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">封禁类型：</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      userBan?.isPermanent
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    }`}>
+                      {userBan?.isPermanent ? '永久封禁' : '临时封禁'}
+                    </span>
+                  </div>
+                  {!userBan?.isPermanent && userBan?.expiresAt && (
+                    <div>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">到期时间：</span>
+                      <span className="text-gray-900 dark:text-white">{new Date(userBan.expiresAt).toLocaleString('zh-CN')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 申述表单 */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    申述原因 *
+                  </label>
+                  <textarea
+                    value={appealReason}
+                    onChange={(e) => setAppealReason(e.target.value)}
+                    placeholder="请简要说明您认为封禁错误的原因..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    详细说明（可选）
+                  </label>
+                  <textarea
+                    value={appealDescription}
+                    onChange={(e) => setAppealDescription(e.target.value)}
+                    placeholder="可以提供更详细的说明、证据或其他相关信息..."
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleSubmitAppeal}
+                    disabled={submittingAppeal || !appealReason.trim()}
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    {submittingAppeal ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        提交中...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        提交申述
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowAppealModal(false)}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+
+              {/* 注意事项 */}
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                <h4 className="font-medium text-yellow-800 dark:text-yellow-400 mb-2">重要提醒</h4>
+                <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                  <li>• 请确保申述理由真实有效，虚假申述可能导致更严厉的处罚</li>
+                  <li>• 管理员会在收到申述后尽快处理，请耐心等待</li>
+                  <li>• 如果申述被驳回，您可以在处理结果后重新提交申述</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 图片查看模态框 */}
       {showImageModal && createPortal(
