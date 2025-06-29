@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { AlertTriangle, MessageSquare, Send, Clock, X } from 'lucide-react'
 import { useToast } from '../contexts/ToastContext'
 import axios from 'axios'
@@ -103,9 +104,12 @@ const BanNotice: React.FC<BanNoticeProps> = ({ ban, onClose }) => {
     loadMyAppeals()
   }, [])
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto shadow-2xl">
+  return createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-[99999] flex items-center justify-center p-4" style={{ margin: 0, padding: '1rem' }}>
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto shadow-2xl"
+        style={{ position: 'relative', zIndex: 1 }}
+      >
         {/* 头部 */}
         <div className="bg-red-600 text-white p-6 rounded-t-lg">
           <div className="flex items-center justify-between">
@@ -320,7 +324,8 @@ const BanNotice: React.FC<BanNoticeProps> = ({ ban, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
