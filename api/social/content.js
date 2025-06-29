@@ -101,32 +101,41 @@ module.exports = async function handler(req, res) {
       return res.status(401).json({ success: false, message: '用户不存在' })
     }
 
-    // 检查用户是否被封禁（只对写操作进行检查）
+    // 检查用户是否被封禁（只对写操作进行检查，但申述功能除外）
     if (req.method !== 'GET') {
-      console.log('🔍 检查用户封禁状态...')
-      const userBan = await checkUserBanStatus(db, decoded.userId)
+      // 检查是否是申述相关操作，申述功能不受封禁限制
+      const action = req.body?.action || req.query?.action
+      const isAppealAction = action === 'submit-appeal' || 
+        (action === 'ban-management' && (req.body?.subAction === 'submit-appeal' || req.query?.subAction === 'my-appeals'))
       
-      if (userBan) {
-        console.log('❌ 用户被封禁:', {
-          banId: userBan._id,
-          reason: userBan.reason,
-          expiresAt: userBan.expiresAt
-        })
+      if (!isAppealAction) {
+        console.log('🔍 检查用户封禁状态...')
+        const userBan = await checkUserBanStatus(db, decoded.userId)
         
-        const banInfo = {
-          reason: userBan.reason,
-          expiresAt: userBan.expiresAt,
-          isPermanent: !userBan.expiresAt,
-          banId: userBan._id.toString()
+        if (userBan) {
+          console.log('❌ 用户被封禁:', {
+            banId: userBan._id,
+            reason: userBan.reason,
+            expiresAt: userBan.expiresAt
+          })
+          
+          const banInfo = {
+            reason: userBan.reason,
+            expiresAt: userBan.expiresAt,
+            isPermanent: !userBan.expiresAt,
+            banId: userBan._id.toString()
+          }
+          
+          return res.status(403).json({ 
+            success: false, 
+            message: '您已被封禁，无法使用社交功能',
+            ban: banInfo
+          })
         }
-        
-        return res.status(403).json({ 
-          success: false, 
-          message: '您已被封禁，无法使用社交功能',
-          ban: banInfo
-        })
+        console.log('✅ 用户未被封禁')
+      } else {
+        console.log('⚖️ 申述操作，跳过封禁检查')
       }
-      console.log('✅ 用户未被封禁')
     }
 
     console.log('✅ 用户验证成功')
