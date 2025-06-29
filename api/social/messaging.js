@@ -32,6 +32,7 @@ async function getUserById(users, userId) {
         role: 1,
         isEmailVerified: 1,
         'security.emailVerified': 1,
+        settings: 1, // 添加settings字段以支持隐私检查
         createdAt: 1
       } 
     }
