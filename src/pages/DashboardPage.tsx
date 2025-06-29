@@ -33,7 +33,7 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
-import FluidGlass from '../components/FluidGlass/FluidGlass'
+import FluidGlass, { FluidGlassOverlay } from '../components/FluidGlass/FluidGlass'
 
 type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
@@ -448,24 +448,35 @@ const DashboardPage: React.FC = () => {
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto min-h-0">
             {navigationItems.map((item) => {
               const Icon = item.icon
+              const isActive = activeView === item.id
               return (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id as ActiveView)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors relative ${
-                    activeView === item.id
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-300 relative overflow-hidden ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 shadow-lg border border-blue-200/50 dark:border-blue-800/50'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
                   }`}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{item.label}</span>
-                  {/* 社交中心未读消息红点 */}
-                  {item.id === 'social' && socialUnreadCount > 0 && (
-                    <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {socialUnreadCount > 99 ? '99+' : socialUnreadCount}
-                    </span>
-                  )}
+                  {/* FluidGlass 覆盖层 - 只在选中状态显示 */}
+                  <FluidGlassOverlay 
+                    isActive={isActive} 
+                    className="opacity-60"
+                  />
+                  
+                  {/* 菜单内容 */}
+                  <div className="relative z-20 flex items-center space-x-3 w-full">
+                    <Icon size={20} />
+                    <span className="font-medium">{item.label}</span>
+                    
+                    {/* 社交中心未读消息红点 */}
+                    {item.id === 'social' && socialUnreadCount > 0 && (
+                      <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center z-30">
+                        {socialUnreadCount > 99 ? '99+' : socialUnreadCount}
+                      </span>
+                    )}
+                  </div>
                 </button>
               )
             })}
