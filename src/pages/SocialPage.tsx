@@ -391,6 +391,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               ? { ...post, commentsCount: newCommentsCount }
               : post
           ))
+          setMyPosts(prev => prev.map(post => 
+            post.id === postId 
+              ? { ...post, commentsCount: newCommentsCount }
+              : post
+          ))
 
           // 同时更新评论树结构，确保与服务器数据一致
           if (countData.data.comments) {
@@ -399,8 +404,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
           }
         }
         showSuccess('评论删除成功')
+      } else if (response.status === 404) {
+        // 404错误表示评论不存在，已经从界面删除了，不需要恢复
+        // 重新获取评论数据确保界面一致性
+        await fetchComments(postId)
+        showSuccess('评论已被删除（可能已在其他地方删除）')
       } else {
-        // 如果删除失败，恢复评论显示
+        // 其他错误，恢复评论显示
         await fetchComments(postId)
         const errorData = await response.json()
         throw new Error(errorData.message || '删除失败')
@@ -409,8 +419,9 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       console.error('删除评论失败:', error)
       showError(error.message || '删除失败')
       // 如果出错，重新获取评论确保数据一致性
+      // 但如果是404错误（评论不存在），则不需要恢复
       const postId = Object.keys(showComments).find(id => showComments[id])
-      if (postId) {
+      if (postId && !error.message?.includes('已被删除')) {
         await fetchComments(postId)
       }
     }
@@ -437,14 +448,26 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       
       if (response.ok) {
         if (type === 'post') {
+          // 成功删除，从页面移除
           setPosts(prev => prev.filter(post => post.id !== id))
+          setMyPosts(prev => prev.filter(post => post.id !== id))
           showSuccess('帖子删除成功')
         } else {
           // 删除评论 - 这个函数已被新的handleCommentDelete替代
           // 但为了兼容性保留简单逻辑
           showSuccess('评论删除成功')
         }
+      } else if (response.status === 404) {
+        // 404错误表示帖子/评论不存在，从页面移除
+        if (type === 'post') {
+          setPosts(prev => prev.filter(post => post.id !== id))
+          setMyPosts(prev => prev.filter(post => post.id !== id))
+          showSuccess('帖子已被删除（可能已在其他地方删除）')
+        } else {
+          showSuccess('评论已被删除（可能已在其他地方删除）')
+        }
       } else {
+        // 其他错误，显示错误信息但不删除
         const errorData = await response.json()
         throw new Error(errorData.message || '删除失败')
       }
