@@ -22,7 +22,8 @@ import {
   Calendar,
   X,
   AlertCircle,
-  Shield
+  Shield,
+  Lock
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -144,6 +145,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   
   // 私信列表加载状态
   const [conversationsLoading, setConversationsLoading] = useState(false)
+  
+  // 个人主页标签状态
+  const [profileTab, setProfileTab] = useState<'posts' | 'followers' | 'following'>('posts')
+  const [followers, setFollowers] = useState<User[]>([])
+  const [following, setFollowing] = useState<User[]>([])
+  const [followersLoading, setFollowersLoading] = useState(false)
+  const [followingLoading, setFollowingLoading] = useState(false)
+  const [myPrivacySettings, setMyPrivacySettings] = useState<any>(null)
   
   // 邮箱验证状态检查
   const isEmailVerified = user?.isEmailVerified || false
@@ -766,10 +775,78 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         const postsData = await postsResponse.json()
         setMyPosts(postsData.data.posts)
       }
+      
+      // 获取隐私设置
+      await fetchMyPrivacySettings()
     } catch (error) {
       console.error('获取个人资料失败:', error)
     } finally {
       setProfileLoading(false)
+    }
+  }
+
+  // 获取用户隐私设置
+  const fetchMyPrivacySettings = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/user-settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setMyPrivacySettings(data.data?.settings)
+      }
+    } catch (error) {
+      console.error('获取隐私设置失败:', error)
+    }
+  }
+
+  // 获取粉丝列表
+  const fetchFollowers = async () => {
+    if (!user?.id) return
+    
+    try {
+      setFollowersLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/content?action=followers&userId=${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setFollowers(data.data.followers)
+      } else {
+        console.error('获取粉丝列表失败')
+      }
+    } catch (error) {
+      console.error('获取粉丝列表失败:', error)
+    } finally {
+      setFollowersLoading(false)
+    }
+  }
+
+  // 获取关注列表
+  const fetchFollowing = async () => {
+    if (!user?.id) return
+    
+    try {
+      setFollowingLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/content?action=following&userId=${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setFollowing(data.data.following)
+      } else {
+        console.error('获取关注列表失败')
+      }
+    } catch (error) {
+      console.error('获取关注列表失败:', error)
+    } finally {
+      setFollowingLoading(false)
     }
   }
   
@@ -1303,16 +1380,69 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                   </div>
                 </div>
 
-                {/* 我的帖子 */}
+                {/* 标签导航 */}
+                <div className="border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex space-x-8 px-6">
+                    <button
+                      onClick={() => setProfileTab('posts')}
+                      className={`py-4 border-b-2 font-medium text-sm transition-colors ${
+                        profileTab === 'posts'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      帖子
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProfileTab('followers')
+                        if (followers.length === 0) {
+                          fetchFollowers()
+                        }
+                      }}
+                      className={`py-4 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                        profileTab === 'followers'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      <span>粉丝</span>
+                                             {myPrivacySettings?.showFollowers === false && (
+                         <div title="私有设置"><Lock className="w-4 h-4 text-orange-500" /></div>
+                       )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProfileTab('following')
+                        if (following.length === 0) {
+                          fetchFollowing()
+                        }
+                      }}
+                      className={`py-4 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                        profileTab === 'following'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      <span>关注</span>
+                                             {myPrivacySettings?.showFollowing === false && (
+                         <div title="私有设置"><Lock className="w-4 h-4 text-orange-500" /></div>
+                       )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 标签内容 */}
                 <div className="p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">我的帖子</h4>
-                  {myPosts.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500 dark:text-gray-400">暂无帖子</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {myPosts.map((post) => (
+                  {profileTab === 'posts' ? (
+                    // 我的帖子
+                    myPosts.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500 dark:text-gray-400">暂无帖子</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {myPosts.map((post) => (
                         <div key={post.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                           {/* 帖子头部 */}
                           <div className="flex items-center justify-between mb-3">
@@ -1401,7 +1531,111 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                         </div>
                       ))}
                     </div>
-                  )}
+                  )) : profileTab === 'followers' ? (
+                    // 粉丝列表
+                    followersLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">加载中...</p>
+                      </div>
+                    ) : followers.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500 dark:text-gray-400">暂无粉丝</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {followers.map((follower) => (
+                          <div key={follower.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleViewProfile(follower.id)}>
+                              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+                                {follower.avatar ? (
+                                  <img src={follower.avatar} alt={follower.nickname} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                    <span className="text-white font-bold">{follower.nickname.charAt(0).toUpperCase()}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-900 dark:text-white">{follower.nickname}</h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">@{follower.username}</p>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleMessage(follower)}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                              >
+                                私信
+                              </button>
+                              <button
+                                onClick={() => handleFollow(follower.id, follower.isFollowing)}
+                                className={`px-3 py-1 rounded-md font-medium transition-colors text-sm ${
+                                  follower.isFollowing
+                                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                }`}
+                              >
+                                {follower.isFollowing ? '取消关注' : '关注'}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : profileTab === 'following' ? (
+                    // 关注列表
+                    followingLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">加载中...</p>
+                      </div>
+                    ) : following.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500 dark:text-gray-400">暂无关注</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {following.map((followedUser) => (
+                          <div key={followedUser.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleViewProfile(followedUser.id)}>
+                              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+                                {followedUser.avatar ? (
+                                  <img src={followedUser.avatar} alt={followedUser.nickname} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                    <span className="text-white font-bold">{followedUser.nickname.charAt(0).toUpperCase()}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-900 dark:text-white">{followedUser.nickname}</h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">@{followedUser.username}</p>
+                              </div>
+                            </div>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleMessage(followedUser)}
+                                className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                              >
+                                私信
+                              </button>
+                              <button
+                                onClick={() => handleFollow(followedUser.id, followedUser.isFollowing)}
+                                className={`px-3 py-1 rounded-md font-medium transition-colors text-sm ${
+                                  followedUser.isFollowing
+                                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500'
+                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                }`}
+                              >
+                                {followedUser.isFollowing ? '取消关注' : '关注'}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  ) : null}
                 </div>
               </div>
             )

@@ -423,6 +423,24 @@ module.exports = async function handler(req, res) {
           bio: null,
           location: null,
           website: null
+        },
+        // 为新用户设置默认隐私设置 - 3个消息公开功能默认启用
+        settings: {
+          theme: 'auto',
+          notifications: {
+            email: true,
+            browser: true,
+            marketing: false
+          },
+          privacy: {
+            profileVisible: true,     // ✅ 个人资料默认公开
+            activityVisible: false,
+            allowDataCollection: true,
+            showFollowers: true,      // ✅ 粉丝列表默认公开
+            showFollowing: true       // ✅ 关注列表默认公开
+          },
+          language: 'zh-CN',
+          timezone: 'Asia/Shanghai'
         }
       }
 
