@@ -173,6 +173,23 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   // 检查社交功能可用性
   const isSocialFeatureEnabled = isEmailVerified && !userBan
   
+  // 统一处理封禁错误响应
+  const handleBanErrorResponse = async (errorData: any) => {
+    if (errorData.ban) {
+      // 直接使用响应中的封禁信息，格式化后设置
+      const banData = errorData.ban
+      const formattedBan = {
+        reason: banData.reason,
+        expiresAt: banData.expiresAt,
+        isPermanent: !banData.expiresAt || banData.durationType === 'permanent',
+        banId: banData._id || banData.banId || banData.id || 'unknown'
+      }
+      setUserBan(formattedBan)
+      return true
+    }
+    return false
+  }
+
   // 当未读消息数量变化时，通知外部组件
   useEffect(() => {
     if (onUnreadCountChange) {
@@ -206,12 +223,20 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     setCheckingBanStatus(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get('/api/admin/ban-management?action=check', {
+      const response = await axios.get('/api/social/content?action=ban-management&subAction=check', {
         headers: { Authorization: `Bearer ${token}` }
       })
       
       if (response.data.success && response.data.data.isBanned) {
-        setUserBan(response.data.data.ban)
+        const banData = response.data.data.ban
+        // 转换数据格式以匹配BanNotice组件期望的格式
+        const formattedBan = {
+          reason: banData.reason,
+          expiresAt: banData.expiresAt,
+          isPermanent: !banData.expiresAt || banData.durationType === 'permanent',
+          banId: banData._id || banData.banId || banData.id
+        }
+        setUserBan(formattedBan)
       } else {
         setUserBan(null)
       }
@@ -317,11 +342,19 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         showSuccess('帖子发布成功')
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.message || '发布失败')
+        // 检查是否是封禁错误
+        const isBanError = await handleBanErrorResponse(errorData)
+        if (isBanError) {
+          showError('您已被封禁，无法使用社交功能。请查看封禁详情。')
+        } else {
+          throw new Error(errorData.message || '发布失败')
+        }
       }
     } catch (error: any) {
       console.error('发布帖子失败:', error)
-      showError(error.message || '发布帖子失败')
+      if (!error.message?.includes('封禁')) {
+        showError(error.message || '发布帖子失败')
+      }
     } finally {
       setIsPosting(false)
     }
@@ -357,11 +390,20 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
             : post
         ))
       } else {
-        throw new Error('操作失败')
+        const errorData = await response.json()
+        // 检查是否是封禁错误
+        const isBanError = await handleBanErrorResponse(errorData)
+        if (isBanError) {
+          showError('您已被封禁，无法使用社交功能。请查看封禁详情。')
+        } else {
+          throw new Error(errorData.message || '操作失败')
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('点赞操作失败:', error)
-      showError('操作失败')
+      if (!error.message?.includes('封禁')) {
+        showError(error.message || '操作失败')
+      }
     }
   }
 
@@ -401,10 +443,21 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
             }))
           }))
         }
+      } else {
+        const errorData = await response.json()
+        // 检查是否是封禁错误
+        const isBanError = await handleBanErrorResponse(errorData)
+        if (isBanError) {
+          showError('您已被封禁，无法使用社交功能。请查看封禁详情。')
+        } else {
+          throw new Error(errorData.message || '操作失败')
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('评论点赞失败:', error)
-      showError('操作失败')
+      if (!error.message?.includes('封禁')) {
+        showError(error.message || '操作失败')
+      }
     }
   }
 
@@ -622,11 +675,19 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         showSuccess('评论发布成功')
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.message || '评论失败')
+        // 检查是否是封禁错误
+        const isBanError = await handleBanErrorResponse(errorData)
+        if (isBanError) {
+          showError('您已被封禁，无法使用社交功能。请查看封禁详情。')
+        } else {
+          throw new Error(errorData.message || '评论失败')
+        }
       }
     } catch (error: any) {
       console.error('发布评论失败:', error)
-      showError(error.message || '发布评论失败')
+      if (!error.message?.includes('封禁')) {
+        showError(error.message || '发布评论失败')
+      }
     }
   }
 
@@ -716,11 +777,20 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         showSuccess('回复发布成功')
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.message || '回复失败')
+        // 检查是否是封禁错误
+        const isBanError = await handleBanErrorResponse(errorData)
+        if (isBanError) {
+          showError('您已被封禁，无法使用社交功能。请查看封禁详情。')
+          return
+        } else {
+          throw new Error(errorData.message || '回复失败')
+        }
       }
     } catch (error: any) {
       console.error('发布回复失败:', error)
-      throw error
+      if (!error.message?.includes('封禁')) {
+        throw error
+      }
     }
   }
 
