@@ -149,6 +149,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         await fetchConversations()
         // 立即通知父组件未读计数已变化
         if (onUnreadCountChange) {
+          console.log('📱 MessagingModal: 调用 onUnreadCountChange (获取消息后)')
           onUnreadCountChange()
         }
       }
@@ -226,6 +227,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         // 刷新会话列表和未读计数
         await fetchConversations()
         if (onUnreadCountChange) {
+          console.log('📱 MessagingModal: 调用 onUnreadCountChange (发送消息后)')
           onUnreadCountChange()
         }
       } else {
@@ -372,6 +374,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         // 立即刷新会话列表和未读计数
         await fetchConversations()
         if (onUnreadCountChange) {
+          console.log('📱 MessagingModal: 调用 onUnreadCountChange (撤回消息后)')
           onUnreadCountChange()
         }
       } else {
@@ -547,6 +550,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                               setTimeout(async () => {
                                 await fetchConversations()
                                 if (onUnreadCountChange) {
+                                  console.log('📱 MessagingModal: 调用 onUnreadCountChange (选择会话后)')
                                   onUnreadCountChange()
                                 }
                               }, 50) // 减少延时到50ms，更及时

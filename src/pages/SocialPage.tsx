@@ -188,9 +188,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
   // 获取未读消息数量
   const fetchUnreadCount = async () => {
-    if (!isSocialFeatureEnabled) return
+    if (!isSocialFeatureEnabled) {
+      console.log('📊 fetchUnreadCount: 社交功能未启用，跳过')
+      return
+    }
 
     try {
+      console.log('📊 fetchUnreadCount: 开始获取未读计数')
       const token = localStorage.getItem('token')
       const response = await fetch('/api/social/messaging?action=conversations', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -198,12 +202,15 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       
       if (response.ok) {
         const data = await response.json()
-        const totalUnread = data.data.conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
-        console.log('未读计数更新:', totalUnread) // 添加调试日志
+        const conversations = data.data.conversations
+        const totalUnread = conversations.reduce((total: number, conv: any) => total + conv.unreadCount, 0)
+        console.log('📊 fetchUnreadCount: 会话数量=', conversations.length, '总未读数=', totalUnread)
         setUnreadCount(totalUnread)
+      } else {
+        console.log('📊 fetchUnreadCount: API响应失败，状态码=', response.status)
       }
     } catch (error) {
-      console.error('获取未读消息数量失败:', error)
+      console.error('📊 fetchUnreadCount: 获取未读消息数量失败:', error)
     }
   }
 
@@ -1010,8 +1017,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         // 从会话列表中移除
         setConversations(prev => prev.filter(conv => conv.id !== conversationToDelete.id))
         showSuccess('✅ 私信会话已删除，聊天记录已保留')
-        // 刷新未读计数
-        setTimeout(fetchUnreadCount, 100)
+        // 立即刷新未读计数
+        await fetchUnreadCount()
         // 关闭对话框
         setShowDeleteConversationDialog(false)
         setConversationToDelete(null)
@@ -1158,18 +1165,18 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               我的主页
             </button>
             <button
-              onClick={() => {
-                if (!isSocialFeatureEnabled) {
-                  showError('请先验证邮箱后再使用社交功能')
-                  return
-                }
-                setActiveTab('messages')
-                if (conversations.length === 0) {
-                  fetchConversations()
-                }
-                // 切换到私信选项卡时立即更新未读计数
-                setTimeout(fetchUnreadCount, 100)
-              }}
+                          onClick={async () => {
+              if (!isSocialFeatureEnabled) {
+                showError('请先验证邮箱后再使用社交功能')
+                return
+              }
+              setActiveTab('messages')
+              if (conversations.length === 0) {
+                fetchConversations()
+              }
+              // 切换到私信选项卡时立即更新未读计数
+              await fetchUnreadCount()
+            }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
                 !isSocialFeatureEnabled 
                   ? 'text-gray-400 cursor-not-allowed'
@@ -1388,22 +1395,24 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                       <div 
                         className="flex items-center space-x-3 flex-1 cursor-pointer"
                         onClick={() => {
-                          setTargetUser({
-                            id: conv.otherUser.id,
-                            username: conv.otherUser.username,
-                            nickname: conv.otherUser.nickname,
-                            avatar: conv.otherUser.avatar,
-                            bio: '',
-                            location: '',
-                            isFollowing: false,
-                            followersCount: 0,
-                            followingCount: 0,
-                            postsCount: 0,
-                            joinedAt: ''
-                          })
-                          setShowMessaging(true)
-                          // 打开私信对话时立即更新未读计数
-                          setTimeout(fetchUnreadCount, 200)
+                                            setTargetUser({
+                    id: conv.otherUser.id,
+                    username: conv.otherUser.username,
+                    nickname: conv.otherUser.nickname,
+                    avatar: conv.otherUser.avatar,
+                    bio: '',
+                    location: '',
+                    isFollowing: false,
+                    followersCount: 0,
+                    followingCount: 0,
+                    postsCount: 0,
+                    joinedAt: ''
+                  })
+                  setShowMessaging(true)
+                  // 打开私信对话后稍微延迟更新未读计数，给消息标记已读的时间
+                  setTimeout(async () => {
+                    await fetchUnreadCount()
+                  }, 100)
                         }}
                       >
                         <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
@@ -2023,17 +2032,17 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       </div>
 
       {/* 私信模态框 */}
-              <MessagingModal
-          isOpen={showMessaging}
-          targetUser={targetUser}
-          onClose={() => {
-            setShowMessaging(false)
-            setTargetUser(null)
-            // 关闭私信时刷新未读计数
-            setTimeout(fetchUnreadCount, 100)
-          }}
-          onUnreadCountChange={fetchUnreadCount}
-        />
+                    <MessagingModal
+        isOpen={showMessaging}
+        targetUser={targetUser}
+        onClose={async () => {
+          setShowMessaging(false)
+          setTargetUser(null)
+          // 关闭私信时立即刷新未读计数
+          await fetchUnreadCount()
+        }}
+        onUnreadCountChange={fetchUnreadCount}
+      />
 
       {/* 用户资料模态框 */}
       <UserProfile
