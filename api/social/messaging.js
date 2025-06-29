@@ -558,7 +558,7 @@ module.exports = async function handler(req, res) {
 
         const messagesWithSenders = await Promise.all(messagesList.map(async (message) => {
           // 检查是否为系统消息
-          if (message.isSystemMessage || message.senderId.toString() === '000000000000000000000000') {
+          if (message.isSystemMessage || message.senderId === 'SYSTEM') {
             return {
               id: message._id,
               content: message.content,
@@ -889,7 +889,7 @@ module.exports = async function handler(req, res) {
         // 发送撤回通知消息
         const recallNotificationMessage = {
           conversationId: message.conversationId,
-          senderId: new ObjectId('000000000000000000000000'), // 使用特殊ID表示系统消息
+          senderId: 'SYSTEM', // 使用字符串标识系统消息
           recipientId: recipientId,
           content: `${recaller.profile?.nickname || recaller.username} 撤回了一条消息`,
           isSystemMessage: true, // 标记为系统消息

@@ -331,7 +331,8 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   }
 
   // 检查消息是否可以撤回（3分钟内）
-  const canRecallMessage = (createdAt: string, senderId: string) => {
+  const canRecallMessage = (createdAt: string, senderId: string, isSystemMessage?: boolean) => {
+    if (isSystemMessage || senderId === 'SYSTEM') return false // 系统消息不能撤回
     if (senderId !== user?.id) return false
     const messageTime = new Date(createdAt).getTime()
     const now = new Date().getTime()
@@ -683,7 +684,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                                       </div>
                                       
                                       {/* 撤回按钮 */}
-                                      {canRecallMessage(message.createdAt, message.senderId) && (
+                                      {canRecallMessage(message.createdAt, message.senderId, message.isSystemMessage) && (
                                         <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
                                           <button
                                             onClick={() => recallMessage(message.id)}
