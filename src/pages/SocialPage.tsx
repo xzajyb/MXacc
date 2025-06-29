@@ -25,7 +25,8 @@ import {
   AlertCircle,
   Shield,
   Lock,
-  MoreHorizontal
+  MoreHorizontal,
+  Clock
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -172,6 +173,9 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   const [appealReason, setAppealReason] = useState('')
   const [appealDescription, setAppealDescription] = useState('')
   const [submittingAppeal, setSubmittingAppeal] = useState(false)
+  const [appealHistory, setAppealHistory] = useState<any[]>([])
+  const [loadingAppealHistory, setLoadingAppealHistory] = useState(false)
+  const [currentAppeal, setCurrentAppeal] = useState<any>(null)
   
   // 邮箱验证状态检查
   const isEmailVerified = user?.isEmailVerified || false
@@ -251,6 +255,34 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     }
   }
 
+  // 获取申述历史
+  const fetchAppealHistory = async () => {
+    if (!userBan?.banId) return
+    
+    setLoadingAppealHistory(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get('/api/social/content?action=ban-management&subAction=my-appeals', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (response.data.success) {
+        const appeals = response.data.data.appeals || []
+        setAppealHistory(appeals)
+        
+        // 查找当前待处理的申述
+        const pendingAppeal = appeals.find((appeal: any) => 
+          appeal.banId === userBan.banId && appeal.status === 'pending'
+        )
+        setCurrentAppeal(pendingAppeal || null)
+      }
+    } catch (error) {
+      console.error('获取申述历史失败:', error)
+    } finally {
+      setLoadingAppealHistory(false)
+    }
+  }
+
   // 提交申述
   const handleSubmitAppeal = async () => {
     if (!appealReason.trim()) {
@@ -276,15 +308,23 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       })
 
       showSuccess('申述已提交，我们会尽快处理')
-      setShowAppealModal(false)
       setAppealReason('')
       setAppealDescription('')
+      
+      // 重新获取申述历史
+      await fetchAppealHistory()
     } catch (error: any) {
       console.error('提交申述失败:', error)
       showError(error.response?.data?.message || '提交申述失败')
     } finally {
       setSubmittingAppeal(false)
     }
+  }
+
+  // 打开申述弹窗时获取申述历史
+  const handleOpenAppealModal = () => {
+    setShowAppealModal(true)
+    fetchAppealHistory()
   }
 
   // 获取未读消息数量
@@ -1307,7 +1347,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                 </div>
               </div>
               <button
-                onClick={() => setShowAppealModal(true)}
+                onClick={handleOpenAppealModal}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
               >
                 申述封禁
@@ -2323,101 +2363,211 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              {/* 封禁信息 */}
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
-                  <AlertCircle className="w-5 h-5 mr-2 text-red-600" />
-                  当前封禁信息
-                </h3>
-                <div className="space-y-1 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">封禁原因：</span>
-                    <span className="text-gray-900 dark:text-white">{userBan?.reason}</span>
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {loadingAppealHistory ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">加载申述信息...</p>
+                </div>
+              ) : (
+                <>
+                  {/* 封禁信息 */}
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
+                      <AlertCircle className="w-5 h-5 mr-2 text-red-600" />
+                      当前封禁信息
+                    </h3>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">封禁原因：</span>
+                        <span className="text-gray-900 dark:text-white">{userBan?.reason}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">封禁类型：</span>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          userBan?.isPermanent
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {userBan?.isPermanent ? '永久封禁' : '临时封禁'}
+                        </span>
+                      </div>
+                      {!userBan?.isPermanent && userBan?.expiresAt && (
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">到期时间：</span>
+                          <span className="text-gray-900 dark:text-white">{new Date(userBan.expiresAt).toLocaleString('zh-CN')}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-700 dark:text-gray-300">封禁类型：</span>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      userBan?.isPermanent
-                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    }`}>
-                      {userBan?.isPermanent ? '永久封禁' : '临时封禁'}
-                    </span>
-                  </div>
-                  {!userBan?.isPermanent && userBan?.expiresAt && (
-                    <div>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">到期时间：</span>
-                      <span className="text-gray-900 dark:text-white">{new Date(userBan.expiresAt).toLocaleString('zh-CN')}</span>
+
+                  {/* 当前申述状态 */}
+                  {currentAppeal ? (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                        <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
+                        当前申述状态
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">申述状态：</span>
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 rounded text-xs font-medium">
+                            待处理
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">申述原因：</span>
+                          <span className="text-gray-900 dark:text-white">{currentAppeal.reason}</span>
+                        </div>
+                        {currentAppeal.description && (
+                          <div>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">详细说明：</span>
+                            <p className="text-gray-900 dark:text-white mt-1">{currentAppeal.description}</p>
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">提交时间：</span>
+                          <span className="text-gray-900 dark:text-white">{new Date(currentAppeal.submittedAt).toLocaleString('zh-CN')}</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                          您的申述已提交，管理员正在处理中。在处理完成前，您无法提交新的申述。
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* 申述表单 */
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                        <Send className="w-5 h-5 mr-2 text-green-600" />
+                        提交新申述
+                      </h3>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          申述原因 *
+                        </label>
+                        <textarea
+                          value={appealReason}
+                          onChange={(e) => setAppealReason(e.target.value)}
+                          placeholder="请简要说明您认为封禁错误的原因..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          详细说明（可选）
+                        </label>
+                        <textarea
+                          value={appealDescription}
+                          onChange={(e) => setAppealDescription(e.target.value)}
+                          placeholder="可以提供更详细的说明、证据或其他相关信息..."
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={handleSubmitAppeal}
+                          disabled={submittingAppeal || !appealReason.trim()}
+                          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        >
+                          {submittingAppeal ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              提交中...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-2" />
+                              提交申述
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowAppealModal(false)}
+                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          取消
+                        </button>
+                      </div>
                     </div>
                   )}
-                </div>
-              </div>
 
-              {/* 申述表单 */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    申述原因 *
-                  </label>
-                  <textarea
-                    value={appealReason}
-                    onChange={(e) => setAppealReason(e.target.value)}
-                    placeholder="请简要说明您认为封禁错误的原因..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                  {/* 申述历史 */}
+                  {appealHistory.length > 0 && (
+                    <div className="border-t border-gray-200 dark:border-gray-600 pt-6">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <Clock className="w-5 h-5 mr-2 text-gray-600" />
+                        申述历史
+                      </h3>
+                      <div className="space-y-4 max-h-60 overflow-y-auto">
+                        {appealHistory.map((appeal: any) => (
+                          <div key={appeal._id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                申述 #{appeal._id.slice(-6)}
+                              </span>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                appeal.status === 'pending'
+                                  ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                                  : appeal.status === 'approved'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                {appeal.status === 'pending' ? '待处理' : 
+                                 appeal.status === 'approved' ? '已通过' : '已驳回'}
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              <div>
+                                <span className="font-medium text-gray-600 dark:text-gray-300">申述原因：</span>
+                                <span className="text-gray-900 dark:text-white">{appeal.reason}</span>
+                              </div>
+                              {appeal.description && (
+                                <div>
+                                  <span className="font-medium text-gray-600 dark:text-gray-300">详细说明：</span>
+                                  <p className="text-gray-900 dark:text-white">{appeal.description}</p>
+                                </div>
+                              )}
+                              <div>
+                                <span className="font-medium text-gray-600 dark:text-gray-300">提交时间：</span>
+                                <span className="text-gray-900 dark:text-white">{new Date(appeal.submittedAt).toLocaleString('zh-CN')}</span>
+                              </div>
+                              {appeal.processedAt && (
+                                <div>
+                                  <span className="font-medium text-gray-600 dark:text-gray-300">处理时间：</span>
+                                  <span className="text-gray-900 dark:text-white">{new Date(appeal.processedAt).toLocaleString('zh-CN')}</span>
+                                </div>
+                              )}
+                              {appeal.adminReply && (
+                                <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded">
+                                  <span className="font-medium text-blue-800 dark:text-blue-200">管理员回复：</span>
+                                  <p className="text-blue-900 dark:text-blue-100 mt-1">{appeal.adminReply}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    详细说明（可选）
-                  </label>
-                  <textarea
-                    value={appealDescription}
-                    onChange={(e) => setAppealDescription(e.target.value)}
-                    placeholder="可以提供更详细的说明、证据或其他相关信息..."
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleSubmitAppeal}
-                    disabled={submittingAppeal || !appealReason.trim()}
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    {submittingAppeal ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        提交中...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        提交申述
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setShowAppealModal(false)}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-
-              {/* 注意事项 */}
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
-                <h4 className="font-medium text-yellow-800 dark:text-yellow-400 mb-2">重要提醒</h4>
-                <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
-                  <li>• 请确保申述理由真实有效，虚假申述可能导致更严厉的处罚</li>
-                  <li>• 管理员会在收到申述后尽快处理，请耐心等待</li>
-                  <li>• 如果申述被驳回，您可以在处理结果后重新提交申述</li>
-                </ul>
-              </div>
+                  {/* 注意事项 */}
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                    <h4 className="font-medium text-yellow-800 dark:text-yellow-400 mb-2">重要提醒</h4>
+                    <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                      <li>• 请确保申述理由真实有效，虚假申述可能导致更严厉的处罚</li>
+                      <li>• 管理员会在收到申述后尽快处理，请耐心等待</li>
+                      <li>• 如果申述被驳回，您可以在处理结果后重新提交申述</li>
+                      <li>• 每次只能有一个待处理的申述</li>
+                    </ul>
+                  </div>
+                </>
+              )}
                          </div>
            </div>
          </div>,
