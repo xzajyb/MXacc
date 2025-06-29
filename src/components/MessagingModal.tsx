@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, User, RotateCcw } from 'lucide-react'
+import { X, Send, User, RotateCcw, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 
@@ -51,6 +51,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [sendingMessage, setSendingMessage] = useState(false)
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // 滚动到最新消息
@@ -261,8 +262,26 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       setSelectedConversation(null)
       setHasInitiallyLoaded(false)
       setMessagesLoading(false)
+      setShowMoreMenu(false)
     }
   }, [isOpen])
+
+  // 点击外部关闭更多菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMoreMenu) {
+        setShowMoreMenu(false)
+      }
+    }
+
+    if (showMoreMenu) {
+      document.addEventListener('click', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showMoreMenu])
 
   // 格式化时间 - 智能显示
   const formatTime = (dateString: string) => {
@@ -340,6 +359,68 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     } catch (error) {
       console.error('撤回消息失败:', error)
       showError('撤回失败')
+    }
+  }
+
+  // 删除聊天记录
+  const deleteChatHistory = async () => {
+    const nickname = targetUser?.nickname || selectedConversation?.otherUser.nickname
+    
+    if (!confirm(`确定要删除与 ${nickname} 的聊天记录吗？\n\n此操作只会删除您这边的聊天记录，不会影响对方的记录。删除后无法恢复。`)) return
+    
+    try {
+      let conversationId: string | undefined
+      
+      if (selectedConversation) {
+        // 通过会话列表打开的聊天
+        conversationId = selectedConversation.id
+      } else if (targetUser) {
+        // 通过主页私信打开的聊天，需要先查找或创建会话
+        const response = await fetch(`/api/social/messaging?otherUserId=${targetUser.id}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          conversationId = data.data.conversationId
+        } else {
+          showError('无法获取会话信息')
+          return
+        }
+      }
+
+      if (!conversationId) {
+        showError('暂无聊天记录可删除')
+        return
+      }
+
+      const deleteResponse = await fetch('/api/social/messaging', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'delete-chat-history',
+          conversationId
+        })
+      })
+      
+      if (deleteResponse.ok) {
+        showSuccess('聊天记录已删除')
+        // 清空消息列表
+        setMessages([])
+        // 刷新会话列表
+        await fetchConversations()
+        // 关闭更多菜单
+        setShowMoreMenu(false)
+      } else {
+        const errorData = await deleteResponse.json()
+        throw new Error(errorData.message || '删除失败')
+      }
+    } catch (error: any) {
+      console.error('删除聊天记录失败:', error)
+      showError(error.message || '删除聊天记录失败')
     }
   }
 
@@ -478,25 +559,51 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                     <>
                       {/* 消息头部 */}
                       <div className="p-4 border-b border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
-                            {(targetUser?.avatar || selectedConversation?.otherUser.avatar) ? (
-                              <img 
-                                src={targetUser?.avatar || selectedConversation?.otherUser.avatar} 
-                                alt={targetUser?.nickname || selectedConversation?.otherUser.nickname} 
-                                className="w-full h-full object-cover" 
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                <span className="text-white font-bold text-xs">
-                                  {(targetUser?.nickname || selectedConversation?.otherUser.nickname || '').charAt(0).toUpperCase()}
-                                </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+                              {(targetUser?.avatar || selectedConversation?.otherUser.avatar) ? (
+                                <img 
+                                  src={targetUser?.avatar || selectedConversation?.otherUser.avatar} 
+                                  alt={targetUser?.nickname || selectedConversation?.otherUser.nickname} 
+                                  className="w-full h-full object-cover" 
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                  <span className="text-white font-bold text-xs">
+                                    {(targetUser?.nickname || selectedConversation?.otherUser.nickname || '').charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <h4 className="font-medium text-gray-900 dark:text-white">
+                              {targetUser?.nickname || selectedConversation?.otherUser.nickname}
+                            </h4>
+                          </div>
+                          
+                          {/* 更多菜单 */}
+                          <div className="relative">
+                            <button
+                              onClick={() => setShowMoreMenu(!showMoreMenu)}
+                              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                              title="更多操作"
+                            >
+                              <MoreHorizontal className="w-5 h-5" />
+                            </button>
+                            
+                            {/* 下拉菜单 */}
+                            {showMoreMenu && (
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-10">
+                                <button
+                                  onClick={deleteChatHistory}
+                                  className="w-full px-4 py-3 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center space-x-2 rounded-lg"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span>删除聊天记录</span>
+                                </button>
                               </div>
                             )}
                           </div>
-                          <h4 className="font-medium text-gray-900 dark:text-white">
-                            {targetUser?.nickname || selectedConversation?.otherUser.nickname}
-                          </h4>
                         </div>
                       </div>
 

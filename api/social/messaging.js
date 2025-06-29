@@ -110,7 +110,9 @@ module.exports = async function handler(req, res) {
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const messagesList = await messages.find({
-          conversationId: conversation._id
+          conversationId: conversation._id,
+          // 过滤掉被当前用户删除的消息
+          deletedBy: { $ne: new ObjectId(decoded.userId) }
         })
           .sort({ createdAt: -1 })
           .skip(skip)
@@ -165,7 +167,9 @@ module.exports = async function handler(req, res) {
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const conversationsList = await conversations.find({
-          participants: new ObjectId(decoded.userId)
+          participants: new ObjectId(decoded.userId),
+          // 过滤掉被当前用户隐藏的会话
+          hiddenBy: { $ne: new ObjectId(decoded.userId) }
         })
           .sort({ lastMessageAt: -1 })
           .skip(skip)
@@ -177,17 +181,21 @@ module.exports = async function handler(req, res) {
           const otherUserId = conversation.participants.find(id => id.toString() !== decoded.userId)
           const otherUser = await getUserById(users, otherUserId)
           
-          // 获取最后一条消息
+          // 获取最后一条消息（排除被当前用户删除的消息）
           const lastMessage = await messages.findOne(
-            { conversationId: conversation._id },
+            { 
+              conversationId: conversation._id,
+              deletedBy: { $ne: new ObjectId(decoded.userId) }
+            },
             { sort: { createdAt: -1 } }
           )
 
-          // 获取未读消息数
+          // 获取未读消息数（排除被当前用户删除的消息）
           const unreadCount = await messages.countDocuments({
             conversationId: conversation._id,
             senderId: { $ne: new ObjectId(decoded.userId) },
-            readAt: { $exists: false }
+            readAt: { $exists: false },
+            deletedBy: { $ne: new ObjectId(decoded.userId) }
           })
 
           return {
@@ -210,7 +218,8 @@ module.exports = async function handler(req, res) {
         }))
 
         const total = await conversations.countDocuments({
-          participants: new ObjectId(decoded.userId)
+          participants: new ObjectId(decoded.userId),
+          hiddenBy: { $ne: new ObjectId(decoded.userId) }
         })
 
         return res.status(200).json({
@@ -538,7 +547,9 @@ module.exports = async function handler(req, res) {
         const skip = (parseInt(page) - 1) * parseInt(limit)
         
         const messagesList = await messages.find({
-          conversationId: new ObjectId(conversationId)
+          conversationId: new ObjectId(conversationId),
+          // 过滤掉被当前用户删除的消息
+          deletedBy: { $ne: new ObjectId(decoded.userId) }
         })
           .sort({ createdAt: -1 })
           .skip(skip)
@@ -562,12 +573,13 @@ module.exports = async function handler(req, res) {
           }
         }))
 
-        // 标记消息为已读
+        // 标记消息为已读（排除被当前用户删除的消息）
         await messages.updateMany(
           {
             conversationId: new ObjectId(conversationId),
             senderId: { $ne: new ObjectId(decoded.userId) },
-            readAt: { $exists: false }
+            readAt: { $exists: false },
+            deletedBy: { $ne: new ObjectId(decoded.userId) }
           },
           {
             $set: { readAt: new Date() }
@@ -575,7 +587,8 @@ module.exports = async function handler(req, res) {
         )
 
         const total = await messages.countDocuments({
-          conversationId: new ObjectId(conversationId)
+          conversationId: new ObjectId(conversationId),
+          deletedBy: { $ne: new ObjectId(decoded.userId) }
         })
 
         return res.status(200).json({
@@ -698,11 +711,12 @@ module.exports = async function handler(req, res) {
 
         const messageResult = await messages.insertOne(newMessage)
 
-        // 更新会话的最后消息时间
+        // 更新会话的最后消息时间，并确保会话对双方都可见
         await conversations.updateOne(
           { _id: conversation._id },
           { 
-            $set: { lastMessageAt: new Date() }
+            $set: { lastMessageAt: new Date() },
+            $unset: { hiddenBy: "" } // 移除隐藏标记，使会话对双方都可见
           }
         )
 
@@ -815,7 +829,7 @@ module.exports = async function handler(req, res) {
 
     // DELETE: 删除操作
     if (req.method === 'DELETE') {
-      const { action, messageId } = req.body
+      const { action, messageId, conversationId } = req.body
 
       // 撤回消息
       if (action === 'recall-message') {
@@ -860,56 +874,75 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      return res.status(400).json({ 
-        success: false, 
-        message: '不支持的删除操作' 
-      })
-    }
-
-    // DELETE: 删除操作
-    if (req.method === 'DELETE') {
-      const { action, messageId } = req.body
-
-      // 撤回消息
-      if (action === 'recall-message') {
-        if (!messageId) {
+      // 隐藏会话（从私信列表中删除，但不删除聊天记录）
+      if (action === 'hide-conversation') {
+        if (!conversationId) {
           return res.status(400).json({ 
             success: false, 
-            message: '消息ID不能为空' 
+            message: '会话ID不能为空' 
           })
         }
 
-        // 查找消息
-        const message = await messages.findOne({
-          _id: new ObjectId(messageId),
-          senderId: new ObjectId(decoded.userId)
+        // 验证用户是否为该会话的参与者
+        const conversation = await conversations.findOne({
+          _id: new ObjectId(conversationId),
+          participants: new ObjectId(decoded.userId)
         })
 
-        if (!message) {
-          return res.status(404).json({ 
+        if (!conversation) {
+          return res.status(403).json({ 
             success: false, 
-            message: '消息不存在或无权限撤回' 
+            message: '无权访问此会话' 
           })
         }
 
-        // 检查消息是否在3分钟内
-        const now = new Date()
-        const messageTime = new Date(message.createdAt)
-        const diffInMinutes = (now - messageTime) / (1000 * 60)
-
-        if (diffInMinutes > 3) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '只能撤回3分钟内发送的消息' 
-          })
-        }
-
-        // 删除消息
-        await messages.deleteOne({ _id: new ObjectId(messageId) })
+        // 添加当前用户到hiddenBy数组中
+        await conversations.updateOne(
+          { _id: new ObjectId(conversationId) },
+          { 
+            $addToSet: { hiddenBy: new ObjectId(decoded.userId) }
+          }
+        )
 
         return res.status(200).json({
           success: true,
-          message: '消息撤回成功'
+          message: '会话已从列表中删除'
+        })
+      }
+
+      // 删除聊天记录（只删除当前用户的记录，不影响对方）
+      if (action === 'delete-chat-history') {
+        if (!conversationId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '会话ID不能为空' 
+          })
+        }
+
+        // 验证用户是否为该会话的参与者
+        const conversation = await conversations.findOne({
+          _id: new ObjectId(conversationId),
+          participants: new ObjectId(decoded.userId)
+        })
+
+        if (!conversation) {
+          return res.status(403).json({ 
+            success: false, 
+            message: '无权访问此会话' 
+          })
+        }
+
+        // 将当前用户添加到所有消息的deletedBy数组中
+        await messages.updateMany(
+          { conversationId: new ObjectId(conversationId) },
+          { 
+            $addToSet: { deletedBy: new ObjectId(decoded.userId) }
+          }
+        )
+
+        return res.status(200).json({
+          success: true,
+          message: '聊天记录已删除'
         })
       }
 

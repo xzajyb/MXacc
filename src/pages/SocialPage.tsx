@@ -23,7 +23,8 @@ import {
   X,
   AlertCircle,
   Shield,
-  Lock
+  Lock,
+  MoreHorizontal
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
@@ -972,6 +973,40 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     }
   }
 
+  // 删除会话（从私信列表中隐藏）
+  const handleDeleteConversation = async (conversationId: string, nickname: string) => {
+    if (!confirm(`确定要删除与 ${nickname} 的私信会话吗？\n\n聊天记录不会被删除，当对方再次发送消息或您通过主页发送消息时会重新显示。`)) return
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/social/messaging', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'hide-conversation',
+          conversationId
+        })
+      })
+      
+      if (response.ok) {
+        // 从会话列表中移除
+        setConversations(prev => prev.filter(conv => conv.id !== conversationId))
+        showSuccess('私信会话已删除')
+        // 刷新未读计数
+        setTimeout(fetchUnreadCount, 100)
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.message || '删除失败')
+      }
+    } catch (error: any) {
+      console.error('删除会话失败:', error)
+      showError(error.message || '删除会话失败')
+    }
+  }
+
   // 分享帖子
   const handleShare = (post: Post) => {
     if (navigator.share) {
@@ -1328,53 +1363,67 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
               ) : (
                 <div className="space-y-3">
                   {conversations.map((conv) => (
-                    <div
-                      key={conv.id}
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                      onClick={() => {
-                        setTargetUser({
-                          id: conv.otherUser.id,
-                          username: conv.otherUser.username,
-                          nickname: conv.otherUser.nickname,
-                          avatar: conv.otherUser.avatar,
-                          bio: '',
-                          location: '',
-                          isFollowing: false,
-                          followersCount: 0,
-                          followingCount: 0,
-                          postsCount: 0,
-                          joinedAt: ''
-                        })
-                        setShowMessaging(true)
-                        // 打开私信对话时立即更新未读计数
-                        setTimeout(fetchUnreadCount, 200)
-                      }}
-                    >
-                      <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
-                        {conv.otherUser.avatar ? (
-                          <img src={conv.otherUser.avatar} alt={conv.otherUser.nickname} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                            <span className="text-white font-bold">{conv.otherUser.nickname.charAt(0).toUpperCase()}</span>
+                    <div key={conv.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      {/* 点击区域 - 打开聊天 */}
+                      <div 
+                        className="flex items-center space-x-3 flex-1 cursor-pointer"
+                        onClick={() => {
+                          setTargetUser({
+                            id: conv.otherUser.id,
+                            username: conv.otherUser.username,
+                            nickname: conv.otherUser.nickname,
+                            avatar: conv.otherUser.avatar,
+                            bio: '',
+                            location: '',
+                            isFollowing: false,
+                            followersCount: 0,
+                            followingCount: 0,
+                            postsCount: 0,
+                            joinedAt: ''
+                          })
+                          setShowMessaging(true)
+                          // 打开私信对话时立即更新未读计数
+                          setTimeout(fetchUnreadCount, 200)
+                        }}
+                      >
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
+                          {conv.otherUser.avatar ? (
+                            <img src={conv.otherUser.avatar} alt={conv.otherUser.nickname} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                              <span className="text-white font-bold">{conv.otherUser.nickname.charAt(0).toUpperCase()}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-gray-900 dark:text-white truncate">{conv.otherUser.nickname}</h4>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {conv.lastMessage ? formatDate(conv.lastMessage.createdAt, 'datetime') : ''}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                            {conv.lastMessage ? conv.lastMessage.content : '开始新对话'}
+                          </p>
+                        </div>
+                        {conv.unreadCount > 0 && (
+                          <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
                           </div>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900 dark:text-white truncate">{conv.otherUser.nickname}</h4>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {conv.lastMessage ? formatDate(conv.lastMessage.createdAt, 'datetime') : ''}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                          {conv.lastMessage ? conv.lastMessage.content : '开始新对话'}
-                        </p>
-                      </div>
-                      {conv.unreadCount > 0 && (
-                        <div className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                          {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
-                        </div>
-                      )}
+                      
+                      {/* 删除按钮 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation() // 阻止事件冒泡
+                          handleDeleteConversation(conv.id, conv.otherUser.nickname)
+                        }}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="删除会话"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   ))}
                 </div>
