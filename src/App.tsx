@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from './contexts/AuthContext'
+import PromoPage from './pages/PromoPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
@@ -13,7 +14,6 @@ import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import DebugPage from './pages/DebugPage'
-import PromoPage from './pages/PromoPage'
 import LoadingSpinner from './components/LoadingSpinner'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -47,10 +47,9 @@ function App() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <AnimatePresence mode="wait">
         <Routes>
-          {/* 宣传页面 */}
-          <Route path="/promo" element={<PromoPage />} />
-          
           {/* 公开路由 */}
+          <Route path="/" element={<PromoPage />} />
+          <Route path="/promo" element={<PromoPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -89,9 +88,8 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* 重定向 - 主页指向宣传页面 */}
-          <Route path="/" element={<Navigate to="/promo" replace />} />
-          <Route path="*" element={<Navigate to="/promo" replace />} />
+          {/* 重定向 */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
     </div>
