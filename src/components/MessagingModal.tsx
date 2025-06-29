@@ -145,13 +145,7 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
           setHasInitiallyLoaded(true)
         }
         
-        // 获取消息后立即刷新会话列表和未读计数（因为后端已将消息标记为已读）
-        await fetchConversations()
-        // 立即通知父组件未读计数已变化
-        if (onUnreadCountChange) {
-          console.log('📱 MessagingModal: 调用 onUnreadCountChange (获取消息后)')
-          onUnreadCountChange()
-        }
+        // 获取消息后不需要更新未读计数（已在标记已读时更新）
       }
     } catch (error) {
       console.error('获取消息失败:', error)
@@ -241,7 +235,43 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     }
   }
 
-  // 组件挂载时获取数据
+  // 标记消息为已读
+  const markMessagesAsRead = async (conversationId?: string, otherUserId?: string) => {
+    try {
+      console.log('📖 开始标记消息为已读:', { conversationId, otherUserId })
+      
+      const response = await fetch('/api/social/messaging', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'mark-read',
+          conversationId,
+          otherUserId
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        console.log(`📖 成功标记${data.data.markedCount}条消息为已读`)
+        
+        // 立即刷新会话列表和未读计数
+        await fetchConversations()
+        if (onUnreadCountChange) {
+          console.log('📱 MessagingModal: 调用 onUnreadCountChange (标记已读后)')
+          onUnreadCountChange()
+        }
+      } else {
+        console.error('📖 标记已读失败:', data.message)
+      }
+    } catch (error) {
+      console.error('📖 标记已读请求失败:', error)
+    }
+  }
+
+  // 组件挂载时获取数据并标记已读
   useEffect(() => {
     if (isOpen) {
       // 重置加载状态，这样每次打开聊天都会显示第一次加载动画
@@ -250,7 +280,10 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (targetUser) {
         // 通过主页私信：直接获取与目标用户的消息，不显示会话列表
         console.log('通过主页私信模式，目标用户:', targetUser.nickname)
-        fetchMessages(undefined, targetUser.id, true) // 第一次加载显示动画
+        // 先标记已读，再获取消息
+        markMessagesAsRead(undefined, targetUser.id).then(() => {
+          fetchMessages(undefined, targetUser.id, true) // 第一次加载显示动画
+        })
       } else {
         // 通过私信选项卡：显示会话列表
         console.log('通过私信选项卡模式，获取会话列表')
@@ -259,12 +292,18 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
     }
   }, [isOpen, targetUser])
 
-  // 当选择会话时获取消息 - 不显示加载动画，因为已经初始化过了
+  // 当选择会话时获取消息并标记已读
   useEffect(() => {
     if (selectedConversation && hasInitiallyLoaded) {
-      fetchMessages(selectedConversation.id, undefined, false) // 切换会话不显示动画
+      // 先标记已读，再获取消息
+      markMessagesAsRead(selectedConversation.id).then(() => {
+        fetchMessages(selectedConversation.id, undefined, false) // 切换会话不显示动画
+      })
     } else if (selectedConversation && !hasInitiallyLoaded) {
-      fetchMessages(selectedConversation.id, undefined, true) // 第一次选择会话显示动画
+      // 先标记已读，再获取消息
+      markMessagesAsRead(selectedConversation.id).then(() => {
+        fetchMessages(selectedConversation.id, undefined, true) // 第一次选择会话显示动画
+      })
     }
   }, [selectedConversation])
 
@@ -544,16 +583,9 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                             className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                               selectedConversation?.id === conv.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                             }`}
-                            onClick={async () => {
+                            onClick={() => {
                               setSelectedConversation(conv)
-                              // 选择会话后立即更新未读计数
-                              setTimeout(async () => {
-                                await fetchConversations()
-                                if (onUnreadCountChange) {
-                                  console.log('📱 MessagingModal: 调用 onUnreadCountChange (选择会话后)')
-                                  onUnreadCountChange()
-                                }
-                              }, 50) // 减少延时到50ms，更及时
+                              // 选择会话后的已读标记在useEffect中处理
                             }}
                           >
                             <div className="flex items-center space-x-3">

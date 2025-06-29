@@ -148,22 +148,7 @@ module.exports = async function handler(req, res) {
           }
         }))
 
-        // 标记来自对方的消息为已读（排除系统消息和已删除消息）
-        const markReadResult = await messages.updateMany(
-          {
-            conversationId: conversation._id,
-            senderId: new ObjectId(otherUserId),
-            readAt: { $exists: false },
-            $or: [
-              { deletedBy: { $exists: false } },
-              { deletedBy: { $ne: new ObjectId(decoded.userId) } }
-            ]
-          },
-          {
-            $set: { readAt: new Date() }
-          }
-        )
-        console.log(`🔵 otherUserId路径: 标记${markReadResult.modifiedCount}条消息为已读`)
+        // 移除自动标记已读逻辑，改为前端主动调用
 
         const total = await messages.countDocuments({
           conversationId: conversation._id
@@ -620,24 +605,7 @@ module.exports = async function handler(req, res) {
           }
         }))
 
-        // 标记消息为已读（排除被当前用户删除的消息和系统消息）
-        const markReadResult = await messages.updateMany(
-          {
-            conversationId: new ObjectId(conversationId),
-            senderId: { 
-              $nin: [new ObjectId(decoded.userId), 'SYSTEM'] // 排除当前用户和系统消息
-            },
-            readAt: { $exists: false },
-            $or: [
-              { deletedBy: { $exists: false } },
-              { deletedBy: { $ne: new ObjectId(decoded.userId) } }
-            ]
-          },
-          {
-            $set: { readAt: new Date() }
-          }
-        )
-        console.log(`🔵 conversationId路径: 标记${markReadResult.modifiedCount}条消息为已读`)
+        // 移除自动标记已读逻辑，改为前端主动调用
 
         const total = await messages.countDocuments({
           conversationId: new ObjectId(conversationId),
@@ -874,6 +842,80 @@ module.exports = async function handler(req, res) {
           success: true,
           message: '取消关注成功',
           data: { isFollowing: false, followersCount }
+        })
+      }
+
+      // 标记消息为已读
+      if (action === 'mark-read') {
+        const { conversationId, otherUserId } = req.body
+        
+        if (!conversationId && !otherUserId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '需要提供会话ID或对方用户ID' 
+          })
+        }
+
+        let targetConversationId
+
+        if (conversationId) {
+          // 验证用户是否为该会话的参与者
+          const conversation = await conversations.findOne({
+            _id: new ObjectId(conversationId),
+            participants: new ObjectId(decoded.userId)
+          })
+
+          if (!conversation) {
+            return res.status(403).json({ 
+              success: false, 
+              message: '无权访问此会话' 
+            })
+          }
+          
+          targetConversationId = new ObjectId(conversationId)
+        } else if (otherUserId) {
+          // 查找与特定用户的会话
+          const conversation = await conversations.findOne({
+            participants: { 
+              $all: [new ObjectId(decoded.userId), new ObjectId(otherUserId)],
+              $size: 2
+            }
+          })
+
+          if (!conversation) {
+            return res.status(404).json({ 
+              success: false, 
+              message: '会话不存在' 
+            })
+          }
+          
+          targetConversationId = conversation._id
+        }
+
+        // 标记消息为已读（排除当前用户发送的消息、系统消息和已删除消息）
+        const markReadResult = await messages.updateMany(
+          {
+            conversationId: targetConversationId,
+            senderId: { 
+              $nin: [new ObjectId(decoded.userId), 'SYSTEM'] // 排除当前用户和系统消息
+            },
+            readAt: { $exists: false },
+            $or: [
+              { deletedBy: { $exists: false } },
+              { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+            ]
+          },
+          {
+            $set: { readAt: new Date() }
+          }
+        )
+
+        console.log(`🔵 标记已读API: 标记${markReadResult.modifiedCount}条消息为已读`)
+
+        return res.status(200).json({
+          success: true,
+          message: '消息已标记为已读',
+          data: { markedCount: markReadResult.modifiedCount }
         })
       }
 
