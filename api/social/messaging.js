@@ -112,7 +112,10 @@ module.exports = async function handler(req, res) {
         const messagesList = await messages.find({
           conversationId: conversation._id,
           // 过滤掉被当前用户删除的消息
-          deletedBy: { $ne: new ObjectId(decoded.userId) }
+          $or: [
+            { deletedBy: { $exists: false } },
+            { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+          ]
         })
           .sort({ createdAt: -1 })
           .skip(skip)
@@ -120,6 +123,19 @@ module.exports = async function handler(req, res) {
           .toArray()
 
         const messagesWithDetails = await Promise.all(messagesList.map(async (message) => {
+          // 检查是否为系统消息
+          if (message.isSystemMessage || message.senderId === 'SYSTEM') {
+            return {
+              id: message._id,
+              content: message.content,
+              senderId: message.senderId,
+              recipientId: message.recipientId,
+              isRead: !!message.readAt,
+              isSystemMessage: true,
+              createdAt: message.createdAt
+            }
+          }
+
           const sender = await getUserById(users, message.senderId)
           return {
             id: message._id,
@@ -127,11 +143,12 @@ module.exports = async function handler(req, res) {
             senderId: message.senderId,
             recipientId: message.recipientId,
             isRead: !!message.readAt,
+            isSystemMessage: false,
             createdAt: message.createdAt
           }
         }))
 
-        // 标记来自对方的消息为已读
+        // 标记来自对方的消息为已读（排除系统消息）
         await messages.updateMany(
           {
             conversationId: conversation._id,
@@ -185,17 +202,25 @@ module.exports = async function handler(req, res) {
           const lastMessage = await messages.findOne(
             { 
               conversationId: conversation._id,
-              deletedBy: { $ne: new ObjectId(decoded.userId) }
+              $or: [
+                { deletedBy: { $exists: false } },
+                { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+              ]
             },
             { sort: { createdAt: -1 } }
           )
 
-          // 获取未读消息数（排除被当前用户删除的消息）
+          // 获取未读消息数（排除被当前用户删除的消息和系统消息）
           const unreadCount = await messages.countDocuments({
             conversationId: conversation._id,
-            senderId: { $ne: new ObjectId(decoded.userId) },
+            senderId: { 
+              $nin: [new ObjectId(decoded.userId), 'SYSTEM'] // 排除当前用户和系统消息
+            },
             readAt: { $exists: false },
-            deletedBy: { $ne: new ObjectId(decoded.userId) }
+            $or: [
+              { deletedBy: { $exists: false } },
+              { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+            ]
           })
 
           return {
@@ -549,7 +574,10 @@ module.exports = async function handler(req, res) {
         const messagesList = await messages.find({
           conversationId: new ObjectId(conversationId),
           // 过滤掉被当前用户删除的消息
-          deletedBy: { $ne: new ObjectId(decoded.userId) }
+          $or: [
+            { deletedBy: { $exists: false } },
+            { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+          ]
         })
           .sort({ createdAt: -1 })
           .skip(skip)
@@ -587,13 +615,18 @@ module.exports = async function handler(req, res) {
           }
         }))
 
-        // 标记消息为已读（排除被当前用户删除的消息）
+        // 标记消息为已读（排除被当前用户删除的消息和系统消息）
         await messages.updateMany(
           {
             conversationId: new ObjectId(conversationId),
-            senderId: { $ne: new ObjectId(decoded.userId) },
+            senderId: { 
+              $nin: [new ObjectId(decoded.userId), 'SYSTEM'] // 排除当前用户和系统消息
+            },
             readAt: { $exists: false },
-            deletedBy: { $ne: new ObjectId(decoded.userId) }
+            $or: [
+              { deletedBy: { $exists: false } },
+              { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+            ]
           },
           {
             $set: { readAt: new Date() }
@@ -602,7 +635,10 @@ module.exports = async function handler(req, res) {
 
         const total = await messages.countDocuments({
           conversationId: new ObjectId(conversationId),
-          deletedBy: { $ne: new ObjectId(decoded.userId) }
+          $or: [
+            { deletedBy: { $exists: false } },
+            { deletedBy: { $ne: new ObjectId(decoded.userId) } }
+          ]
         })
 
         return res.status(200).json({
