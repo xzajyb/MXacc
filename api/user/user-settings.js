@@ -140,16 +140,30 @@ module.exports = async function handler(req, res) {
           }
         }
 
+        // 深度合并设置对象
+        const mergedSettings = { ...user.settings }
+        
+        // 合并顶层设置
+        Object.keys(validatedSettings).forEach(key => {
+          if (key === 'notifications' && validatedSettings.notifications) {
+            mergedSettings.notifications = { ...mergedSettings.notifications, ...validatedSettings.notifications }
+          } else if (key === 'privacy' && validatedSettings.privacy) {
+            mergedSettings.privacy = { ...mergedSettings.privacy, ...validatedSettings.privacy }
+          } else {
+            mergedSettings[key] = validatedSettings[key]
+          }
+        })
+
         await users.updateOne({ _id: user._id }, {
           $set: {
-            'settings': { ...user.settings, ...validatedSettings },
+            'settings': mergedSettings,
             updatedAt: new Date()
           }
         })
 
         return res.status(200).json({
           message: '设置保存成功',
-          settings: { ...user.settings, ...validatedSettings }
+          settings: mergedSettings
         })
       }
     } else {

@@ -274,11 +274,6 @@ async function handleVerifyEmail(user, users, verificationCode, res) {
     welcomeEmailError = error.message || '未知错误'
   }
 
-  // 自动发布邮箱验证成功系统消息（异步，不阻塞响应）
-  publishEmailVerifiedMessage(user.username).catch(error => {
-    console.error('发布邮箱验证成功系统消息失败:', error)
-  })
-
   // 发布个人专属邮箱验证成功消息（异步，不阻塞响应）
   publishPersonalEmailVerifiedMessage(user.username, user._id.toString()).catch(error => {
     console.error('发布个人专属邮箱验证成功消息失败:', error)

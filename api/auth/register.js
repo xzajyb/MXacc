@@ -434,11 +434,6 @@ module.exports = async function handler(req, res) {
         console.error('发送欢迎邮件失败:', error)
       })
 
-      // 自动发布欢迎系统消息（异步，不阻塞响应）
-      publishWelcomeMessage(username, isFirstUser).catch(error => {
-        console.error('发布欢迎系统消息失败:', error)
-      })
-
       // 发布个人专属欢迎消息（异步，不阻塞响应）
       publishPersonalWelcomeMessage(username, result.insertedId.toString(), isFirstUser).catch(error => {
         console.error('发布个人专属欢迎消息失败:', error)
