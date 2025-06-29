@@ -33,6 +33,7 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
+import FluidGlass from '../components/FluidGlass/FluidGlass'
 
 type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
@@ -418,6 +419,22 @@ const DashboardPage: React.FC = () => {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
+          {/* FluidGlass 3D效果区域 */}
+          <div className="flex-shrink-0 p-4">
+            <FluidGlass 
+              mode="lens" 
+              height={128}
+              className="w-full"
+              modeProps={{
+                scale: 1.5,
+                ior: 1.5,
+                thickness: 2,
+                transmission: 0.9,
+                chromaticAberration: 0.1
+              }}
+            />
+          </div>
+
           {/* Logo区域 - 固定高度 */}
           <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
