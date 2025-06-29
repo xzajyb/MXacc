@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield } from 'lucide-react'
+import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield, Lock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -74,6 +74,24 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
   const [followingLoading, setFollowingLoading] = useState(false)
   const [showMessaging, setShowMessaging] = useState(false)
   const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following'>('posts')
+  const [userPrivacySettings, setUserPrivacySettings] = useState<any>(null)
+
+  // 获取用户隐私设置（仅查看自己时）
+  const fetchUserPrivacySettings = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/user-settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setUserPrivacySettings(data.settings?.privacy || null)
+      }
+    } catch (error) {
+      console.error('获取隐私设置失败:', error)
+    }
+  }
 
   // 获取用户信息
   const fetchUser = async () => {
@@ -89,6 +107,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
       if (response.ok) {
         const data = await response.json()
         setUser(data.data)
+        
+        // 如果是查看自己的资料，获取隐私设置
+        if (data.data.isOwnProfile) {
+          fetchUserPrivacySettings()
+        }
       } else if (response.status === 403) {
         const data = await response.json()
         showError(data.message || '该用户设置了隐私保护，无法查看个人资料')
@@ -462,13 +485,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                   {user.canViewFollowers && (
                     <button
                       onClick={() => setActiveTab('followers')}
-                      className={`py-3 border-b-2 transition-colors ${
+                      className={`flex items-center space-x-1 py-3 border-b-2 transition-colors ${
                         activeTab === 'followers'
                           ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                           : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                       }`}
                     >
-                      粉丝 ({user.followersCount})
+                      <span>粉丝 ({user.followersCount})</span>
+                      {/* 在自己的资料中且设置了不可见时显示锁图标 */}
+                      {user.isOwnProfile && userPrivacySettings?.showFollowers === false && (
+                        <span title="粉丝列表已设为私有">
+                          <Lock className="w-3 h-3 text-orange-500" />
+                        </span>
+                      )}
                     </button>
                   )}
                   
@@ -476,13 +505,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                   {user.canViewFollowing && (
                     <button
                       onClick={() => setActiveTab('following')}
-                      className={`py-3 border-b-2 transition-colors ${
+                      className={`flex items-center space-x-1 py-3 border-b-2 transition-colors ${
                         activeTab === 'following'
                           ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                           : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                       }`}
                     >
-                      关注 ({user.followingCount})
+                      <span>关注 ({user.followingCount})</span>
+                      {/* 在自己的资料中且设置了不可见时显示锁图标 */}
+                      {user.isOwnProfile && userPrivacySettings?.showFollowing === false && (
+                        <span title="关注列表已设为私有">
+                          <Lock className="w-3 h-3 text-orange-500" />
+                        </span>
+                      )}
                     </button>
                   )}
                 </div>
