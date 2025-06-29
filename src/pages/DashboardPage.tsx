@@ -4,6 +4,63 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { motion, AnimatePresence } from 'framer-motion'
+
+// Fluid Glass CSS styles
+const fluidGlassStyles = `
+  .fluid-glass {
+    position: relative;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark .fluid-glass {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  }
+
+  .fluid-glass::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(67, 117, 255, 0.1), rgba(138, 68, 255, 0.1));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+
+  .fluid-glass:hover::before {
+    opacity: 1;
+  }
+
+  .fluid-glass-active {
+    background: linear-gradient(135deg, rgba(67, 117, 255, 0.15), rgba(138, 68, 255, 0.1));
+    border: 1px solid rgba(67, 117, 255, 0.3);
+    box-shadow: 
+      0 8px 32px 0 rgba(67, 117, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .fluid-glass-active {
+    background: linear-gradient(135deg, rgba(67, 117, 255, 0.12), rgba(138, 68, 255, 0.08));
+    border: 1px solid rgba(67, 117, 255, 0.25);
+    box-shadow: 
+      0 8px 32px 0 rgba(67, 117, 255, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .fluid-glass-active::before {
+    opacity: 0.5;
+  }
+`
 import { 
   Home, 
   User, 
@@ -45,6 +102,27 @@ const DashboardPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [socialUnreadCount, setSocialUnreadCount] = useState(0)  // 新增：社交未读消息数量
   const navigate = useNavigate()
+
+  // 注入 Fluid Glass CSS 样式
+  useEffect(() => {
+    const styleId = 'fluid-glass-styles'
+    let styleElement = document.getElementById(styleId)
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style')
+      styleElement.id = styleId
+      styleElement.textContent = fluidGlassStyles
+      document.head.appendChild(styleElement)
+    }
+
+    return () => {
+      // 清理函数 - 组件卸载时移除样式
+      const element = document.getElementById(styleId)
+      if (element) {
+        element.remove()
+      }
+    }
+  }, [])
 
   // 根据用户状态自动显示邮箱验证
   useEffect(() => {
@@ -431,43 +509,23 @@ const DashboardPage: React.FC = () => {
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto min-h-0">
             {navigationItems.map((item) => {
               const Icon = item.icon
-              const isActive = activeView === item.id
               return (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id as ActiveView)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl transition-all duration-300 relative overflow-hidden group ${
-                    isActive
-                      ? 'text-white shadow-lg'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg relative ${
+                    activeView === item.id
+                      ? 'fluid-glass fluid-glass-active text-blue-700 dark:text-blue-400'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors'
                   }`}
                 >
-                  {/* Fluid Glass Background for Active State */}
-                  {isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-md">
-                      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-                      <div className="absolute inset-[1px] rounded-xl bg-gradient-to-r from-white/20 to-white/5 backdrop-blur-lg"></div>
-                      {/* Animated gradient overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                    </div>
-                  )}
-                  
-                  {/* Content */}
-                  <div className="relative z-10 flex items-center space-x-3">
-                    <Icon size={20} className={isActive ? 'drop-shadow-sm' : ''} />
-                    <span className={`font-medium ${isActive ? 'drop-shadow-sm' : ''}`}>{item.label}</span>
-                  </div>
-                  
+                  <Icon size={20} />
+                  <span className="font-medium">{item.label}</span>
                   {/* 社交中心未读消息红点 */}
                   {item.id === 'social' && socialUnreadCount > 0 && (
-                    <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center z-20 shadow-lg">
+                    <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                       {socialUnreadCount > 99 ? '99+' : socialUnreadCount}
                     </span>
-                  )}
-                  
-                  {/* Subtle border glow for active state */}
-                  {isActive && (
-                    <div className="absolute inset-0 rounded-xl border border-white/20 shadow-inner"></div>
                   )}
                 </button>
               )
