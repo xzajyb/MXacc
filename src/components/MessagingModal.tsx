@@ -145,14 +145,12 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
           setHasInitiallyLoaded(true)
         }
         
-        // 获取消息后立即刷新会话列表（因为后端已将消息标记为已读）
-        setTimeout(async () => {
-          await fetchConversations()
-          // 通知父组件未读计数可能已变化
-          if (onUnreadCountChange) {
-            onUnreadCountChange()
-          }
-        }, 100)
+        // 获取消息后立即刷新会话列表和未读计数（因为后端已将消息标记为已读）
+        await fetchConversations()
+        // 立即通知父组件未读计数已变化
+        if (onUnreadCountChange) {
+          onUnreadCountChange()
+        }
       }
     } catch (error) {
       console.error('获取消息失败:', error)
@@ -225,8 +223,11 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
           await fetchMessages(selectedConversation.id, undefined, false)
         }
         
-        // 刷新会话列表
+        // 刷新会话列表和未读计数
         await fetchConversations()
+        if (onUnreadCountChange) {
+          onUnreadCountChange()
+        }
       } else {
         showError(data.message || '发送失败')
       }
@@ -367,6 +368,12 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         } else if (selectedConversation) {
           await fetchMessages(selectedConversation.id, undefined, false)
         }
+        
+        // 立即刷新会话列表和未读计数
+        await fetchConversations()
+        if (onUnreadCountChange) {
+          onUnreadCountChange()
+        }
       } else {
         showError(data.message || '❌ 撤回失败，请稍后重试')
       }
@@ -428,8 +435,11 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
         showSuccess('✅ 聊天记录已删除，对方的记录不受影响')
         // 清空消息列表
         setMessages([])
-        // 刷新会话列表
+        // 刷新会话列表和未读计数
         await fetchConversations()
+        if (onUnreadCountChange) {
+          onUnreadCountChange()
+        }
         // 关闭对话框
         setShowDeleteHistoryDialog(false)
       } else {
@@ -531,15 +541,15 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                             className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                               selectedConversation?.id === conv.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                             }`}
-                            onClick={() => {
+                            onClick={async () => {
                               setSelectedConversation(conv)
-                              // 选择会话后短暂延时更新未读计数（给后端时间标记消息为已读）
-                              setTimeout(() => {
-                                fetchConversations()
+                              // 选择会话后立即更新未读计数
+                              setTimeout(async () => {
+                                await fetchConversations()
                                 if (onUnreadCountChange) {
                                   onUnreadCountChange()
                                 }
-                              }, 200)
+                              }, 50) // 减少延时到50ms，更及时
                             }}
                           >
                             <div className="flex items-center space-x-3">

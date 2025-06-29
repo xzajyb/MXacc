@@ -77,25 +77,24 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const dialogContent = (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100000] flex items-center justify-center p-4"
+          onClick={loading ? undefined : onClose} // 加载时禁止点击关闭
+        >
           {/* 背景遮罩 */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000]"
-            onClick={loading ? undefined : onClose} // 加载时禁止点击关闭
-            style={{ margin: 0, padding: 0 }}
-          />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           
           {/* 对话框 */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -50 }}
+            initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -50 }}
+            exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[10001] w-full max-w-md mx-4"
-            style={{ margin: 0 }}
+            className="relative w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               {/* 头部 */}
@@ -148,7 +147,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               </div>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   )
