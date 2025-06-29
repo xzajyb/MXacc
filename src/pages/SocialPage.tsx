@@ -28,10 +28,12 @@ import {
 } from 'lucide-react'
 import MessagingModal from '../components/MessagingModal'
 import UserProfile from '../components/UserProfile'
+import BanNotice from '../components/BanNotice'
 import ConfirmDialog from '../components/ConfirmDialog'
 import CommentTree, { TreeComment } from '../components/CommentTree'
 import { buildCommentTree, updateCommentInTree, removeCommentFromTree, addReplyToTree } from '../utils/commentUtils'
 import { createPortal } from 'react-dom'
+import axios from 'axios'
 
 interface Post {
   id: string
@@ -161,11 +163,15 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   // 私信列表加载状态
   const [conversationsLoading, setConversationsLoading] = useState(false)
   
+  // 封禁状态
+  const [userBan, setUserBan] = useState<any>(null)
+  const [checkingBanStatus, setCheckingBanStatus] = useState(true)
+  
   // 邮箱验证状态检查
   const isEmailVerified = user?.isEmailVerified || false
   
   // 检查社交功能可用性
-  const isSocialFeatureEnabled = isEmailVerified
+  const isSocialFeatureEnabled = isEmailVerified && !userBan
   
   // 当未读消息数量变化时，通知外部组件
   useEffect(() => {
@@ -173,6 +179,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       onUnreadCountChange(unreadCount)
     }
   }, [unreadCount, onUnreadCountChange])
+
+  // 初始化时检查封禁状态
+  useEffect(() => {
+    if (user?.id) {
+      checkBanStatus()
+    }
+  }, [user?.id])
 
   // 定期刷新未读消息数量
   useEffect(() => {
@@ -185,6 +198,30 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       return () => clearInterval(interval)
     }
   }, [isSocialFeatureEnabled])
+
+  // 检查用户封禁状态
+  const checkBanStatus = async () => {
+    if (!user?.id) return
+    
+    setCheckingBanStatus(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get('/api/admin/ban-management?action=check', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (response.data.success && response.data.data.isBanned) {
+        setUserBan(response.data.data.ban)
+      } else {
+        setUserBan(null)
+      }
+    } catch (error) {
+      console.error('检查封禁状态失败:', error)
+      setUserBan(null)
+    } finally {
+      setCheckingBanStatus(false)
+    }
+  }
 
   // 获取未读消息数量
   const fetchUnreadCount = async () => {
@@ -1093,6 +1130,23 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
     ? "space-y-6" 
     : "min-h-screen bg-gray-50 dark:bg-gray-900 p-6"
 
+  // 如果用户被封禁，显示封禁通知
+  if (userBan) {
+    return <BanNotice ban={userBan} />
+  }
+
+  // 如果正在检查封禁状态，显示加载状态
+  if (checkingBanStatus) {
+    return (
+      <div className={containerClass}>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">检查账户状态...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={containerClass}>
       {/* 页面标题 */}
@@ -1146,7 +1200,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               }`}
               disabled={!isSocialFeatureEnabled}
-              title={!isSocialFeatureEnabled ? '请先验证邮箱后使用社交功能' : ''}
+              title={userBan ? '账户已被封禁，无法使用社交功能' : !isEmailVerified ? '请先验证邮箱后使用社交功能' : ''}
             >
               <Search className="w-4 h-4 inline mr-2" />
               发现用户
@@ -1161,7 +1215,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               }`}
               disabled={!isSocialFeatureEnabled}
-              title={!isSocialFeatureEnabled ? '请先验证邮箱后使用社交功能' : ''}
+              title={userBan ? '账户已被封禁，无法使用社交功能' : !isEmailVerified ? '请先验证邮箱后使用社交功能' : ''}
             >
               <UserIcon className="w-4 h-4 inline mr-2" />
               我的主页
@@ -1169,7 +1223,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
             <button
                           onClick={async () => {
               if (!isSocialFeatureEnabled) {
-                showError('请先验证邮箱后再使用社交功能')
+                showError(userBan ? '账户已被封禁，无法使用社交功能' : '请先验证邮箱后再使用社交功能')
                 return
               }
               setActiveTab('messages')
@@ -1187,7 +1241,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                   : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               }`}
               disabled={!isSocialFeatureEnabled}
-              title={!isSocialFeatureEnabled ? '请先验证邮箱后使用社交功能' : ''}
+              title={userBan ? '账户已被封禁，无法使用社交功能' : !isEmailVerified ? '请先验证邮箱后使用社交功能' : ''}
             >
               <MessageCircle className="w-4 h-4 inline mr-2" />
               私信
@@ -1291,7 +1345,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         </div>
 
         {/* 发布帖子 */}
-        {!isSocialFeatureEnabled && (
+        {!isSocialFeatureEnabled && !userBan && (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6">
             <div className="flex items-center space-x-2">
               <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />

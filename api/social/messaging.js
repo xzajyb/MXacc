@@ -16,6 +16,20 @@ function verifyToken(authHeader) {
   }
 }
 
+// 检查用户是否被封禁
+async function checkUserBanStatus(db, userId) {
+  const activeBan = await db.collection('user_bans').findOne({
+    userId: new ObjectId(userId),
+    status: 'active',
+    $or: [
+      { expiresAt: null }, // 永久封禁
+      { expiresAt: { $gt: new Date() } } // 临时封禁未到期
+    ]
+  })
+  
+  return activeBan
+}
+
 // 获取用户信息
 async function getUserById(users, userId) {
   const user = await users.findOne(
@@ -633,6 +647,34 @@ module.exports = async function handler(req, res) {
         success: false, 
         message: '不支持的操作' 
       })
+    }
+
+    // 检查用户是否被封禁（只对写操作进行检查）
+    if (req.method !== 'GET') {
+      console.log('🔍 检查用户封禁状态...')
+      const userBan = await checkUserBanStatus(db, decoded.userId)
+      
+      if (userBan) {
+        console.log('❌ 用户被封禁:', {
+          banId: userBan._id,
+          reason: userBan.reason,
+          expiresAt: userBan.expiresAt
+        })
+        
+        const banInfo = {
+          reason: userBan.reason,
+          expiresAt: userBan.expiresAt,
+          isPermanent: !userBan.expiresAt,
+          banId: userBan._id.toString()
+        }
+        
+        return res.status(403).json({ 
+          success: false, 
+          message: '您已被封禁，无法使用社交功能',
+          ban: banInfo
+        })
+      }
+      console.log('✅ 用户未被封禁')
     }
 
     // POST: 创建和操作
