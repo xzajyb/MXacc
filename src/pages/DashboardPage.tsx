@@ -431,23 +431,43 @@ const DashboardPage: React.FC = () => {
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto min-h-0">
             {navigationItems.map((item) => {
               const Icon = item.icon
+              const isActive = activeView === item.id
               return (
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id as ActiveView)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors relative ${
-                    activeView === item.id
-                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-xl transition-all duration-300 relative overflow-hidden group ${
+                    isActive
+                      ? 'text-white shadow-lg'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
                   }`}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{item.label}</span>
+                  {/* Fluid Glass Background for Active State */}
+                  {isActive && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/90 via-purple-500/90 to-pink-500/90 backdrop-blur-md">
+                      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                      <div className="absolute inset-[1px] rounded-xl bg-gradient-to-r from-white/20 to-white/5 backdrop-blur-lg"></div>
+                      {/* Animated gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                    </div>
+                  )}
+                  
+                  {/* Content */}
+                  <div className="relative z-10 flex items-center space-x-3">
+                    <Icon size={20} className={isActive ? 'drop-shadow-sm' : ''} />
+                    <span className={`font-medium ${isActive ? 'drop-shadow-sm' : ''}`}>{item.label}</span>
+                  </div>
+                  
                   {/* 社交中心未读消息红点 */}
                   {item.id === 'social' && socialUnreadCount > 0 && (
-                    <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center z-20 shadow-lg">
                       {socialUnreadCount > 99 ? '99+' : socialUnreadCount}
                     </span>
+                  )}
+                  
+                  {/* Subtle border glow for active state */}
+                  {isActive && (
+                    <div className="absolute inset-0 rounded-xl border border-white/20 shadow-inner"></div>
                   )}
                 </button>
               )
