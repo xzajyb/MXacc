@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2 } from 'lucide-react'
+import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon } from 'lucide-react'
 import axios from 'axios'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
@@ -110,6 +110,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [appealResponse, setAppealResponse] = useState('')
   const [sendNotificationToUser, setSendNotificationToUser] = useState(true)
   const [sendBanNotification, setSendBanNotification] = useState(true) // 封禁时是否发送通知
+  
+  // 解封确认弹窗状态
+  const [showUnbanDialog, setShowUnbanDialog] = useState(false)
+  const [selectedUnbanUser, setSelectedUnbanUser] = useState<any>(null)
+  const [processingUnban, setProcessingUnban] = useState(false)
+  const [sendUnbanNotification, setSendUnbanNotification] = useState(true)
 
   // 检查管理员权限
   if (!user || user.role !== 'admin') {
@@ -465,25 +471,59 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     }
   }
 
-  // 解除封禁
-  const handleUnbanUser = async (banId: string) => {
-    if (!confirm('确定要解除该用户的封禁吗？')) {
-      return
-    }
+  // 打开解封确认弹窗
+  const handleUnbanUser = (ban: any) => {
+    setSelectedUnbanUser(ban)
+    setShowUnbanDialog(true)
+  }
 
+  // 执行解封操作
+  const executeUnban = async () => {
+    if (!selectedUnbanUser) return
+
+    setProcessingUnban(true)
     try {
       await axios.put('/api/social/content', {
         action: 'unban-user',
-        banId: banId
+        banId: selectedUnbanUser._id
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
+      // 发送解封通知给用户（如果选择了）
+      if (sendUnbanNotification && selectedUnbanUser.userId) {
+        try {
+          const notificationPayload = {
+            action: 'create',
+            title: '封禁已解除',
+            content: `您的账户封禁已被管理员解除，现在可以正常使用所有功能。\n\n原封禁原因：${selectedUnbanUser.reason}\n解除时间：${new Date().toLocaleString('zh-CN')}\n\n感谢您的耐心等待。如有任何疑问，请联系客服。`,
+            type: 'success',
+            priority: 'high',
+            autoRead: false,
+            targetUserId: selectedUnbanUser.userId
+          }
+
+          await axios.post('/api/admin/system-messages', notificationPayload, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          console.log('解封通知已发送给用户')
+        } catch (notificationError) {
+          console.error('发送解封通知失败:', notificationError)
+          // 不阻断主流程
+        }
+      }
+
       showToast('封禁已解除', 'success')
+      setShowUnbanDialog(false)
+      setSelectedUnbanUser(null)
+      setSendUnbanNotification(true) // 重置为默认值
       loadBanList()
     } catch (error: any) {
       console.error('解除封禁失败:', error)
       showToast(error.response?.data?.message || '解除封禁失败', 'error')
+    } finally {
+      setProcessingUnban(false)
     }
   }
 
@@ -1919,7 +1959,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                 
                                 {ban.status === 'active' && (
                                   <button
-                                    onClick={() => handleUnbanUser(ban._id)}
+                                    onClick={() => handleUnbanUser(ban)}
                                     className="ml-2 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
                                   >
                                     解封
@@ -2200,6 +2240,165 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* 解封确认弹窗 */}
+        {showUnbanDialog && selectedUnbanUser && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => {
+              setShowUnbanDialog(false)
+              setSelectedUnbanUser(null)
+              setSendUnbanNotification(true)
+            }}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 头部 */}
+              <div className="bg-green-600 text-white p-6 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">解除封禁</h2>
+                      <p className="text-green-100 text-sm">管理员操作确认</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowUnbanDialog(false)
+                      setSelectedUnbanUser(null)
+                      setSendUnbanNotification(true)
+                    }}
+                    className="text-green-100 hover:text-white transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              {/* 内容 */}
+              <div className="p-6 space-y-6">
+                {/* 用户信息 */}
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                     <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                     <UserIcon className="w-5 h-5 mr-2 text-blue-600" />
+                     被封禁用户信息
+                   </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">用户名：</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {selectedUnbanUser.user?.username || '未知用户'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">封禁原因：</span>
+                      <span className="font-medium text-gray-900 dark:text-white text-right max-w-48 break-words">
+                        {selectedUnbanUser.reason}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">封禁时间：</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {new Date(selectedUnbanUser.createdAt).toLocaleString('zh-CN')}
+                      </span>
+                    </div>
+                    {selectedUnbanUser.expiresAt && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">到期时间：</span>
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {new Date(selectedUnbanUser.expiresAt).toLocaleString('zh-CN')}
+                        </span>
+                      </div>
+                    )}
+                    {selectedUnbanUser.notes && (
+                      <div className="col-span-2">
+                        <span className="text-gray-600 dark:text-gray-400">管理员备注：</span>
+                        <p className="font-medium text-gray-900 dark:text-white mt-1">
+                          {selectedUnbanUser.notes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 确认信息 */}
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-green-600 dark:text-green-300 text-sm font-bold">!</span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">解封操作说明</h4>
+                      <ul className="text-sm text-green-700 dark:text-green-400 space-y-1">
+                        <li>• 用户将立即恢复所有功能权限</li>
+                        <li>• 可以正常使用社交、私信等功能</li>
+                        <li>• 封禁记录将标记为"已解除"状态</li>
+                        <li>• 此操作无法撤销，请谨慎确认</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 系统通知选项 */}
+                <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                  <label className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={sendUnbanNotification}
+                      onChange={(e) => setSendUnbanNotification(e.target.checked)}
+                      className="mt-1 rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        发送解封通知给用户
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        选中后将向用户发送系统通知，告知封禁已解除并可正常使用功能
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* 操作按钮 */}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowUnbanDialog(false)
+                      setSelectedUnbanUser(null)
+                      setSendUnbanNotification(true)
+                    }}
+                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
+                  >
+                    取消操作
+                  </button>
+                  <button
+                    onClick={executeUnban}
+                    disabled={processingUnban}
+                    className="flex-1 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center"
+                  >
+                    {processingUnban ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        解封中...
+                      </>
+                    ) : (
+                      <>
+                        <Shield className="w-5 h-5 mr-2" />
+                        确认解封
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
         )}
       </div>
     </>
