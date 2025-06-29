@@ -169,7 +169,21 @@ module.exports = async function handler(req, res) {
           const readCount = await userReadStatus.countDocuments({
             messageId: message._id
           })
-          const totalUsers = await users.countDocuments()
+          
+          // 根据消息类型计算总用户数
+          let totalUsers
+          let targetUser = null
+          let isPersonal = false
+          
+          if (message.targetUserId) {
+            // 个人专属消息，总用户数为1
+            totalUsers = 1
+            isPersonal = true
+            targetUser = await getUserById(users, message.targetUserId)
+          } else {
+            // 全局消息，总用户数为所有用户
+            totalUsers = await users.countDocuments()
+          }
 
           return {
             id: message._id,
@@ -178,6 +192,13 @@ module.exports = async function handler(req, res) {
             type: message.type,
             priority: message.priority,
             autoRead: message.autoRead || false,
+            isPersonal,
+            targetUser: targetUser ? {
+              id: targetUser._id,
+              username: targetUser.username,
+              email: targetUser.email,
+              nickname: targetUser.profile?.nickname || targetUser.username
+            } : null,
             readCount,
             totalUsers,
             readRate: totalUsers > 0 ? (readCount / totalUsers * 100).toFixed(1) : '0',

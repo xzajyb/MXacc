@@ -10,10 +10,20 @@ interface TokenInfo {
   timeUntilExpiry: string | null
 }
 
+interface PrivacySettings {
+  profileVisible: boolean
+  showFollowers: boolean
+  showFollowing: boolean
+  activityVisible: boolean
+  allowDataCollection: boolean
+}
+
 export default function DebugPage() {
   const { user, isAuthenticated, loading, token } = useAuth()
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null)
   const [apiTest, setApiTest] = useState<any>(null)
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null)
+  const [privacyTestResult, setPrivacyTestResult] = useState<any>(null)
 
   // 解析token信息
   useEffect(() => {
@@ -88,6 +98,76 @@ export default function DebugPage() {
        })
      }
   }
+
+  // 获取隐私设置
+  const fetchPrivacySettings = async () => {
+    const token = localStorage.getItem('token')
+    try {
+      const response = await fetch('/api/user/user-settings', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (response.ok && data.settings?.privacy) {
+        setPrivacySettings(data.settings.privacy)
+      }
+    } catch (error) {
+      console.error('获取隐私设置失败:', error)
+    }
+  }
+
+  // 测试隐私设置是否生效
+  const testPrivacySettings = async () => {
+    if (!user?.id) return
+    
+    const token = localStorage.getItem('token')
+    const results: any = {}
+    
+    try {
+      // 测试个人资料访问
+      const profileResponse = await fetch(`/api/social/messaging?action=user-profile&userId=${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      results.profile = {
+        status: profileResponse.status,
+        ok: profileResponse.ok,
+        canAccess: profileResponse.ok
+      }
+
+      // 测试粉丝列表访问
+      const followersResponse = await fetch(`/api/social/messaging?action=followers&userId=${user.id}&page=1&limit=1`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      results.followers = {
+        status: followersResponse.status,
+        ok: followersResponse.ok,
+        canAccess: followersResponse.ok
+      }
+
+      // 测试关注列表访问
+      const followingResponse = await fetch(`/api/social/messaging?action=following&userId=${user.id}&page=1&limit=1`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      results.following = {
+        status: followingResponse.status,
+        ok: followingResponse.ok,
+        canAccess: followingResponse.ok
+      }
+
+      setPrivacyTestResult(results)
+    } catch (error) {
+      setPrivacyTestResult({ error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  // 初始化时获取隐私设置
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchPrivacySettings()
+    }
+  }, [isAuthenticated, user])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
@@ -220,6 +300,112 @@ export default function DebugPage() {
           )}
         </div>
 
+        {/* 隐私设置调试 */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+            隐私设置调试
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 当前隐私设置 */}
+            <div>
+              <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">当前设置</h3>
+              {privacySettings ? (
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">个人资料公开:</span>
+                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.profileVisible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {privacySettings.profileVisible ? '是' : '否'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">粉丝列表公开:</span>
+                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.showFollowers ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {privacySettings.showFollowers ? '是' : '否'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">关注列表公开:</span>
+                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.showFollowing ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {privacySettings.showFollowing ? '是' : '否'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">活动可见:</span>
+                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.activityVisible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {privacySettings.activityVisible ? '是' : '否'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">允许数据收集:</span>
+                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.allowDataCollection ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {privacySettings.allowDataCollection ? '是' : '否'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-600 dark:text-gray-400">暂无隐私设置数据</p>
+              )}
+              
+              <button
+                onClick={fetchPrivacySettings}
+                className="mt-3 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+              >
+                刷新设置
+              </button>
+            </div>
+
+            {/* 隐私测试结果 */}
+            <div>
+              <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">API访问测试</h3>
+              <button
+                onClick={testPrivacySettings}
+                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 mb-3"
+                disabled={!user?.id}
+              >
+                测试隐私设置效果
+              </button>
+              
+              {privacyTestResult && (
+                <div className="space-y-2">
+                  {privacyTestResult.error ? (
+                    <div className="text-red-600 dark:text-red-400">
+                      错误: {privacyTestResult.error}
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400">个人资料访问:</span>
+                        <span className={`ml-2 px-2 py-1 rounded text-sm ${privacyTestResult.profile?.canAccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {privacyTestResult.profile?.canAccess ? '成功' : `失败 (${privacyTestResult.profile?.status})`}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400">粉丝列表访问:</span>
+                        <span className={`ml-2 px-2 py-1 rounded text-sm ${privacyTestResult.followers?.canAccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {privacyTestResult.followers?.canAccess ? '成功' : `失败 (${privacyTestResult.followers?.status})`}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 dark:text-gray-400">关注列表访问:</span>
+                        <span className={`ml-2 px-2 py-1 rounded text-sm ${privacyTestResult.following?.canAccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {privacyTestResult.following?.canAccess ? '成功' : `失败 (${privacyTestResult.following?.status})`}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              
+              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  <strong>说明：</strong>这里测试的是您自己对自己资料的访问权限。如果设置为私有但测试仍然成功，这是正常的，因为您始终可以访问自己的资料。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 环境信息 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -250,22 +436,60 @@ export default function DebugPage() {
           <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
             常见问题解决方案
           </h3>
-          <ul className="list-disc list-inside space-y-1 text-yellow-700 dark:text-yellow-300">
-            <li>如果Token过期，请重新登录</li>
-            <li>如果Token格式无效，请清除localStorage并重新登录</li>
-            <li>如果API调用失败，检查网络连接或服务器状态</li>
-            <li>如果持续出现问题，请联系技术支持</li>
-          </ul>
           
-          <button
-            onClick={() => {
-              localStorage.removeItem('token')
-              window.location.reload()
-            }}
-            className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-          >
-            清除Token并刷新页面
-          </button>
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium text-yellow-800 dark:text-yellow-200">认证问题：</h4>
+              <ul className="list-disc list-inside space-y-1 text-yellow-700 dark:text-yellow-300 ml-4">
+                <li>如果Token过期，请重新登录</li>
+                <li>如果Token格式无效，请清除localStorage并重新登录</li>
+                <li>如果API调用失败，检查网络连接或服务器状态</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="font-medium text-yellow-800 dark:text-yellow-200">隐私设置问题：</h4>
+              <ul className="list-disc list-inside space-y-1 text-yellow-700 dark:text-yellow-300 ml-4">
+                <li>如果隐私设置没有生效，请刷新设置并重新保存</li>
+                <li>如果其他用户仍能查看您的资料，请清除浏览器缓存并重新登录</li>
+                <li>如果设置显示为私有但测试仍成功，这是正常的（本人始终可以查看自己的资料）</li>
+                <li>建议让朋友测试是否能查看您的资料来验证隐私设置</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="flex space-x-2 mt-4">
+            <button
+              onClick={() => {
+                localStorage.removeItem('token')
+                window.location.reload()
+              }}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            >
+              清除Token并刷新页面
+            </button>
+            
+            <button
+              onClick={() => {
+                localStorage.clear()
+                window.location.reload()
+              }}
+              className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700"
+            >
+              清除所有缓存并刷新
+            </button>
+            
+            <button
+              onClick={() => {
+                fetchPrivacySettings()
+                setTimeout(() => testPrivacySettings(), 1000)
+              }}
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+              disabled={!user?.id}
+            >
+              重新测试隐私设置
+            </button>
+          </div>
         </div>
       </div>
     </div>
