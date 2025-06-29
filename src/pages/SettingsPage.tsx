@@ -15,7 +15,8 @@ import {
   Eye,
   EyeOff,
   Check,
-  RefreshCw
+  RefreshCw,
+  Users
 } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
@@ -38,6 +39,8 @@ interface UserSettings {
     profileVisible: boolean
     activityVisible: boolean
     allowDataCollection: boolean
+    showFollowers: boolean
+    showFollowing: boolean
   }
   language: string
   timezone: string
@@ -60,7 +63,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
     privacy: {
       profileVisible: true,
       activityVisible: false,
-      allowDataCollection: true
+      allowDataCollection: true,
+      showFollowers: true,
+      showFollowing: true
     },
     language: language,
     timezone: timezone
@@ -418,6 +423,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ embedded = false }) => {
               <div className="space-y-4">
                 {[
                   { key: 'profileVisible', label: t.settings.profileVisible, desc: t.settings.profileVisibleDesc, icon: Eye },
+                  { key: 'showFollowers', label: '公开粉丝列表', desc: '允许其他用户查看你的粉丝列表', icon: Users },
+                  { key: 'showFollowing', label: '公开关注列表', desc: '允许其他用户查看你的关注列表', icon: Users },
                   { key: 'activityVisible', label: t.settings.activityVisible, desc: t.settings.activityVisibleDesc, icon: Globe },
                   { key: 'allowDataCollection', label: t.settings.dataCollection, desc: t.settings.dataCollectionDesc, icon: Shield }
                 ].map((privacy) => {

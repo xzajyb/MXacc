@@ -318,6 +318,18 @@ module.exports = async function handler(req, res) {
           })
         }
 
+        // 检查个人资料可见性
+        const isOwnProfile = user._id.toString() === decoded.userId
+        const isProfileVisible = user.settings?.privacy?.profileVisible !== false
+        
+        // 如果不是本人且用户设置了不公开个人资料
+        if (!isOwnProfile && !isProfileVisible) {
+          return res.status(403).json({ 
+            success: false, 
+            message: '该用户设置了隐私保护，无法查看个人资料' 
+          })
+        }
+
         const [isFollowing, followersCount, followingCount, postsCount] = await Promise.all([
           follows.findOne({
             followerId: new ObjectId(decoded.userId),
@@ -327,6 +339,10 @@ module.exports = async function handler(req, res) {
           follows.countDocuments({ followerId: new ObjectId(userId) }),
           posts.countDocuments({ authorId: new ObjectId(userId) })
         ])
+
+        // 检查隐私设置，确定是否可以查看粉丝和关注列表
+        const canViewFollowers = isOwnProfile || (user.settings?.privacy?.showFollowers !== false)
+        const canViewFollowing = isOwnProfile || (user.settings?.privacy?.showFollowing !== false)
 
         return res.status(200).json({
           success: true,
@@ -343,7 +359,9 @@ module.exports = async function handler(req, res) {
             followingCount,
             postsCount,
             joinedAt: user.createdAt,
-            isOwnProfile: user._id.toString() === decoded.userId
+            isOwnProfile,
+            canViewFollowers,
+            canViewFollowing
           }
         })
       }
@@ -354,6 +372,26 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ 
             success: false, 
             message: '用户ID不能为空' 
+          })
+        }
+
+        // 获取目标用户信息以检查隐私设置
+        const targetUser = await getUserById(users, userId)
+        if (!targetUser) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '用户不存在' 
+          })
+        }
+
+        // 隐私设置检查：如果不是本人且设置了不公开粉丝列表
+        const isOwnProfile = userId === decoded.userId
+        const showFollowers = targetUser.settings?.privacy?.showFollowers !== false
+        
+        if (!isOwnProfile && !showFollowers) {
+          return res.status(403).json({ 
+            success: false, 
+            message: '该用户设置了不公开粉丝列表' 
           })
         }
 
@@ -407,6 +445,26 @@ module.exports = async function handler(req, res) {
           return res.status(400).json({ 
             success: false, 
             message: '用户ID不能为空' 
+          })
+        }
+
+        // 获取目标用户信息以检查隐私设置
+        const targetUser = await getUserById(users, userId)
+        if (!targetUser) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '用户不存在' 
+          })
+        }
+
+        // 隐私设置检查：如果不是本人且设置了不公开关注列表
+        const isOwnProfile = userId === decoded.userId
+        const showFollowing = targetUser.settings?.privacy?.showFollowing !== false
+        
+        if (!isOwnProfile && !showFollowing) {
+          return res.status(403).json({ 
+            success: false, 
+            message: '该用户设置了不公开关注列表' 
           })
         }
 

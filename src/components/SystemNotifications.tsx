@@ -41,6 +41,7 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
   const [messages, setMessages] = useState<SystemMessage[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [isFirstLoad, setIsFirstLoad] = useState(true) // 跟踪是否是首次加载
 
   // 获取未读消息数量
   const fetchUnreadCount = async () => {
@@ -62,11 +63,15 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
   }
 
   // 获取消息列表
-  const fetchMessages = async () => {
+  const fetchMessages = async (showLoadingAnimation = true) => {
     if (!user) return
 
     try {
-      setLoading(true)
+      // 只在首次加载且允许显示动画时才显示加载状态
+      if (showLoadingAnimation && isFirstLoad) {
+        setLoading(true)
+      }
+      
       const token = localStorage.getItem('token')
       const response = await fetch('/api/admin/system-messages?action=list&page=1&limit=20', {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -75,12 +80,24 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
       if (response.ok) {
         const data = await response.json()
         setMessages(data.data.messages)
+        
+        // 标记已不是首次加载
+        if (isFirstLoad) {
+          setIsFirstLoad(false)
+        }
       }
     } catch (error) {
       console.error('获取消息失败:', error)
     } finally {
-      setLoading(false)
+      if (showLoadingAnimation && isFirstLoad) {
+        setLoading(false)
+      }
     }
+  }
+
+  // 静默更新消息列表（不显示加载动画）
+  const silentUpdateMessages = async () => {
+    await fetchMessages(false)
   }
 
   // 标记消息为已读
@@ -100,9 +117,11 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
       })
       
       if (response.ok) {
+        // 立即更新本地状态
         setMessages(prev => prev.map(msg => 
           msg.id === messageId ? { ...msg, isRead: true } : msg
         ))
+        // 静默更新未读计数
         await fetchUnreadCount()
       }
     } catch (error) {
@@ -126,6 +145,7 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
       })
       
       if (response.ok) {
+        // 立即更新本地状态
         setMessages(prev => prev.map(msg => ({ ...msg, isRead: true })))
         setUnreadCount(0)
         showSuccess('所有消息已标记为已读')
@@ -198,7 +218,7 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
   const autoMarkAsRead = async (messageId: string) => {
     try {
       const token = localStorage.getItem('token')
-      await fetch('/api/admin/system-messages', {
+      const response = await fetch('/api/admin/system-messages', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -209,6 +229,15 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
           messageId
         })
       })
+      
+      if (response.ok) {
+        // 立即更新本地状态，避免重新加载
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId ? { ...msg, isRead: true } : msg
+        ))
+        // 静默更新未读计数
+        await fetchUnreadCount()
+      }
     } catch (error) {
       console.error('自动标记已读失败:', error)
     }
@@ -217,8 +246,7 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
   // 打开时获取消息并自动标记已读
   useEffect(() => {
     if (isOpen && user) {
-      fetchMessages()
-      fetchUnreadCount()
+      fetchMessages() // 首次打开时会显示加载动画
       
       // 延迟自动标记未读的autoRead消息为已读
       setTimeout(() => {
@@ -227,14 +255,26 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
             autoMarkAsRead(message.id)
           }
         })
-        // 延迟后重新获取消息状态
-        setTimeout(() => {
-          fetchMessages()
-          fetchUnreadCount()
-        }, 500)
       }, 1000)
+    } else if (!isOpen) {
+      // 关闭时重置首次加载状态，这样下次打开又会显示加载动画
+      setIsFirstLoad(true)
     }
-  }, [isOpen, user, messages.length])
+  }, [isOpen, user])
+
+  // 当消息列表变化时，处理自动确认
+  useEffect(() => {
+    if (isOpen && user && messages.length > 0) {
+      const unreadAutoMessages = messages.filter(msg => !msg.isRead && msg.autoRead)
+      if (unreadAutoMessages.length > 0) {
+        setTimeout(() => {
+          unreadAutoMessages.forEach(message => {
+            autoMarkAsRead(message.id)
+          })
+        }, 1000)
+      }
+    }
+  }, [messages, isOpen, user])
 
   if (!user) return null
 
@@ -426,7 +466,9 @@ const SystemNotifications: React.FC<SystemNotificationsProps> = ({ className = '
                                 <div className="flex items-center space-x-3">
                                   <span className="flex items-center space-x-1">
                                     <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                                      <span className="text-white text-xs font-bold">S</span>
+                                      <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                                      </svg>
                                     </div>
                                     <span>{message.author.nickname}</span>
                                   </span>
