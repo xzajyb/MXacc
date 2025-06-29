@@ -349,7 +349,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       return
     }
 
-    if (!isSocialFeatureEnabled) {
+    // 优先检查封禁状态
+    if (userBan) {
+      showError('您已被封禁，无法使用社交功能')
+      return
+    }
+
+    if (!isEmailVerified) {
       showError('请先验证邮箱后再使用社交功能')
       return
     }
@@ -401,7 +407,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
   // 点赞/取消点赞帖子
   const handleLike = async (postId: string) => {
-    if (!isSocialFeatureEnabled) {
+    // 优先检查封禁状态
+    if (userBan) {
+      showError('您已被封禁，无法使用社交功能')
+      return
+    }
+
+    if (!isEmailVerified) {
       showError('请先验证邮箱后再使用社交功能')
       return
     }
@@ -448,7 +460,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
   // 点赞/取消点赞评论
   const handleCommentLike = async (commentId: string) => {
-    if (!isSocialFeatureEnabled) {
+    // 优先检查封禁状态
+    if (userBan) {
+      showError('您已被封禁，无法使用社交功能')
+      return
+    }
+
+    if (!isEmailVerified) {
       showError('请先验证邮箱后再使用社交功能')
       return
     }
@@ -840,7 +858,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       return
     }
 
-    if (!isSocialFeatureEnabled) {
+    // 优先检查封禁状态
+    if (userBan) {
+      showError('您已被封禁，无法使用社交功能')
+      return
+    }
+
+    if (!isEmailVerified) {
       showError('请先验证邮箱后再使用社交功能')
       return
     }
@@ -1110,7 +1134,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
 
   // 获取会话列表
   const fetchConversations = async () => {
-    if (!isSocialFeatureEnabled) {
+    // 优先检查封禁状态
+    if (userBan) {
+      showError('您已被封禁，无法使用社交功能')
+      return
+    }
+
+    if (!isEmailVerified) {
       showError('请先验证邮箱后再使用社交功能')
       return
     }
@@ -2271,9 +2301,12 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       />
 
       {/* 申述模态框 */}
-      {showAppealModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full shadow-2xl">
+      {showAppealModal && createPortal(
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+          onClick={() => setShowAppealModal(false)}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {/* 头部 */}
             <div className="bg-blue-600 text-white p-6 rounded-t-lg">
               <div className="flex items-center justify-between">
@@ -2385,10 +2418,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                   <li>• 如果申述被驳回，您可以在处理结果后重新提交申述</li>
                 </ul>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+                         </div>
+           </div>
+         </div>,
+         document.body
+       )}
 
       {/* 图片查看模态框 */}
       {showImageModal && createPortal(
