@@ -24,6 +24,7 @@ export default function DebugPage() {
   const [apiTest, setApiTest] = useState<any>(null)
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null)
   const [privacyTestResult, setPrivacyTestResult] = useState<any>(null)
+  const [dataConsistency, setDataConsistency] = useState<any>(null)
 
   // 解析token信息
   useEffect(() => {
@@ -159,6 +160,51 @@ export default function DebugPage() {
       setPrivacyTestResult(results)
     } catch (error) {
       setPrivacyTestResult({ error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  // 数据一致性检查
+  const checkDataConsistency = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      // 同时调用多个API来检查数据一致性
+      const [settingsResponse, profileResponse] = await Promise.all([
+        fetch('/api/user/user-settings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/user/user-profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ])
+
+      const settingsData = settingsResponse.ok ? await settingsResponse.json() : null
+      const profileData = profileResponse.ok ? await profileResponse.json() : null
+
+      const consistency = {
+        timestamp: new Date().toLocaleString(),
+        settingsAPI: {
+          status: settingsResponse.status,
+          success: settingsResponse.ok,
+          privacy: settingsData?.settings?.privacy || null
+        },
+        profileAPI: {
+          status: profileResponse.status,
+          success: profileResponse.ok,
+          data: profileData || null
+        },
+        dataMatch: settingsData?.settings?.privacy && profileData ? 
+          JSON.stringify(settingsData.settings.privacy) === JSON.stringify(profileData.settings?.privacy || {}) : 
+          false
+      }
+
+      setDataConsistency(consistency)
+    } catch (error) {
+      setDataConsistency({
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toLocaleString()
+      })
     }
   }
 
@@ -311,35 +357,55 @@ export default function DebugPage() {
             <div>
               <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">当前设置</h3>
               {privacySettings ? (
-                <div className="space-y-2">
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">个人资料公开:</span>
-                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.profileVisible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {privacySettings.profileVisible ? '是' : '否'}
+                <div className="space-y-3">
+                  {/* 与设置页面保持一致的顺序和标签 */}
+                  <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">公开个人资料</span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">允许其他用户查看你的个人资料</div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${privacySettings.profileVisible ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
+                      {privacySettings.profileVisible ? '开启' : '关闭'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">粉丝列表公开:</span>
-                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.showFollowers ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {privacySettings.showFollowers ? '是' : '否'}
+                  
+                  <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">公开粉丝列表</span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">允许其他用户查看你的粉丝列表</div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${privacySettings.showFollowers ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
+                      {privacySettings.showFollowers ? '开启' : '关闭'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">关注列表公开:</span>
-                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.showFollowing ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {privacySettings.showFollowing ? '是' : '否'}
+                  
+                  <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">公开关注列表</span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">允许其他用户查看你的关注列表</div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${privacySettings.showFollowing ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
+                      {privacySettings.showFollowing ? '开启' : '关闭'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">活动可见:</span>
-                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.activityVisible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {privacySettings.activityVisible ? '是' : '否'}
+                  
+                  <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">公开活动记录</span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">允许其他用户查看你的活动记录</div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${privacySettings.activityVisible ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
+                      {privacySettings.activityVisible ? '开启' : '关闭'}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">允许数据收集:</span>
-                    <span className={`ml-2 px-2 py-1 rounded text-sm ${privacySettings.allowDataCollection ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {privacySettings.allowDataCollection ? '是' : '否'}
+                  
+                  <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">允许数据收集</span>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">允许系统收集匿名使用数据以改善服务</div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${privacySettings.allowDataCollection ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'}`}>
+                      {privacySettings.allowDataCollection ? '开启' : '关闭'}
                     </span>
                   </div>
                 </div>
@@ -347,12 +413,33 @@ export default function DebugPage() {
                 <p className="text-gray-600 dark:text-gray-400">暂无隐私设置数据</p>
               )}
               
-              <button
-                onClick={fetchPrivacySettings}
-                className="mt-3 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
-              >
-                刷新设置
-              </button>
+              <div className="flex space-x-2 mt-4">
+                <button
+                  onClick={fetchPrivacySettings}
+                  className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700 text-sm"
+                >
+                  刷新设置
+                </button>
+                                 <button
+                   onClick={() => window.open('/settings', '_blank')}
+                   className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 text-sm"
+                 >
+                   打开设置页面
+                 </button>
+                 <button
+                   onClick={checkDataConsistency}
+                   className="bg-purple-600 text-white px-3 py-2 rounded hover:bg-purple-700 text-sm"
+                 >
+                   检查数据一致性
+                 </button>
+               </div>
+              
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>📋 数据来源：</strong>以上显示的设置数据来自 <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">/api/user/user-settings</code> API，
+                  与设置页面使用完全相同的数据源，确保信息一致性。
+                </p>
+              </div>
             </div>
 
             {/* 隐私测试结果 */}
@@ -397,14 +484,84 @@ export default function DebugPage() {
                 </div>
               )}
               
-              <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
-                <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                  <strong>说明：</strong>这里测试的是您自己对自己资料的访问权限。如果设置为私有但测试仍然成功，这是正常的，因为您始终可以访问自己的资料。
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+                             <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                 <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                   <strong>说明：</strong>这里测试的是您自己对自己资料的访问权限。如果设置为私有但测试仍然成功，这是正常的，因为您始终可以访问自己的资料。
+                 </p>
+               </div>
+             </div>
+           </div>
+           
+           {/* 数据一致性检查结果 */}
+           {dataConsistency && (
+             <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+               <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">数据一致性检查结果</h3>
+               
+               {dataConsistency.error ? (
+                 <div className="text-red-600 dark:text-red-400">
+                   错误: {dataConsistency.error}
+                 </div>
+               ) : (
+                 <div className="space-y-3">
+                   <div className="text-sm text-gray-600 dark:text-gray-400">
+                     检查时间: {dataConsistency.timestamp}
+                   </div>
+                   
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="p-3 bg-white dark:bg-gray-800 rounded border">
+                       <h4 className="font-medium text-gray-900 dark:text-white mb-2">设置API</h4>
+                       <div className="text-sm space-y-1">
+                         <div>状态: <span className={`font-medium ${dataConsistency.settingsAPI.success ? 'text-green-600' : 'text-red-600'}`}>
+                           {dataConsistency.settingsAPI.status}
+                         </span></div>
+                         <div>隐私数据: {dataConsistency.settingsAPI.privacy ? '✅ 已获取' : '❌ 未获取'}</div>
+                       </div>
+                     </div>
+                     
+                     <div className="p-3 bg-white dark:bg-gray-800 rounded border">
+                       <h4 className="font-medium text-gray-900 dark:text-white mb-2">用户资料API</h4>
+                       <div className="text-sm space-y-1">
+                         <div>状态: <span className={`font-medium ${dataConsistency.profileAPI.success ? 'text-green-600' : 'text-red-600'}`}>
+                           {dataConsistency.profileAPI.status}
+                         </span></div>
+                         <div>用户数据: {dataConsistency.profileAPI.data ? '✅ 已获取' : '❌ 未获取'}</div>
+                       </div>
+                     </div>
+                   </div>
+                   
+                   <div className={`p-3 rounded-lg ${dataConsistency.dataMatch ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'}`}>
+                     <div className={`text-sm font-medium ${dataConsistency.dataMatch ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                       {dataConsistency.dataMatch ? '✅ 数据一致' : '❌ 数据不一致'}
+                     </div>
+                     <div className={`text-xs mt-1 ${dataConsistency.dataMatch ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                       {dataConsistency.dataMatch 
+                         ? '设置页面和调试页面显示的隐私设置数据完全一致' 
+                         : '检测到数据不一致，建议清除缓存后重新登录'}
+                     </div>
+                   </div>
+                   
+                   {!dataConsistency.dataMatch && (
+                     <details className="mt-3">
+                       <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+                         查看详细数据对比
+                       </summary>
+                       <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-600 rounded text-xs font-mono">
+                         <div className="mb-2">
+                           <strong>设置API返回:</strong>
+                           <pre>{JSON.stringify(dataConsistency.settingsAPI.privacy, null, 2)}</pre>
+                         </div>
+                         <div>
+                           <strong>用户资料API返回:</strong>
+                           <pre>{JSON.stringify(dataConsistency.profileAPI.data?.settings?.privacy || null, null, 2)}</pre>
+                         </div>
+                       </div>
+                     </details>
+                   )}
+                 </div>
+               )}
+             </div>
+           )}
+         </div>
 
         {/* 环境信息 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
@@ -456,6 +613,16 @@ export default function DebugPage() {
                 <li>建议让朋友测试是否能查看您的资料来验证隐私设置</li>
               </ul>
             </div>
+            
+            <div>
+              <h4 className="font-medium text-yellow-800 dark:text-yellow-200">数据一致性问题：</h4>
+              <ul className="list-disc list-inside space-y-1 text-yellow-700 dark:text-yellow-300 ml-4">
+                <li>如果数据一致性检查显示不一致，表示不同API返回的数据有差异</li>
+                <li>点击"检查数据一致性"按钮验证设置页面和调试页面的数据是否同步</li>
+                <li>如果发现不一致，请先尝试刷新设置，然后清除缓存</li>
+                <li>数据一致性检查可以帮助诊断缓存问题或API同步问题</li>
+              </ul>
+            </div>
           </div>
           
           <div className="flex space-x-2 mt-4">
@@ -482,12 +649,15 @@ export default function DebugPage() {
             <button
               onClick={() => {
                 fetchPrivacySettings()
-                setTimeout(() => testPrivacySettings(), 1000)
+                setTimeout(() => {
+                  testPrivacySettings()
+                  checkDataConsistency()
+                }, 1000)
               }}
               className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
               disabled={!user?.id}
             >
-              重新测试隐私设置
+              完整诊断检查
             </button>
           </div>
         </div>
