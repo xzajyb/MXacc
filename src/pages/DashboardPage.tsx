@@ -4,63 +4,6 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
 import { motion, AnimatePresence } from 'framer-motion'
-
-// Fluid Glass CSS styles
-const fluidGlassStyles = `
-  .fluid-glass {
-    position: relative;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .dark .fluid-glass {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  }
-
-  .fluid-glass::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: inherit;
-    background: linear-gradient(135deg, rgba(67, 117, 255, 0.1), rgba(138, 68, 255, 0.1));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-  }
-
-  .fluid-glass:hover::before {
-    opacity: 1;
-  }
-
-  .fluid-glass-active {
-    background: linear-gradient(135deg, rgba(67, 117, 255, 0.15), rgba(138, 68, 255, 0.1));
-    border: 1px solid rgba(67, 117, 255, 0.3);
-    box-shadow: 
-      0 8px 32px 0 rgba(67, 117, 255, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  .dark .fluid-glass-active {
-    background: linear-gradient(135deg, rgba(67, 117, 255, 0.12), rgba(138, 68, 255, 0.08));
-    border: 1px solid rgba(67, 117, 255, 0.25);
-    box-shadow: 
-      0 8px 32px 0 rgba(67, 117, 255, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  .fluid-glass-active::before {
-    opacity: 0.5;
-  }
-`
 import { 
   Home, 
   User, 
@@ -90,6 +33,7 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
+import FluidGlass from '../components/FluidGlass'
 
 type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
@@ -102,27 +46,6 @@ const DashboardPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [socialUnreadCount, setSocialUnreadCount] = useState(0)  // 新增：社交未读消息数量
   const navigate = useNavigate()
-
-  // 注入 Fluid Glass CSS 样式
-  useEffect(() => {
-    const styleId = 'fluid-glass-styles'
-    let styleElement = document.getElementById(styleId)
-    
-    if (!styleElement) {
-      styleElement = document.createElement('style')
-      styleElement.id = styleId
-      styleElement.textContent = fluidGlassStyles
-      document.head.appendChild(styleElement)
-    }
-
-    return () => {
-      // 清理函数 - 组件卸载时移除样式
-      const element = document.getElementById(styleId)
-      if (element) {
-        element.remove()
-      }
-    }
-  }, [])
 
   // 根据用户状态自动显示邮箱验证
   useEffect(() => {
@@ -496,6 +419,20 @@ const DashboardPage: React.FC = () => {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
+          {/* FluidGlass 效果区域 */}
+          <div className="relative h-32 overflow-hidden border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-600">
+              <FluidGlass 
+                mode="lens"
+                height={128}
+                navItems={navigationItems.slice(0, 3).map(item => ({
+                  label: item.label,
+                  link: `#${item.id}`
+                }))}
+              />
+            </div>
+          </div>
+
           {/* Logo区域 - 固定高度 */}
           <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
@@ -513,10 +450,10 @@ const DashboardPage: React.FC = () => {
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id as ActiveView)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg relative ${
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors relative ${
                     activeView === item.id
-                      ? 'fluid-glass fluid-glass-active text-blue-700 dark:text-blue-400'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white transition-colors'
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white'
                   }`}
                 >
                   <Icon size={20} />
