@@ -25,6 +25,7 @@ export default function DebugPage() {
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings | null>(null)
   const [privacyTestResult, setPrivacyTestResult] = useState<any>(null)
   const [dataConsistency, setDataConsistency] = useState<any>(null)
+  const [deepPrivacyDebug, setDeepPrivacyDebug] = useState<any>(null)
 
   // 解析token信息
   useEffect(() => {
@@ -160,6 +161,28 @@ export default function DebugPage() {
       setPrivacyTestResult(results)
     } catch (error) {
       setPrivacyTestResult({ error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
+  // 深度隐私诊断
+  const performDeepPrivacyDebug = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/debug/privacy-debug?action=check-user-data', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDeepPrivacyDebug(data.data)
+      } else {
+        const errorData = await response.json()
+        setDeepPrivacyDebug({ error: errorData.message || '调试API调用失败' })
+      }
+    } catch (error) {
+      setDeepPrivacyDebug({ error: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -492,6 +515,143 @@ export default function DebugPage() {
              </div>
            </div>
            
+           {/* 深度隐私诊断 */}
+           <div className="mt-6">
+             <div className="flex items-center justify-between mb-4">
+               <h3 className="text-lg font-medium text-gray-900 dark:text-white">🔍 深度隐私诊断</h3>
+               <button
+                 onClick={performDeepPrivacyDebug}
+                 className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-sm font-medium"
+               >
+                 🚨 深度诊断
+               </button>
+             </div>
+             
+             <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 mb-4">
+               <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">⚠️ 重要诊断工具</h4>
+               <p className="text-sm text-red-700 dark:text-red-300">
+                 如果您的隐私设置显示已关闭，但其他用户仍能访问您的资料，请点击"深度诊断"按钮。
+                 这将检查数据库中的实际数据和API的隐私检查逻辑，帮助找出问题所在。
+               </p>
+             </div>
+
+             {deepPrivacyDebug && (
+               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                 {deepPrivacyDebug.error ? (
+                   <div className="text-red-600 dark:text-red-400">
+                     <h4 className="font-medium mb-2">诊断错误</h4>
+                     <p>{deepPrivacyDebug.error}</p>
+                   </div>
+                 ) : (
+                   <div className="space-y-6">
+                     {/* 基本信息 */}
+                     <div>
+                       <h4 className="font-medium text-gray-900 dark:text-white mb-3">📋 基本信息</h4>
+                       <div className="grid grid-cols-2 gap-4 text-sm">
+                         <div>用户ID: <code className="bg-gray-100 dark:bg-gray-600 px-1 rounded">{deepPrivacyDebug.userId}</code></div>
+                         <div>用户名: <strong>{deepPrivacyDebug.username}</strong></div>
+                         <div>邮箱: {deepPrivacyDebug.email}</div>
+                         <div>是否为本人: {deepPrivacyDebug.isOwnProfile ? '✅ 是' : '❌ 否'}</div>
+                       </div>
+                     </div>
+
+                     {/* 数据库原始数据 */}
+                     <div>
+                       <h4 className="font-medium text-gray-900 dark:text-white mb-3">🗄️ 数据库原始数据</h4>
+                       <div className="space-y-3">
+                         <div>
+                           <span className="text-sm font-medium">完整设置数据:</span>
+                           <pre className="mt-1 p-3 bg-gray-100 dark:bg-gray-600 rounded text-xs overflow-x-auto">
+                             {JSON.stringify(deepPrivacyDebug.fullSettings, null, 2)}
+                           </pre>
+                         </div>
+                         <div>
+                           <span className="text-sm font-medium">隐私设置数据:</span>
+                           <pre className="mt-1 p-3 bg-gray-100 dark:bg-gray-600 rounded text-xs overflow-x-auto">
+                             {JSON.stringify(deepPrivacyDebug.privacySettings, null, 2)}
+                           </pre>
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* 隐私检查详情 */}
+                     <div>
+                       <h4 className="font-medium text-gray-900 dark:text-white mb-3">🔍 隐私检查详情</h4>
+                       <div className="space-y-3">
+                         {Object.entries(deepPrivacyDebug.privacyChecks || {}).map(([key, check]: [string, any]) => (
+                           <div key={key} className="p-3 border border-gray-200 dark:border-gray-600 rounded">
+                             <div className="flex items-center justify-between mb-2">
+                               <span className="font-medium">{key}</span>
+                               <span className={`px-2 py-1 rounded text-xs ${check.checkResult ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'}`}>
+                                 {check.checkResult ? '🚨 允许访问' : '🔒 拒绝访问'}
+                               </span>
+                             </div>
+                             <div className="text-sm space-y-1">
+                               <div>原始值: <code>{String(check.rawValue)}</code></div>
+                               <div>检查结果: <code>{String(check.checkResult)}</code></div>
+                               <div className="text-xs text-gray-600 dark:text-gray-400">{check.explanation}</div>
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+
+                     {/* 最终权限结果 */}
+                     <div>
+                       <h4 className="font-medium text-gray-900 dark:text-white mb-3">🎯 最终权限结果</h4>
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                         {Object.entries(deepPrivacyDebug.accessChecks || {}).map(([key, canAccess]: [string, any]) => (
+                           <div key={key} className={`p-3 rounded-lg border ${canAccess ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'}`}>
+                             <div className={`font-medium ${canAccess ? 'text-red-800 dark:text-red-200' : 'text-green-800 dark:text-green-200'}`}>
+                               {key}
+                             </div>
+                             <div className={`text-sm ${canAccess ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                               {canAccess ? '🚨 其他用户可以访问' : '🔒 其他用户无法访问'}
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+
+                     {/* 元数据 */}
+                     <details className="border border-gray-200 dark:border-gray-600 rounded">
+                       <summary className="p-3 cursor-pointer font-medium text-gray-900 dark:text-white">
+                         📊 元数据信息
+                       </summary>
+                       <div className="p-3 border-t border-gray-200 dark:border-gray-600 text-sm space-y-2">
+                         <div>创建时间: {deepPrivacyDebug.metadata?.createdAt}</div>
+                         <div>更新时间: {deepPrivacyDebug.metadata?.updatedAt}</div>
+                         <div>有设置数据: {deepPrivacyDebug.metadata?.hasSettings ? '✅' : '❌'}</div>
+                         <div>有隐私设置: {deepPrivacyDebug.metadata?.hasPrivacySettings ? '✅' : '❌'}</div>
+                         <div>设置键: {deepPrivacyDebug.metadata?.settingsKeys?.join(', ')}</div>
+                         <div>隐私键: {deepPrivacyDebug.metadata?.privacyKeys?.join(', ')}</div>
+                       </div>
+                     </details>
+
+                     {/* 问题分析 */}
+                     <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                       <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">🔬 问题分析</h4>
+                       <div className="text-sm text-yellow-700 dark:text-yellow-300 space-y-2">
+                         {!deepPrivacyDebug.metadata?.hasPrivacySettings && (
+                           <div>⚠️ 未找到隐私设置数据，这可能是问题的根源</div>
+                         )}
+                         {deepPrivacyDebug.accessChecks?.canViewProfile && (
+                           <div>🚨 profileVisible 检查结果为允许访问，这就是为什么其他用户能看到您的资料</div>
+                         )}
+                         {deepPrivacyDebug.privacyChecks?.profileVisible?.rawValue === undefined && (
+                           <div>❗ profileVisible 值为 undefined，API 默认认为资料是公开的</div>
+                         )}
+                         {deepPrivacyDebug.privacyChecks?.profileVisible?.rawValue === false && deepPrivacyDebug.privacyChecks?.profileVisible?.checkResult === true && (
+                           <div>🐛 发现逻辑错误：设置为 false 但检查结果为 true</div>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 )}
+               </div>
+             )}
+           </div>
+
            {/* 数据一致性检查结果 */}
            {dataConsistency && (
              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
@@ -623,6 +783,17 @@ export default function DebugPage() {
                 <li>数据一致性检查可以帮助诊断缓存问题或API同步问题</li>
               </ul>
             </div>
+            
+            <div>
+              <h4 className="font-medium text-yellow-800 dark:text-yellow-200">深度隐私诊断：</h4>
+              <ul className="list-disc list-inside space-y-1 text-yellow-700 dark:text-yellow-300 ml-4">
+                <li>🚨 如果设置显示关闭但其他用户仍能访问，请立即使用"深度诊断"</li>
+                <li>深度诊断会检查数据库中的实际数据和API的隐私检查逻辑</li>
+                <li>如果发现"profileVisible值为undefined"，说明数据库中没有保存隐私设置</li>
+                <li>如果发现"设置为false但检查结果为true"，说明API逻辑有问题</li>
+                <li>如果发现"未找到隐私设置数据"，需要重新保存隐私设置</li>
+              </ul>
+            </div>
           </div>
           
           <div className="flex space-x-2 mt-4">
@@ -649,6 +820,7 @@ export default function DebugPage() {
             <button
               onClick={() => {
                 fetchPrivacySettings()
+                performDeepPrivacyDebug()
                 setTimeout(() => {
                   testPrivacySettings()
                   checkDataConsistency()
