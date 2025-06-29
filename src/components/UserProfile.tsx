@@ -548,9 +548,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                 )}
                               </div>
                               <div>
-                                                              <div>
+                              <div>
                                 <div className="flex items-center space-x-2">
-                                  <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
+                                    <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
                                   {/* 管理员标签 */}
                                   {post.author.role === 'admin' && (
                                     <div className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
@@ -560,7 +560,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
-                              </div>
+                                </div>
                               </div>
                             </div>
                             {post.canDelete && (

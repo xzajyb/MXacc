@@ -90,6 +90,10 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (data.success) {
         setConversations(data.data.conversations)
         console.log('设置会话列表:', data.data.conversations.length, '个会话')
+        // 打印每个会话的未读数
+        data.data.conversations.forEach((conv: any) => {
+          console.log(`会话 ${conv.otherUser.nickname}: unreadCount=${conv.unreadCount}`)
+        })
         // 会话列表加载完成后标记为已初始化
         if (!hasInitiallyLoaded) {
           setHasInitiallyLoaded(true)
@@ -257,12 +261,35 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
       if (data.success) {
         console.log(`📖 成功标记${data.data.markedCount}条消息为已读`)
         
+        // 立即更新前端会话列表中的未读计数
+        if (conversationId) {
+          setConversations(prev => prev.map(conv => 
+            conv.id === conversationId 
+              ? { ...conv, unreadCount: 0 }
+              : conv
+          ))
+          console.log(`📖 立即更新会话 ${conversationId} 的未读计数为0`)
+        } else if (otherUserId) {
+          setConversations(prev => prev.map(conv => 
+            conv.otherUser.id === otherUserId 
+              ? { ...conv, unreadCount: 0 }
+              : conv
+          ))
+          console.log(`📖 立即更新与用户 ${otherUserId} 的会话未读计数为0`)
+        }
+        
         // 立即刷新会话列表和未读计数
         await fetchConversations()
-        if (onUnreadCountChange) {
-          console.log('📱 MessagingModal: 调用 onUnreadCountChange (标记已读后)')
-          onUnreadCountChange()
-        }
+        
+        // 强制刷新：等待50ms再次刷新，确保数据一致性
+        setTimeout(async () => {
+          console.log('📱 执行延迟刷新会话列表...')
+          await fetchConversations()
+          if (onUnreadCountChange) {
+            console.log('📱 MessagingModal: 调用 onUnreadCountChange (标记已读后)')
+            onUnreadCountChange()
+          }
+        }, 50)
       } else {
         console.error('📖 标记已读失败:', data.message)
       }
@@ -626,25 +653,25 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                       {/* 消息头部 */}
                       <div className="p-4 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
-                              {(targetUser?.avatar || selectedConversation?.otherUser.avatar) ? (
-                                <img 
-                                  src={targetUser?.avatar || selectedConversation?.otherUser.avatar} 
-                                  alt={targetUser?.nickname || selectedConversation?.otherUser.nickname} 
-                                  className="w-full h-full object-cover" 
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                  <span className="text-white font-bold text-xs">
-                                    {(targetUser?.nickname || selectedConversation?.otherUser.nickname || '').charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">
-                              {targetUser?.nickname || selectedConversation?.otherUser.nickname}
-                            </h4>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+                            {(targetUser?.avatar || selectedConversation?.otherUser.avatar) ? (
+                              <img 
+                                src={targetUser?.avatar || selectedConversation?.otherUser.avatar} 
+                                alt={targetUser?.nickname || selectedConversation?.otherUser.nickname} 
+                                className="w-full h-full object-cover" 
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                <span className="text-white font-bold text-xs">
+                                  {(targetUser?.nickname || selectedConversation?.otherUser.nickname || '').charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">
+                            {targetUser?.nickname || selectedConversation?.otherUser.nickname}
+                          </h4>
                           </div>
                           
                           {/* 更多菜单 */}
@@ -710,39 +737,39 @@ const MessagingModal: React.FC<MessagingModalProps> = ({
                                   </div>
                                 ) : (
                                   // 普通消息样式
-                                  <div className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
-                                    <div className="relative group">
-                                      <div
-                                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                                          message.senderId === user?.id
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
-                                        }`}
-                                      >
-                                        <p className="text-sm">{message.content}</p>
-                                        <p className={`text-xs mt-1 ${
-                                          message.senderId === user?.id
-                                            ? 'text-blue-100'
-                                            : 'text-gray-500 dark:text-gray-400'
-                                        }`}>
-                                          {formatTime(message.createdAt)}
-                                        </p>
-                                      </div>
-                                      
-                                      {/* 撤回按钮 */}
-                                      {canRecallMessage(message.createdAt, message.senderId, message.isSystemMessage) && (
-                                        <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                          <button
-                                            onClick={() => recallMessage(message.id)}
-                                            className="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-all duration-200 hover:scale-110"
-                                            title="撤回消息 (3分钟内可撤回)"
-                                          >
-                                            <RotateCcw className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      )}
+                                <div className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                                  <div className="relative group">
+                                    <div
+                                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
+                                        message.senderId === user?.id
+                                          ? 'bg-blue-600 text-white'
+                                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                                      }`}
+                                    >
+                                      <p className="text-sm">{message.content}</p>
+                                      <p className={`text-xs mt-1 ${
+                                        message.senderId === user?.id
+                                          ? 'text-blue-100'
+                                          : 'text-gray-500 dark:text-gray-400'
+                                      }`}>
+                                        {formatTime(message.createdAt)}
+                                      </p>
                                     </div>
+                                    
+                                    {/* 撤回按钮 */}
+                                      {canRecallMessage(message.createdAt, message.senderId, message.isSystemMessage) && (
+                                      <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                        <button
+                                          onClick={() => recallMessage(message.id)}
+                                          className="bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full w-7 h-7 flex items-center justify-center shadow-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-orange-600 dark:hover:text-orange-400 transition-all duration-200 hover:scale-110"
+                                          title="撤回消息 (3分钟内可撤回)"
+                                        >
+                                          <RotateCcw className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
+                                </div>
                                 )}
                               </div>
                             )

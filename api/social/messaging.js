@@ -999,11 +999,11 @@ module.exports = async function handler(req, res) {
       // 隐藏会话（从私信列表中删除，但不删除聊天记录）
       if (action === 'hide-conversation') {
         if (!conversationId) {
-          return res.status(400).json({ 
-            success: false, 
+      return res.status(400).json({ 
+        success: false, 
             message: '会话ID不能为空' 
-          })
-        }
+      })
+    }
 
         // 验证用户是否为该会话的参与者
         const conversation = await conversations.findOne({
