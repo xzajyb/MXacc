@@ -23,6 +23,12 @@ interface User {
   role?: string
   canViewFollowers?: boolean
   canViewFollowing?: boolean
+  titles?: {
+    id: string
+    name: string
+    color: string
+    description?: string
+  }[]
 }
 
 interface FollowUser {
@@ -34,6 +40,12 @@ interface FollowUser {
   role?: string
   isFollowing: boolean
   followedAt: string
+  titles?: {
+    id: string
+    name: string
+    color: string
+    description?: string
+  }[]
 }
 
 interface Post {
@@ -46,6 +58,12 @@ interface Post {
     nickname: string
     avatar: string
     role?: string
+    titles?: {
+      id: string
+      name: string
+      color: string
+      description?: string
+    }[]
   }
   likesCount: number
   commentsCount: number
@@ -386,7 +404,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
 
                   {/* 用户信息 */}
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 flex-wrap">
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user.nickname}</h3>
                       {/* 管理员标签 */}
                       {user.role === 'admin' && (
@@ -395,6 +413,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                           管理员
                         </div>
                       )}
+                      {/* 用户头衔 */}
+                      {user.titles && user.titles.length > 0 && user.titles.map(title => (
+                        <div 
+                          key={title.id}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                          style={{ 
+                            backgroundColor: `${title.color}20`,
+                            color: title.color
+                          }}
+                          title={title.description || title.name}
+                        >
+                          {title.name}
+                        </div>
+                      ))}
                     </div>
                     <p className="text-gray-500 dark:text-gray-400">@{user.username}</p>
                     
@@ -549,7 +581,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                               </div>
                               <div>
                               <div>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 flex-wrap">
                                     <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
                                   {/* 管理员标签 */}
                                   {post.author.role === 'admin' && (
@@ -558,6 +590,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                       管理员
                                     </div>
                                   )}
+                                  {/* 用户头衔 */}
+                                  {post.author.titles && post.author.titles.length > 0 && post.author.titles.map(title => (
+                                    <div 
+                                      key={title.id}
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium"
+                                      style={{ 
+                                        backgroundColor: `${title.color}20`,
+                                        color: title.color
+                                      }}
+                                      title={title.description || title.name}
+                                    >
+                                      {title.name}
+                                    </div>
+                                  ))}
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                                 </div>
@@ -644,7 +690,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                 )}
                               </div>
                               <div className="flex-1">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 flex-wrap">
                                   <h4 className="font-medium text-gray-900 dark:text-white">{follower.nickname}</h4>
                                   {follower.role === 'admin' && (
                                     <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
@@ -652,6 +698,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                       管理员
                                     </div>
                                   )}
+                                  {/* 用户头衔 */}
+                                  {follower.titles && follower.titles.length > 0 && follower.titles.map(title => (
+                                    <div 
+                                      key={title.id}
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium"
+                                      style={{ 
+                                        backgroundColor: `${title.color}20`,
+                                        color: title.color
+                                      }}
+                                      title={title.description || title.name}
+                                    >
+                                      {title.name}
+                                    </div>
+                                  ))}
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">@{follower.username}</p>
                                 {follower.bio && (
@@ -707,7 +767,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                 )}
                               </div>
                               <div className="flex-1">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 flex-wrap">
                                   <h4 className="font-medium text-gray-900 dark:text-white">{followingUser.nickname}</h4>
                                   {followingUser.role === 'admin' && (
                                     <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
@@ -715,6 +775,20 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                       管理员
                                     </div>
                                   )}
+                                  {/* 用户头衔 */}
+                                  {followingUser.titles && followingUser.titles.length > 0 && followingUser.titles.map(title => (
+                                    <div 
+                                      key={title.id}
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium"
+                                      style={{ 
+                                        backgroundColor: `${title.color}20`,
+                                        color: title.color
+                                      }}
+                                      title={title.description || title.name}
+                                    >
+                                      {title.name}
+                                    </div>
+                                  ))}
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">@{followingUser.username}</p>
                                 {followingUser.bio && (

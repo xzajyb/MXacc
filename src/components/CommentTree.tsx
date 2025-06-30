@@ -13,6 +13,12 @@ export interface TreeComment {
     nickname: string
     avatar: string
     role?: string
+    titles?: {
+      id: string
+      name: string
+      color: string
+      description?: string
+    }[]
   }
   replyTo?: {
     id: string
@@ -222,6 +228,21 @@ const CommentTree: React.FC<CommentTreeProps> = ({
                       管理员
                     </div>
                   )}
+                  
+                  {/* 用户头衔 */}
+                  {comment.author.titles && comment.author.titles.length > 0 && comment.author.titles.map(title => (
+                    <div 
+                      key={title.id}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium"
+                      style={{ 
+                        backgroundColor: `${title.color}20`,
+                        color: title.color
+                      }}
+                      title={title.description || title.name}
+                    >
+                      {title.name}
+                    </div>
+                  ))}
 
                   <span className="text-gray-500 dark:text-gray-400">·</span>
                   <span className="text-gray-500 dark:text-gray-400">

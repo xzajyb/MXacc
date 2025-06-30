@@ -48,6 +48,12 @@ interface Post {
     nickname: string
     avatar: string
     role?: string
+    titles?: {
+      id: string
+      name: string
+      color: string
+      description?: string
+    }[]
   }
   likesCount: number
   commentsCount: number
@@ -66,6 +72,13 @@ interface Comment {
     username: string
     nickname: string
     avatar: string
+    role?: string
+    titles?: {
+      id: string
+      name: string
+      color: string
+      description?: string
+    }[]
   }
   replyTo?: {
     id: string
@@ -91,6 +104,13 @@ interface User {
   followingCount: number
   postsCount: number
   joinedAt: string
+  role?: string
+  titles?: {
+    id: string
+    name: string
+    color: string
+    description?: string
+  }[]
 }
 
 interface SocialPageProps {
@@ -1923,7 +1943,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                     )}
                                   </div>
                                   <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                                    <h4 className="font-medium text-gray-900 dark:text-white flex items-center space-x-2">
+                                    <h4 className="font-medium text-gray-900 dark:text-white flex items-center space-x-2 flex-wrap">
                                       <span>{post.author.nickname}</span>
                                       {/* 管理员标签 */}
                                       {post.author.role === 'admin' && (
@@ -1932,6 +1952,20 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                                           管理员
                                         </div>
                                       )}
+                                      {/* 用户头衔 */}
+                                      {post.author.titles && post.author.titles.length > 0 && post.author.titles.map(title => (
+                                        <div 
+                                          key={title.id}
+                                          className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium"
+                                          style={{ 
+                                            backgroundColor: `${title.color}20`,
+                                            color: title.color
+                                          }}
+                                          title={title.description || title.name}
+                                        >
+                                          {title.name}
+                                        </div>
+                                      ))}
                                     </h4>
                                   </div>
                                 </div>
@@ -2176,7 +2210,7 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                         )}
                       </div>
                       <div className="cursor-pointer" onClick={() => handleViewProfile(post.author.id)}>
-                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center space-x-2">
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center space-x-2 flex-wrap">
                           <span>{post.author.nickname}</span>
                           {/* 管理员标签 */}
                           {post.author.role === 'admin' && (
@@ -2185,6 +2219,20 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                               管理员
                             </div>
                           )}
+                          {/* 用户头衔 */}
+                          {post.author.titles && post.author.titles.length > 0 && post.author.titles.map(title => (
+                            <div 
+                              key={title.id}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium"
+                              style={{ 
+                                backgroundColor: `${title.color}20`,
+                                color: title.color
+                              }}
+                              title={title.description || title.name}
+                            >
+                              {title.name}
+                            </div>
+                          ))}
                         </h4>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(post.createdAt, 'datetime')}</p>
                       </div>
