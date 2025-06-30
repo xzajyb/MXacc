@@ -128,6 +128,8 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [newPostContent, setNewPostContent] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [hasMorePosts, setHasMorePosts] = useState(true)
   const [showComments, setShowComments] = useState<Record<string, boolean>>({})
   const [comments, setComments] = useState<Record<string, TreeComment[]>>({})
   const [commentContent, setCommentContent] = useState<Record<string, string>>({})
@@ -440,11 +442,11 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
   }
 
   // 获取帖子列表
-  const fetchPosts = async (type: 'feed' | 'following' = 'feed') => {
+  const fetchPosts = async (type: 'feed' | 'following' = 'feed', page: number = 1, append: boolean = false) => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/social/content?action=posts&type=${type}`, {
+      const response = await fetch(`/api/social/content?action=posts&type=${type}&page=${page}&limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -452,7 +454,14 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
       
       if (response.ok) {
         const data = await response.json()
-        setPosts(data.data.posts)
+        if (append) {
+          setPosts(prev => [...prev, ...data.data.posts])
+        } else {
+          setPosts(data.data.posts)
+        }
+        // 检查是否还有更多帖子可加载
+        setHasMorePosts(data.data.posts.length === 10)
+        setCurrentPage(page)
       } else {
         throw new Error('获取帖子失败')
       }
@@ -2386,6 +2395,18 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
                 </motion.div>
               ))
             )
+          )}
+          
+          {/* 加载更多按钮 */}
+          {!loading && hasMorePosts && activeTab !== 'profile' && (activeTab === 'feed' || activeTab === 'following') && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={() => fetchPosts(activeTab === 'feed' ? 'feed' : 'following', currentPage + 1, true)}
+                className="px-6 py-2 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
+              >
+                加载更多
+              </button>
+            </div>
           )}
         </div>
       </div>
