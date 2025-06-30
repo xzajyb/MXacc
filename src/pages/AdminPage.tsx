@@ -38,7 +38,7 @@ interface AdminPageProps {
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
   const { showToast } = useToast()
-  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans'>('email')
+  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles'>('email')
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -117,6 +117,35 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [processingUnban, setProcessingUnban] = useState(false)
   const [sendUnbanNotification, setSendUnbanNotification] = useState(true)
 
+  // 头衔管理相关状态
+  const [titlesList, setTitlesList] = useState<any[]>([])
+  const [titlesLoading, setTitlesLoading] = useState(false)
+  const [showCreateTitleDialog, setShowCreateTitleDialog] = useState(false)
+  const [showEditTitleDialog, setShowEditTitleDialog] = useState(false)
+  const [showAssignTitleDialog, setShowAssignTitleDialog] = useState(false)
+  const [selectedTitle, setSelectedTitle] = useState<any>(null)
+  const [titleName, setTitleName] = useState('')
+  const [titleColor, setTitleColor] = useState('#3B82F6')
+  const [titleDescription, setTitleDescription] = useState('')
+  const [processingTitle, setProcessingTitle] = useState(false)
+  const [assigningTitle, setAssigningTitle] = useState(false)
+  const [selectedUserForTitle, setSelectedUserForTitle] = useState('')
+  const [selectedTitleForAssign, setSelectedTitleForAssign] = useState('')
+  const [userTitles, setUserTitles] = useState<any[]>([])
+  
+  // 预设颜色选项
+  const presetColors = [
+    { name: 'Blue', value: '#3B82F6' },
+    { name: 'Red', value: '#EF4444' },
+    { name: 'Green', value: '#10B981' },
+    { name: 'Yellow', value: '#F59E0B' },
+    { name: 'Purple', value: '#8B5CF6' },
+    { name: 'Pink', value: '#EC4899' },
+    { name: 'Indigo', value: '#6366F1' },
+    { name: 'Orange', value: '#F97316' },
+    { name: 'Gray', value: '#6B7280' }
+  ]
+
   // 检查管理员权限
   if (!user || user.role !== 'admin') {
     return (
@@ -185,6 +214,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       loadBanList()
       loadAppealsList()
       loadUsers() // 加载用户列表供封禁选择器使用
+    } else if (activeTab === 'titles' && token) {
+      loadTitles()
+      loadUsers() // 加载用户列表供头衔分配使用
     }
   }, [activeTab, currentPage, token])
 
@@ -397,6 +429,179 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     } finally {
       setAppealLoading(false)
     }
+  }
+
+  // 加载头衔列表
+  const loadTitles = async () => {
+    if (!token) return
+    
+    setTitlesLoading(true)
+    try {
+      const response = await axios.get('/api/social/content?action=title-management&subAction=titles', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setTitlesList(response.data.data.titles)
+    } catch (error: any) {
+      console.error('加载头衔列表失败:', error)
+      showToast(error.response?.data?.message || '加载头衔列表失败', 'error')
+    } finally {
+      setTitlesLoading(false)
+    }
+  }
+
+  // 创建头衔
+  const handleCreateTitle = async () => {
+    if (!titleName.trim() || !titleColor) {
+      showToast('请填写头衔名称和选择颜色', 'error')
+      return
+    }
+
+    setProcessingTitle(true)
+    try {
+      await axios.post('/api/social/content', {
+        action: 'create-title',
+        name: titleName.trim(),
+        color: titleColor,
+        description: titleDescription.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast('头衔创建成功', 'success')
+      setShowCreateTitleDialog(false)
+      setTitleName('')
+      setTitleColor('#3B82F6')
+      setTitleDescription('')
+      loadTitles()
+    } catch (error: any) {
+      console.error('创建头衔失败:', error)
+      showToast(error.response?.data?.message || '创建头衔失败', 'error')
+    } finally {
+      setProcessingTitle(false)
+    }
+  }
+
+  // 更新头衔
+  const handleUpdateTitle = async () => {
+    if (!selectedTitle || !titleName.trim() || !titleColor) {
+      showToast('请填写完整信息', 'error')
+      return
+    }
+
+    setProcessingTitle(true)
+    try {
+      await axios.put('/api/social/content', {
+        action: 'update-title',
+        titleId: selectedTitle._id,
+        name: titleName.trim(),
+        color: titleColor,
+        description: titleDescription.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast('头衔更新成功', 'success')
+      setShowEditTitleDialog(false)
+      setSelectedTitle(null)
+      setTitleName('')
+      setTitleColor('#3B82F6')
+      setTitleDescription('')
+      loadTitles()
+    } catch (error: any) {
+      console.error('更新头衔失败:', error)
+      showToast(error.response?.data?.message || '更新头衔失败', 'error')
+    } finally {
+      setProcessingTitle(false)
+    }
+  }
+
+  // 删除头衔
+  const handleDeleteTitle = async (titleId: string) => {
+    if (!confirm('确定要删除这个头衔吗？这将移除所有用户的该头衔。')) {
+      return
+    }
+
+    try {
+      await axios.delete(`/api/social/content?action=title&id=${titleId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      showToast('头衔删除成功', 'success')
+      loadTitles()
+    } catch (error: any) {
+      console.error('删除头衔失败:', error)
+      showToast(error.response?.data?.message || '删除头衔失败', 'error')
+    }
+  }
+
+  // 分配头衔给用户
+  const handleAssignTitle = async () => {
+    if (!selectedUserForTitle || !selectedTitleForAssign) {
+      showToast('请选择用户和头衔', 'error')
+      return
+    }
+
+    setAssigningTitle(true)
+    try {
+      await axios.post('/api/social/content', {
+        action: 'assign-title',
+        userId: selectedUserForTitle,
+        titleId: selectedTitleForAssign
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast('头衔分配成功', 'success')
+      setShowAssignTitleDialog(false)
+      setSelectedUserForTitle('')
+      setSelectedTitleForAssign('')
+      loadUserTitles(selectedUserForTitle) // 刷新用户头衔列表
+    } catch (error: any) {
+      console.error('分配头衔失败:', error)
+      showToast(error.response?.data?.message || '分配头衔失败', 'error')
+    } finally {
+      setAssigningTitle(false)
+    }
+  }
+
+  // 加载用户头衔列表
+  const loadUserTitles = async (userId: string) => {
+    if (!token || !userId) return
+    
+    try {
+      const response = await axios.get(`/api/social/content?action=title-management&subAction=user-titles&userId=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setUserTitles(response.data.data.userTitles)
+    } catch (error: any) {
+      console.error('加载用户头衔失败:', error)
+    }
+  }
+
+  // 移除用户头衔
+  const handleRemoveUserTitle = async (userId: string, titleId: string) => {
+    if (!confirm('确定要移除该用户的头衔吗？')) {
+      return
+    }
+
+    try {
+      await axios.delete(`/api/social/content?action=user-title&userId=${userId}&titleId=${titleId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      showToast('头衔移除成功', 'success')
+      loadUserTitles(userId) // 刷新用户头衔列表
+    } catch (error: any) {
+      console.error('移除头衔失败:', error)
+      showToast(error.response?.data?.message || '移除头衔失败', 'error')
+    }
+  }
+
+  // 打开编辑头衔弹窗
+  const openEditTitleDialog = (title: any) => {
+    setSelectedTitle(title)
+    setTitleName(title.name)
+    setTitleColor(title.color)
+    setTitleDescription(title.description || '')
+    setShowEditTitleDialog(true)
   }
 
   // 封禁用户
@@ -868,6 +1073,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 >
                   <AlertTriangle className="h-5 w-5 inline mr-2" />
                   封禁管理
+                </button>
+                <button
+                  onClick={() => setActiveTab('titles')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'titles'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <UserIcon className="h-5 w-5 inline mr-2" />
+                  头衔管理
                 </button>
               </nav>
             </div>
@@ -2078,6 +2294,542 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* 头衔管理内容 */}
+            {activeTab === 'titles' && (
+              <div className="max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 左侧：头衔列表 */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                          <UserIcon className="w-5 h-5 mr-2" />
+                          头衔管理
+                        </h2>
+                        <button
+                          onClick={() => setShowCreateTitleDialog(true)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          创建头衔
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-[600px] overflow-y-auto">
+                      {titlesLoading ? (
+                        <div className="p-8 text-center">
+                          <Loader className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+                          <p className="mt-2 text-gray-500 dark:text-gray-400">加载中...</p>
+                        </div>
+                      ) : titlesList.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <UserIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500 dark:text-gray-400">暂无头衔</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-200 dark:divide-gray-600">
+                          {titlesList.map((title) => (
+                            <div key={title._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div
+                                    className="w-4 h-4 rounded-full border-2 border-gray-300"
+                                    style={{ backgroundColor: title.color }}
+                                  ></div>
+                                  <div>
+                                    <h3 className="font-medium text-gray-900 dark:text-white">
+                                      {title.name}
+                                    </h3>
+                                    {title.description && (
+                                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {title.description}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      <span>颜色: {title.color}</span>
+                                      <span>用户数: {title.userCount || 0}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => openEditTitleDialog(title)}
+                                    className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                  >
+                                    编辑
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteTitle(title._id)}
+                                    className="px-3 py-1 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                  >
+                                    删除
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 右侧：头衔分配 */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                    <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                          头衔分配
+                        </h2>
+                        <button
+                          onClick={() => setShowAssignTitleDialog(true)}
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                        >
+                          分配头衔
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            选择用户查看头衔
+                          </label>
+                          <select
+                            value={selectedUserForTitle}
+                            onChange={(e) => {
+                              setSelectedUserForTitle(e.target.value)
+                              if (e.target.value) {
+                                loadUserTitles(e.target.value)
+                              }
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">选择用户</option>
+                            {users.map((user) => (
+                              <option key={user._id} value={user._id}>
+                                {user.username} ({user.email})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {selectedUserForTitle && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                              用户当前头衔
+                            </h3>
+                            {userTitles.length === 0 ? (
+                              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                                该用户暂无头衔
+                              </p>
+                            ) : (
+                              <div className="space-y-2">
+                                {userTitles.map((userTitle) => (
+                                  <div
+                                    key={userTitle._id}
+                                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                                  >
+                                    <div className="flex items-center space-x-3">
+                                      <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{ backgroundColor: userTitle.title?.color }}
+                                      ></div>
+                                      <div>
+                                        <span className="font-medium text-gray-900 dark:text-white">
+                                          {userTitle.title?.name}
+                                        </span>
+                                        {userTitle.title?.description && (
+                                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                                            {userTitle.title.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => handleRemoveUserTitle(userTitle.userId, userTitle.titleId)}
+                                      className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                    >
+                                      移除
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 创建头衔对话框 */}
+                {showCreateTitleDialog && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+                      <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            创建新头衔
+                          </h3>
+                          <button
+                            onClick={() => {
+                              setShowCreateTitleDialog(false)
+                              setTitleName('')
+                              setTitleColor('#3B82F6')
+                              setTitleDescription('')
+                            }}
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="p-6 space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            头衔名称 *
+                          </label>
+                          <input
+                            type="text"
+                            value={titleName}
+                            onChange={(e) => setTitleName(e.target.value)}
+                            placeholder="例如：活跃用户、贡献者"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            头衔颜色 *
+                          </label>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-3 gap-2">
+                              {presetColors.map((preset) => (
+                                <button
+                                  key={preset.value}
+                                  onClick={() => setTitleColor(preset.value)}
+                                  className={`flex items-center space-x-2 p-2 rounded-md border-2 transition-colors ${
+                                    titleColor === preset.value
+                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                  }`}
+                                >
+                                  <div
+                                    className="w-4 h-4 rounded-full"
+                                    style={{ backgroundColor: preset.value }}
+                                  ></div>
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    {preset.name}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="color"
+                                value={titleColor}
+                                onChange={(e) => setTitleColor(e.target.value)}
+                                className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
+                              />
+                              <input
+                                type="text"
+                                value={titleColor}
+                                onChange={(e) => setTitleColor(e.target.value)}
+                                placeholder="#3B82F6"
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            头衔描述
+                          </label>
+                          <textarea
+                            value={titleDescription}
+                            onChange={(e) => setTitleDescription(e.target.value)}
+                            placeholder="描述这个头衔的含义和获得条件..."
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => {
+                              setShowCreateTitleDialog(false)
+                              setTitleName('')
+                              setTitleColor('#3B82F6')
+                              setTitleDescription('')
+                            }}
+                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            取消
+                          </button>
+                          <button
+                            onClick={handleCreateTitle}
+                            disabled={processingTitle}
+                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                          >
+                            {processingTitle ? (
+                              <>
+                                <Loader className="h-4 w-4 animate-spin mr-2" />
+                                创建中...
+                              </>
+                            ) : (
+                              '创建头衔'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 编辑头衔对话框 */}
+                {showEditTitleDialog && selectedTitle && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+                      <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            编辑头衔
+                          </h3>
+                          <button
+                            onClick={() => {
+                              setShowEditTitleDialog(false)
+                              setSelectedTitle(null)
+                              setTitleName('')
+                              setTitleColor('#3B82F6')
+                              setTitleDescription('')
+                            }}
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="p-6 space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            头衔名称 *
+                          </label>
+                          <input
+                            type="text"
+                            value={titleName}
+                            onChange={(e) => setTitleName(e.target.value)}
+                            placeholder="例如：活跃用户、贡献者"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            头衔颜色 *
+                          </label>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-3 gap-2">
+                              {presetColors.map((preset) => (
+                                <button
+                                  key={preset.value}
+                                  onClick={() => setTitleColor(preset.value)}
+                                  className={`flex items-center space-x-2 p-2 rounded-md border-2 transition-colors ${
+                                    titleColor === preset.value
+                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                                  }`}
+                                >
+                                  <div
+                                    className="w-4 h-4 rounded-full"
+                                    style={{ backgroundColor: preset.value }}
+                                  ></div>
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    {preset.name}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="color"
+                                value={titleColor}
+                                onChange={(e) => setTitleColor(e.target.value)}
+                                className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
+                              />
+                              <input
+                                type="text"
+                                value={titleColor}
+                                onChange={(e) => setTitleColor(e.target.value)}
+                                placeholder="#3B82F6"
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            头衔描述
+                          </label>
+                          <textarea
+                            value={titleDescription}
+                            onChange={(e) => setTitleDescription(e.target.value)}
+                            placeholder="描述这个头衔的含义和获得条件..."
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => {
+                              setShowEditTitleDialog(false)
+                              setSelectedTitle(null)
+                              setTitleName('')
+                              setTitleColor('#3B82F6')
+                              setTitleDescription('')
+                            }}
+                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            取消
+                          </button>
+                          <button
+                            onClick={handleUpdateTitle}
+                            disabled={processingTitle}
+                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                          >
+                            {processingTitle ? (
+                              <>
+                                <Loader className="h-4 w-4 animate-spin mr-2" />
+                                更新中...
+                              </>
+                            ) : (
+                              '更新头衔'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 分配头衔对话框 */}
+                {showAssignTitleDialog && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+                      <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            分配头衔
+                          </h3>
+                          <button
+                            onClick={() => {
+                              setShowAssignTitleDialog(false)
+                              setSelectedUserForTitle('')
+                              setSelectedTitleForAssign('')
+                            }}
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="p-6 space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            选择用户 *
+                          </label>
+                          <select
+                            value={selectedUserForTitle}
+                            onChange={(e) => setSelectedUserForTitle(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">选择用户</option>
+                            {users.map((user) => (
+                              <option key={user._id} value={user._id}>
+                                {user.username} ({user.email})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            选择头衔 *
+                          </label>
+                          <select
+                            value={selectedTitleForAssign}
+                            onChange={(e) => setSelectedTitleForAssign(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">选择头衔</option>
+                            {titlesList.map((title) => (
+                              <option key={title._id} value={title._id}>
+                                {title.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {selectedTitleForAssign && (
+                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div className="flex items-center space-x-2">
+                              <div
+                                className="w-4 h-4 rounded-full"
+                                style={{ 
+                                  backgroundColor: titlesList.find(t => t._id === selectedTitleForAssign)?.color 
+                                }}
+                              ></div>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {titlesList.find(t => t._id === selectedTitleForAssign)?.name}
+                              </span>
+                            </div>
+                            {titlesList.find(t => t._id === selectedTitleForAssign)?.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {titlesList.find(t => t._id === selectedTitleForAssign)?.description}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => {
+                              setShowAssignTitleDialog(false)
+                              setSelectedUserForTitle('')
+                              setSelectedTitleForAssign('')
+                            }}
+                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            取消
+                          </button>
+                          <button
+                            onClick={handleAssignTitle}
+                            disabled={assigningTitle}
+                            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                          >
+                            {assigningTitle ? (
+                              <>
+                                <Loader className="h-4 w-4 animate-spin mr-2" />
+                                分配中...
+                              </>
+                            ) : (
+                              '分配头衔'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

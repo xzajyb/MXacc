@@ -30,8 +30,8 @@ async function checkUserBanStatus(db, userId) {
   return activeBan
 }
 
-// 获取用户信息
-async function getUserById(users, userId) {
+// 获取用户信息（包含头衔）
+async function getUserById(users, userId, db = null) {
   const user = await users.findOne(
     { _id: new ObjectId(userId) },
     { 
@@ -52,6 +52,34 @@ async function getUserById(users, userId) {
   // 统一处理邮箱验证状态字段
   if (user) {
     user.isEmailVerified = user.isEmailVerified || user.security?.emailVerified || false
+  }
+  
+  // 如果提供了db，获取用户头衔
+  if (user && db) {
+    try {
+      const userTitleAssignments = await db.collection('user_title_assignments')
+        .find({ userId: new ObjectId(userId) })
+        .toArray()
+      
+      if (userTitleAssignments.length > 0) {
+        const titleIds = userTitleAssignments.map(assignment => new ObjectId(assignment.titleId))
+        const userTitlesList = await db.collection('user_titles')
+          .find({ _id: { $in: titleIds } })
+          .toArray()
+        
+        user.titles = userTitlesList.map(title => ({
+          id: title._id.toString(),
+          name: title.name,
+          color: title.color,
+          description: title.description
+        }))
+      } else {
+        user.titles = []
+      }
+    } catch (error) {
+      console.error('获取用户头衔失败:', error)
+      user.titles = []
+    }
   }
   
   return user
@@ -81,13 +109,15 @@ module.exports = async function handler(req, res) {
     const comments = db.collection('comments')
     const likes = db.collection('likes')
     const follows = db.collection('follows')
+    const titles = db.collection('user_titles')
+    const userTitles = db.collection('user_title_assignments')
 
     // 验证用户身份
     console.log('🔍 开始验证用户身份...')
     const decoded = verifyToken(req.headers.authorization)
     console.log('✅ Token解码成功, 用户ID:', decoded.userId)
     
-    const currentUser = await getUserById(users, decoded.userId)
+    const currentUser = await getUserById(users, decoded.userId, db)
     console.log('👤 查询到的用户:', currentUser ? {
       id: currentUser._id,
       username: currentUser.username,
@@ -172,7 +202,7 @@ module.exports = async function handler(req, res) {
 
         const postsWithStats = await Promise.all(postList.map(async (post) => {
           const [author, likesCount, commentsCount, isLiked] = await Promise.all([
-            getUserById(users, post.authorId),
+            getUserById(users, post.authorId, db),
             likes.countDocuments({ targetId: post._id, type: 'post' }),
             comments.countDocuments({ postId: post._id }), // 统计所有评论，包括子评论
             likes.findOne({ 
@@ -191,7 +221,8 @@ module.exports = async function handler(req, res) {
               username: author.username,
               nickname: author.profile?.nickname || author.username,
               avatar: author.profile?.avatar,
-              role: author.role || 'user'
+              role: author.role || 'user',
+              titles: author.titles || []
             },
             likesCount,
             commentsCount,
@@ -237,7 +268,7 @@ module.exports = async function handler(req, res) {
         // 获取评论详情
         const commentsWithDetails = await Promise.all(allComments.map(async (comment) => {
           const [author, likesCount, repliesCount, isLiked] = await Promise.all([
-            getUserById(users, comment.authorId),
+            getUserById(users, comment.authorId, db),
             likes.countDocuments({ targetId: comment._id, type: 'comment' }),
             comments.countDocuments({ parentId: comment._id }),
             likes.findOne({ 
@@ -255,7 +286,8 @@ module.exports = async function handler(req, res) {
               username: author.username,
               nickname: author.profile?.nickname || author.username,
               avatar: author.profile?.avatar,
-              role: author.role // 包含用户角色信息
+              role: author.role, // 包含用户角色信息
+              titles: author.titles || []
             },
             replyTo: comment.replyTo ? {
               id: comment.replyTo.userId,
@@ -307,7 +339,7 @@ module.exports = async function handler(req, res) {
           .toArray()
 
         const repliesWithAuthors = await Promise.all(repliesList.map(async (reply) => {
-          const author = await getUserById(users, reply.authorId)
+          const author = await getUserById(users, reply.authorId, db)
           return {
             id: reply._id,
             content: reply.content,
@@ -315,7 +347,9 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role || 'user',
+              titles: author.titles || []
             },
             replyTo: reply.replyTo ? {
               id: reply.replyTo.userId,
@@ -516,6 +550,144 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      // 头衔管理相关功能
+      if (action === 'title-management') {
+        const { subAction, page = 1, limit = 20, titleId, userId } = req.query
+
+        if (subAction === 'titles') {
+          // 获取所有头衔列表（管理员专用）
+          if (currentUser.role !== 'admin') {
+            return res.status(403).json({ success: false, message: '需要管理员权限' })
+          }
+
+          const skip = (parseInt(page) - 1) * parseInt(limit)
+          
+          const titlesList = await titles
+            .find({})
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray()
+
+          // 获取每个头衔的用户数量
+          const titlesWithStats = await Promise.all(titlesList.map(async (title) => {
+            const userCount = await userTitles.countDocuments({ 
+              titleId: new ObjectId(title._id) 
+            })
+            
+            return {
+              ...title,
+              _id: title._id.toString(),
+              userCount
+            }
+          }))
+
+          const total = await titles.countDocuments({})
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              titles: titlesWithStats,
+              pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+              }
+            }
+          })
+        } else if (subAction === 'title-users') {
+          // 获取拥有指定头衔的用户列表（管理员专用）
+          if (currentUser.role !== 'admin') {
+            return res.status(403).json({ success: false, message: '需要管理员权限' })
+          }
+
+          if (!titleId) {
+            return res.status(400).json({ success: false, message: '头衔ID不能为空' })
+          }
+
+          const skip = (parseInt(page) - 1) * parseInt(limit)
+          
+          const titleAssignments = await userTitles
+            .find({ titleId: new ObjectId(titleId) })
+            .sort({ assignedAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray()
+
+          // 获取用户信息
+          const userIds = titleAssignments.map(assignment => new ObjectId(assignment.userId))
+          const titleUsers = await users.find({ _id: { $in: userIds } })
+            .project({ username: 1, email: 1, profile: 1, role: 1 })
+            .toArray()
+
+          const userMap = {}
+          titleUsers.forEach(user => {
+            userMap[user._id.toString()] = user
+          })
+
+          const usersWithTitle = titleAssignments.map(assignment => ({
+            ...assignment,
+            _id: assignment._id.toString(),
+            userId: assignment.userId.toString(),
+            titleId: assignment.titleId.toString(),
+            user: userMap[assignment.userId.toString()] || null
+          }))
+
+          const total = await userTitles.countDocuments({ titleId: new ObjectId(titleId) })
+
+          return res.status(200).json({
+            success: true,
+            data: {
+              assignments: usersWithTitle,
+              pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+              }
+            }
+          })
+        } else if (subAction === 'user-titles') {
+          // 获取指定用户的头衔列表（管理员专用）
+          if (currentUser.role !== 'admin') {
+            return res.status(403).json({ success: false, message: '需要管理员权限' })
+          }
+
+          if (!userId) {
+            return res.status(400).json({ success: false, message: '用户ID不能为空' })
+          }
+
+          const userAssignments = await userTitles
+            .find({ userId: new ObjectId(userId) })
+            .sort({ assignedAt: -1 })
+            .toArray()
+
+          const titleIds = userAssignments.map(assignment => new ObjectId(assignment.titleId))
+          const userTitlesList = await titles
+            .find({ _id: { $in: titleIds } })
+            .toArray()
+
+          const titleMap = {}
+          userTitlesList.forEach(title => {
+            titleMap[title._id.toString()] = title
+          })
+
+          const userTitlesWithInfo = userAssignments.map(assignment => ({
+            ...assignment,
+            _id: assignment._id.toString(),
+            userId: assignment.userId.toString(),
+            titleId: assignment.titleId.toString(),
+            title: titleMap[assignment.titleId.toString()] || null
+          }))
+
+          return res.status(200).json({
+            success: true,
+            data: { userTitles: userTitlesWithInfo }
+          })
+        }
+      }
+
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
@@ -568,7 +740,7 @@ module.exports = async function handler(req, res) {
         }
 
         const result = await posts.insertOne(newPost)
-        const author = await getUserById(users, decoded.userId)
+        const author = await getUserById(users, decoded.userId, db)
 
         return res.status(201).json({
           success: true,
@@ -581,7 +753,9 @@ module.exports = async function handler(req, res) {
               id: author._id,
               username: author.username,
               nickname: author.profile?.nickname || author.username,
-              avatar: author.profile?.avatar
+              avatar: author.profile?.avatar,
+              role: author.role || 'user',
+              titles: author.titles || []
             },
             likesCount: 0,
             commentsCount: 0,
@@ -656,7 +830,7 @@ module.exports = async function handler(req, res) {
         }
 
         const result = await comments.insertOne(newComment)
-        const author = await getUserById(users, decoded.userId)
+        const author = await getUserById(users, decoded.userId, db)
 
         // 更新评论计数 - 统计该帖子的所有评论（包括所有级别的评论）
         const commentsCount = await comments.countDocuments({ 
@@ -674,7 +848,9 @@ module.exports = async function handler(req, res) {
                 id: author._id,
                 username: author.username,
                 nickname: author.profile?.nickname || author.username,
-                avatar: author.profile?.avatar
+                avatar: author.profile?.avatar,
+                role: author.role || 'user',
+                titles: author.titles || []
               },
               replyTo: newComment.replyTo || null,
               likesCount: 0,
@@ -755,7 +931,7 @@ module.exports = async function handler(req, res) {
         }
 
         // 检查目标用户是否存在
-        const targetUser = await getUserById(users, userId)
+        const targetUser = await getUserById(users, userId, db)
         if (!targetUser) {
           return res.status(404).json({ success: false, message: '目标用户不存在' })
         }
@@ -937,6 +1113,113 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      // 头衔管理操作
+      if (action === 'create-title') {
+        // 管理员创建头衔
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const { name, color, description } = body
+
+        if (!name || !color) {
+          return res.status(400).json({ success: false, message: '头衔名称和颜色不能为空' })
+        }
+
+        // 检查头衔名称是否已存在
+        const existingTitle = await titles.findOne({ name: name.trim() })
+        if (existingTitle) {
+          return res.status(400).json({ success: false, message: '头衔名称已存在' })
+        }
+
+        // 验证颜色格式（支持 hex 和预设颜色名）
+        const colorPattern = /^#([0-9A-F]{3}|[0-9A-F]{6})$/i
+        const presetColors = ['red', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo', 'gray', 'orange']
+        if (!colorPattern.test(color) && !presetColors.includes(color.toLowerCase())) {
+          return res.status(400).json({ success: false, message: '颜色格式无效' })
+        }
+
+        // 创建头衔
+        const titleData = {
+          name: name.trim(),
+          color: color.toLowerCase(),
+          description: description ? description.trim() : null,
+          createdBy: new ObjectId(decoded.userId),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+
+        const result = await titles.insertOne(titleData)
+
+        return res.status(201).json({
+          success: true,
+          message: '头衔创建成功',
+          data: {
+            titleId: result.insertedId.toString(),
+            name: titleData.name,
+            color: titleData.color,
+            description: titleData.description
+          }
+        })
+      }
+
+      if (action === 'assign-title') {
+        // 管理员分配头衔给用户
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const { userId, titleId } = body
+
+        if (!userId || !titleId) {
+          return res.status(400).json({ success: false, message: '用户ID和头衔ID不能为空' })
+        }
+
+        // 检查用户是否存在
+        const targetUser = await getUserById(users, userId, db)
+        if (!targetUser) {
+          return res.status(404).json({ success: false, message: '目标用户不存在' })
+        }
+
+        // 检查头衔是否存在
+        const title = await titles.findOne({ _id: new ObjectId(titleId) })
+        if (!title) {
+          return res.status(404).json({ success: false, message: '头衔不存在' })
+        }
+
+        // 检查用户是否已拥有该头衔
+        const existingAssignment = await userTitles.findOne({
+          userId: new ObjectId(userId),
+          titleId: new ObjectId(titleId)
+        })
+
+        if (existingAssignment) {
+          return res.status(400).json({ success: false, message: '用户已拥有该头衔' })
+        }
+
+        // 分配头衔
+        const assignmentData = {
+          userId: new ObjectId(userId),
+          titleId: new ObjectId(titleId),
+          assignedBy: new ObjectId(decoded.userId),
+          assignedAt: new Date()
+        }
+
+        const result = await userTitles.insertOne(assignmentData)
+
+        return res.status(201).json({
+          success: true,
+          message: '头衔分配成功',
+          data: {
+            assignmentId: result.insertedId.toString(),
+            userId: userId,
+            titleId: titleId,
+            titleName: title.name,
+            titleColor: title.color
+          }
+        })
+      }
+
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
@@ -1047,6 +1330,63 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      if (action === 'update-title') {
+        // 管理员更新头衔
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const { titleId, name, color, description } = req.body
+
+        if (!titleId) {
+          return res.status(400).json({ success: false, message: '头衔ID不能为空' })
+        }
+
+        // 检查头衔是否存在
+        const title = await titles.findOne({ _id: new ObjectId(titleId) })
+        if (!title) {
+          return res.status(404).json({ success: false, message: '头衔不存在' })
+        }
+
+        const updateData = { updatedAt: new Date() }
+
+        if (name && name.trim() !== title.name) {
+          // 检查新名称是否已存在
+          const existingTitle = await titles.findOne({ 
+            name: name.trim(),
+            _id: { $ne: new ObjectId(titleId) }
+          })
+          if (existingTitle) {
+            return res.status(400).json({ success: false, message: '头衔名称已存在' })
+          }
+          updateData.name = name.trim()
+        }
+
+        if (color && color !== title.color) {
+          // 验证颜色格式
+          const colorPattern = /^#([0-9A-F]{3}|[0-9A-F]{6})$/i
+          const presetColors = ['red', 'blue', 'green', 'yellow', 'purple', 'pink', 'indigo', 'gray', 'orange']
+          if (!colorPattern.test(color) && !presetColors.includes(color.toLowerCase())) {
+            return res.status(400).json({ success: false, message: '颜色格式无效' })
+          }
+          updateData.color = color.toLowerCase()
+        }
+
+        if (description !== undefined) {
+          updateData.description = description ? description.trim() : null
+        }
+
+        await titles.updateOne(
+          { _id: new ObjectId(titleId) },
+          { $set: updateData }
+        )
+
+        return res.status(200).json({
+          success: true,
+          message: '头衔更新成功'
+        })
+      }
+
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
@@ -1136,6 +1476,78 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           success: true,
           message: '评论删除成功'
+        })
+      }
+
+      // 删除头衔（管理员专用）
+      if (action === 'title') {
+        if (!id) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '头衔ID不能为空' 
+          })
+        }
+
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const title = await titles.findOne({ _id: new ObjectId(id) })
+        
+        if (!title) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '头衔不存在' 
+          })
+        }
+
+        // 删除头衔及所有相关分配
+        await Promise.all([
+          titles.deleteOne({ _id: new ObjectId(id) }),
+          userTitles.deleteMany({ titleId: new ObjectId(id) })
+        ])
+
+        return res.status(200).json({
+          success: true,
+          message: '头衔删除成功'
+        })
+      }
+
+      // 移除用户头衔（管理员专用）
+      if (action === 'user-title') {
+        const { userId, titleId } = req.query
+
+        if (!userId || !titleId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '用户ID和头衔ID不能为空' 
+          })
+        }
+
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const assignment = await userTitles.findOne({ 
+          userId: new ObjectId(userId),
+          titleId: new ObjectId(titleId)
+        })
+        
+        if (!assignment) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '用户头衔分配不存在' 
+          })
+        }
+
+        await userTitles.deleteOne({ 
+          userId: new ObjectId(userId),
+          titleId: new ObjectId(titleId)
+        })
+
+        return res.status(200).json({
+          success: true,
+          message: '用户头衔移除成功'
         })
       }
 
