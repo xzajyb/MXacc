@@ -2467,8 +2467,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 </div>
 
                 {/* 创建头衔对话框 */}
-                {showCreateTitleDialog && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                {showCreateTitleDialog && createPortal(
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
                       <div className="p-6 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex items-center justify-between">
@@ -2589,12 +2589,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
 
                 {/* 编辑头衔对话框 */}
-                {showEditTitleDialog && selectedTitle && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                {showEditTitleDialog && selectedTitle && createPortal(
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
                       <div className="p-6 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex items-center justify-between">
@@ -2717,12 +2718,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
 
                 {/* 分配头衔对话框 */}
-                {showAssignTitleDialog && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                {showAssignTitleDialog && createPortal(
+                  <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
                       <div className="p-6 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex items-center justify-between">
@@ -2828,7 +2830,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             )}
