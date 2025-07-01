@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon } from 'lucide-react'
+import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon, List, Heart } from 'lucide-react'
 import axios from 'axios'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 interface User {
   _id: string
@@ -38,7 +39,7 @@ interface AdminPageProps {
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
   const { showToast } = useToast()
-  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos'>('email')
+  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos' | 'posts'>('email')
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -139,6 +140,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [newLogoUrl, setNewLogoUrl] = useState('')
   const [newLogoName, setNewLogoName] = useState('')
   const [updatingPartnerLogos, setUpdatingPartnerLogos] = useState(false)
+  
+  // 帖子管理相关状态
+  const [posts, setPosts] = useState<any[]>([])
+  const [postsLoading, setPostsLoading] = useState(false)
+  const [selectedPosts, setSelectedPosts] = useState<string[]>([])
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [processingBulkDelete, setProcessingBulkDelete] = useState(false)
+  const [postSearchTerm, setPostSearchTerm] = useState('')
+  const [postsPage, setPostsPage] = useState(1)
+  const [postsTotal, setPostsTotal] = useState(0)
+  const [postsPages, setPostsPages] = useState(1)
 
   // 预设颜色选项
   const presetColors = [
@@ -226,6 +238,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       loadUsers() // 加载用户列表供头衔分配使用
     } else if (activeTab === 'partner-logos' && token) {
       loadPartnerLogos()
+    } else if (activeTab === 'posts' && token) {
+      loadPosts()
     }
   }, [activeTab, currentPage, token])
 
@@ -609,18 +623,18 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     if (!token) return
     
     try {
-      const response = await axios.get('/api/admin/users?action=partner-logos', {
+      const response = await axios.get('/api/admin/system-settings?key=partnerLogos', {
         headers: { Authorization: `Bearer ${token}` }
       })
       
       if (response.data.success) {
-        const data = response.data.data
+        const data = response.data.data || {}
         setPartnerLogos(data.logos || [])
-        setPartnerLogosEnabled(data.enabled !== undefined ? data.enabled : true)
+        setPartnerLogosEnabled(data.enabled !== false) // 默认为true
       }
-    } catch (error: any) {
-      console.error('加载合作伙伴Logo设置失败:', error)
-      showToast(error.response?.data?.message || '加载合作伙伴Logo设置失败', 'error')
+    } catch (error) {
+      console.error('加载合作伙伴Logo失败:', error)
+      showToast('加载合作伙伴Logo失败', 'error')
     }
   }
   
@@ -1084,6 +1098,95 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     return templateMap[templateId] || templateMap['custom']
   }
 
+  // 加载帖子列表
+  const loadPosts = async (page = 1) => {
+    if (!token) return
+    
+    setPostsLoading(true)
+    try {
+      const params = new URLSearchParams({
+        action: 'posts',
+        page: page.toString(),
+        limit: '20'
+      })
+      
+      if (postSearchTerm) {
+        params.append('search', postSearchTerm)
+      }
+
+      const response = await axios.get(`/api/social/content?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      setPosts(response.data.data.posts)
+      setPostsPage(page)
+      setPostsTotal(response.data.data.pagination?.total || 0)
+      setPostsPages(response.data.data.pagination?.pages || 1)
+    } catch (error) {
+      console.error('加载帖子列表失败:', error)
+      showToast('加载帖子列表失败', 'error')
+    } finally {
+      setPostsLoading(false)
+    }
+  }
+
+  // 处理帖子搜索
+  const handlePostSearch = () => {
+    loadPosts(1)
+  }
+
+  // 切换帖子选择
+  const togglePostSelection = (postId: string) => {
+    setSelectedPosts(prev => 
+      prev.includes(postId)
+        ? prev.filter(id => id !== postId)
+        : [...prev, postId]
+    )
+  }
+
+  // 全选/取消全选帖子
+  const toggleAllPosts = () => {
+    if (selectedPosts.length === posts.length) {
+      setSelectedPosts([])
+    } else {
+      setSelectedPosts(posts.map(post => post.id))
+    }
+  }
+
+  // 打开批量删除确认对话框
+  const openBulkDeleteDialog = () => {
+    if (selectedPosts.length === 0) {
+      showToast('请先选择要删除的帖子', 'warning')
+      return
+    }
+    setShowBulkDeleteDialog(true)
+  }
+
+  // 执行批量删除
+  const executeBulkDelete = async () => {
+    if (selectedPosts.length === 0) return
+    
+    setProcessingBulkDelete(true)
+    try {
+      const response = await axios.post('/api/social/content', {
+        action: 'bulk-delete-posts',
+        postIds: selectedPosts
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      showToast(response.data.message || '批量删除成功', 'success')
+      setSelectedPosts([])
+      loadPosts(1) // 重新加载帖子列表
+    } catch (error) {
+      console.error('批量删除帖子失败:', error)
+      showToast('批量删除帖子失败', 'error')
+    } finally {
+      setProcessingBulkDelete(false)
+      setShowBulkDeleteDialog(false)
+    }
+  }
+
   return (
     <>
       <div className={embedded ? "space-y-6" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
@@ -1096,7 +1199,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 管理员控制台
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-2">系统管理和邮件发送功能</p>
-            </div>
+              </div>
           )}
 
           {/* 选项卡导航 */}
@@ -1123,7 +1226,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                   }`}
                 >
                   <Users className="h-5 w-5 inline mr-2" />
-                  用户管理
+                    用户管理
                 </button>
                 <button
                   onClick={() => setActiveTab('messages')}
@@ -1145,7 +1248,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                   }`}
                 >
                   <AlertTriangle className="h-5 w-5 inline mr-2" />
-                  封禁管理
+                    封禁管理
                 </button>
                 <button
                   onClick={() => setActiveTab('titles')}
@@ -1156,21 +1259,43 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                   }`}
                 >
                   <UserIcon className="h-5 w-5 inline mr-2" />
-                  头衔管理
+                    头衔管理
                 </button>
+                                  <button
+                    onClick={() => setActiveTab('partner-logos')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'partner-logos'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <ImageIcon className="h-5 w-5 inline mr-2" />
+                    合作伙伴
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('posts')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'posts'
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <List className="h-5 w-5 inline mr-2" />
+                    帖子管理
+                  </button>
                 <button
-                  onClick={() => setActiveTab('partner-logos')}
+                  onClick={() => setActiveTab('posts')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'partner-logos'
+                    activeTab === 'posts'
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
                 >
-                  <ImageIcon className="h-5 w-5 inline mr-2" />
-                  合作伙伴
+                  <List className="h-5 w-5 inline mr-2" />
+                  帖子管理
                 </button>
               </nav>
-            </div>
+                  </div>
           </div>
 
           {/* 主内容 */}
@@ -1208,15 +1333,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                 已选择：{templates.find(t => t.id === selectedTemplate)?.name}
                               </p>
                               <div className="flex space-x-2">
-                                <button 
+                <button
                                   onClick={() => setShowTemplatePreview(true)}
                                   className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                                 >
                                   预览模板
-                                </button>
+                </button>
                               </div>
-                            </div>
-                            
+            </div>
+
                             {/* 实时预览区域 */}
                             <div className="mt-4 border border-blue-200 dark:border-blue-700 rounded-lg overflow-hidden">
                               <div className="bg-blue-100 dark:bg-blue-900/40 px-3 py-2 text-sm font-medium text-blue-800 dark:text-blue-200">
@@ -1309,7 +1434,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                     </div>
 
                     {/* 右侧：邮件内容 */}
-                    <div className="space-y-6">
+                <div className="space-y-6">
                       {/* 基础内容 */}
                       <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">📝 邮件基础内容</h3>
@@ -1319,8 +1444,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                               邮件标题 *
                             </label>
-                            <input
-                              type="text"
+                        <input
+                          type="text"
                               value={emailData.title}
                               onChange={(e) => setEmailData({...emailData, title: e.target.value})}
                               placeholder="例如：系统升级完成通知"
@@ -1491,7 +1616,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                       </div>
 
                       {/* 发送按钮 */}
-                      <button
+                        <button
                         onClick={handleSendEmail}
                         disabled={sendingEmail}
                         className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
@@ -1507,10 +1632,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                             发送邮件
                           </>
                         )}
-                      </button>
+                        </button>
                     </div>
-                  </div>
-
+                      </div>
+                      
                   {/* 发送结果 */}
                   {emailResults && (
                     <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
@@ -1596,17 +1721,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                         <option value="user">普通用户</option>
                         <option value="admin">管理员</option>
                       </select>
-                      <button
+                        <button
                         onClick={handleSearch}
                         className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                      >
+                        >
                         搜索
-                      </button>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-
+                    
                   {/* 用户列表 */}
-                  <div className="overflow-x-auto">
+                    <div className="overflow-x-auto">
                     {loading ? (
                       <div className="p-8 text-center">
                         <Loader className="h-8 w-8 animate-spin mx-auto text-blue-600" />
@@ -2145,8 +2270,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                       {/* 系统通知选项 */}
                       <div>
                         <label className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
+                                  <input
+                                    type="checkbox"
                             checked={sendBanNotification}
                             onChange={(e) => setSendBanNotification(e.target.checked)}
                             className="rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500"
@@ -2178,7 +2303,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                           </>
                         )}
                       </button>
-                    </div>
+                                        </div>
                   </div>
 
                   {/* 中间：封禁列表 */}
@@ -2233,8 +2358,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                       <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
                                         临时封禁
                                       </span>
-                                    )}
-                                  </div>
+                                      )}
+                                    </div>
                                   
                                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                                     <span className="font-medium">原因：</span>{ban.reason}
@@ -2324,7 +2449,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                     }`}>
                                       {appeal.status === 'pending' ? '待处理' : 
                                        appeal.status === 'approved' ? '已通过' : '已驳回'}
-                                    </span>
+                                          </span>
                                   </div>
                                   
                                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -2357,7 +2482,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                                       </p>
                                     </div>
                                   )}
-                                </div>
+                                  </div>
                                 
                                 {appeal.status === 'pending' && (
                                   <button
@@ -3088,8 +3213,188 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 </div>
               </div>
             )}
+
+            {/* 帖子管理内容 */}
+            {activeTab === 'posts' && (
+              <div className="max-w-7xl mx-auto">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white p-6 border-b border-gray-200 dark:border-gray-700">帖子管理</h2>
+                  
+                  {/* 帖子搜索 */}
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <input
+                        type="text"
+                        placeholder="搜索帖子"
+                        value={postSearchTerm}
+                        onChange={(e) => setPostSearchTerm(e.target.value)}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <select
+                        value={selectedPosts}
+                        onChange={(e) => setSelectedPosts(e.target.value.split(','))}
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">选择帖子</option>
+                        {posts.map((post) => (
+                          <option key={post._id} value={post._id}>
+                            {post.title}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setShowBulkDeleteDialog(true)}
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                      >
+                        批量删除
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 帖子列表 */}
+                  <div className="overflow-x-auto">
+                    {postsLoading ? (
+                      <div className="p-8 text-center">
+                        <Loader className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+                        <p className="mt-2 text-gray-600">加载中...</p>
+                      </div>
+                    ) : (
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {selectedPosts.length > 0 && (
+                                <input
+                                  type="checkbox"
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedPosts(posts.map(p => p._id))
+                                    } else {
+                                      setSelectedPosts([])
+                                    }
+                                  }}
+                                  className="mr-2"
+                                />
+                              )}
+                              帖子信息
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              状态
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              发布时间
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              操作
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {posts.map((post) => (
+                            <tr key={post._id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  {selectedPosts.length > 0 && (
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedPosts.includes(post._id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedPosts([...selectedPosts, post._id])
+                                        } else {
+                                          setSelectedPosts(selectedPosts.filter(id => id !== post._id))
+                                        }
+                                      }}
+                                      className="mr-3"
+                                    />
+                                  )}
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {post.title}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {post.content}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex flex-col space-y-1">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    post.isPublished
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {post.isPublished ? '已发布' : '未发布'}
+                                  </span>
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    post.isApproved
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {post.isApproved ? '已审核' : '未审核'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(post.createdAt).toLocaleDateString('zh-CN')}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                {!post.isPublished ? (
+                                  <button
+                                    onClick={() => handleUserAction(post._id, 'publish')}
+                                    className="text-green-600 hover:text-green-900"
+                                  >
+                                    发布
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleUserAction(post._id, 'unpublish')}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    下架
+                                  </button>
+                                )}
+                                {!post.isApproved ? (
+                                  <button
+                                    onClick={() => handleUserAction(post._id, 'approve')}
+                                    className="text-blue-600 hover:text-blue-900"
+                                  >
+                                    审核
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleUserAction(post._id, 'unapprove')}
+                                    className="text-yellow-600 hover:text-yellow-900"
+                                  >
+                                    取消审核
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* 批量删除确认对话框 */}
+        <ConfirmDialog
+          isOpen={showBulkDeleteDialog}
+          onClose={() => setShowBulkDeleteDialog(false)}
+          onConfirm={executeBulkDelete}
+          title="批量删除帖子"
+          message={`确定要删除选中的 ${selectedPosts.length} 个帖子吗？此操作不可恢复，相关评论和点赞也将被删除。`}
+          confirmText="删除"
+          cancelText="取消"
+          type="danger"
+          loading={processingBulkDelete}
+        />
 
         {/* 申述处理对话框 */}
         {showAppealDialog && selectedAppeal && createPortal(
@@ -3408,7 +3713,31 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
           </div>,
           document.body
         )}
+
+        {/* 批量删除对话框 */}
+        {showBulkDeleteDialog && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => {
+              setShowBulkDeleteDialog(false)
+              setSelectedPosts([])
+              setProcessingBulkDelete(false)
+            }}
+          >
+            <div 
       </div>
+      {/* 批量删除确认对话框 */}
+      <ConfirmDialog
+        isOpen={showBulkDeleteDialog}
+        onClose={() => setShowBulkDeleteDialog(false)}
+        onConfirm={executeBulkDelete}
+        title="批量删除帖子"
+        message={`确定要删除选中的 ${selectedPosts.length} 个帖子吗？此操作不可恢复，相关评论和点赞也将被删除。`}
+        confirmText="删除"
+        cancelText="取消"
+        type="danger"
+        loading={processingBulkDelete}
+      />
     </>
   )
 }
