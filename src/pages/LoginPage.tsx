@@ -68,30 +68,28 @@ const LoginPage = () => {
           {/* Glass card container */}
           <div className="glass-card rounded-2xl p-8 shadow-strong">
             {/* Logo and header */}
-        <div className="text-center mb-8">
+                  <div className="text-center mb-8">
           <motion.div
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="mx-logo-large mx-auto mb-4"
-              >
-                <img 
-                  src="/logo.svg" 
-                  alt="MX Logo" 
-                  className="w-full h-full object-contain"
-                />
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex items-center justify-center mb-4"
+          >
+            <div className="mx-logo-large">
+              <img 
+                src="/logo.svg" 
+                alt="MX Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <PartnerLogos compact={true} className="ml-2" />
           </motion.div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
             欢迎回来
           </h1>
-              <p className="text-slate-600 dark:text-slate-300">
-                登录到您的 梦锡账号
+          <p className="text-slate-600 dark:text-slate-300">
+            登录到您的 梦锡账号
           </p>
-          
-          {/* 合作伙伴Logo */}
-          <div className="mt-4">
-            <PartnerLogos authPage={true} />
-          </div>
         </div>
 
             {/* Error message */}

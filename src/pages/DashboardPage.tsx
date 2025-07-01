@@ -421,9 +421,11 @@ const DashboardPage: React.FC = () => {
         <div className="flex flex-col h-full">
           {/* Logo区域 - 固定高度 */}
           <div className="flex items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
-            <PartnerLogos />
-            <div>
+            <div className="flex items-center">
+              <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
+              <PartnerLogos />
+            </div>
+            <div className="ml-3">
               <h1 className="font-bold text-xl text-gray-900 dark:text-white">梦锡账号</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">统一管理</p>
             </div>

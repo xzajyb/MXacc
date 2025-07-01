@@ -2962,119 +2962,62 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                       </p>
                     </div>
 
-                                         {/* 添加新Logo */}
-                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                       <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">添加新Logo</h3>
-                       
-                       <div className="mb-4">
-                         <div className="flex items-center space-x-2 mb-2">
-                           <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
-                           <span className="text-sm text-gray-500 dark:text-gray-400">方式一：上传图片</span>
-                           <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
-                         </div>
-                         
-                         <form 
-                           action="/api/admin/upload-partner-logo" 
-                           method="post" 
-                           encType="multipart/form-data"
-                           className="space-y-4"
-                           onSubmit={(e) => {
-                             e.preventDefault()
-                             const formData = new FormData(e.currentTarget)
-                             
-                             fetch('/api/admin/upload-partner-logo', {
-                               method: 'POST',
-                               headers: {
-                                 'Authorization': `Bearer ${token}`
-                               },
-                               body: formData
-                             })
-                             .then(response => response.json())
-                             .then(data => {
-                               if (data.success) {
-                                 showToast('Logo上传成功', 'success')
-                                 loadPartnerLogos()
-                               } else {
-                                 showToast(data.message || 'Logo上传失败', 'error')
-                               }
-                             })
-                             .catch(error => {
-                               console.error('Logo上传失败:', error)
-                               showToast('Logo上传失败', 'error')
-                             })
-                           }}
-                         >
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">选择图片</label>
-                             <input
-                               type="file"
-                               name="logo"
-                               accept="image/*"
-                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                             />
-                           </div>
-                           
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">合作伙伴名称</label>
-                             <input
-                               type="text"
-                               name="name"
-                               placeholder="合作伙伴名称"
-                               required
-                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                             />
-                           </div>
-                           
-                           <div className="flex justify-end">
-                             <button
-                               type="submit"
-                               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                             >
-                               上传Logo
-                             </button>
-                           </div>
-                         </form>
-                       </div>
-                       
-                       <div>
-                         <div className="flex items-center space-x-2 mb-2">
-                           <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
-                           <span className="text-sm text-gray-500 dark:text-gray-400">方式二：输入URL</span>
-                           <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700"></div>
-                         </div>
-                         
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo URL</label>
-                             <input
-                               type="text"
-                               value={newLogoUrl}
-                               onChange={(e) => setNewLogoUrl(e.target.value)}
-                               placeholder="https://example.com/logo.png"
-                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                             />
-                           </div>
-                           <div>
-                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">合作伙伴名称</label>
-                             <input
-                               type="text"
-                               value={newLogoName}
-                               onChange={(e) => setNewLogoName(e.target.value)}
-                               placeholder="合作伙伴名称"
-                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                             />
-                           </div>
-                         </div>
-                         <div className="mt-4 flex justify-end">
-                           <button
-                             onClick={addPartnerLogo}
-                             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                           >
-                             添加Logo
-                           </button>
-                         </div>
-                       </div>
-                     </div>
+                    {/* 添加新Logo */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                      <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">添加新Logo</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Logo URL 或上传图片</label>
+                          <div className="flex">
+                            <input
+                              type="text"
+                              value={newLogoUrl}
+                              onChange={(e) => setNewLogoUrl(e.target.value)}
+                              placeholder="https://example.com/logo.png 或上传"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <label className="cursor-pointer bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 border-l-0 rounded-r-md px-3 flex items-center justify-center">
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    const reader = new FileReader()
+                                    reader.onload = (event) => {
+                                      if (event.target?.result) {
+                                        setNewLogoUrl(event.target.result as string)
+                                      }
+                                    }
+                                    reader.readAsDataURL(file)
+                                  }
+                                }}
+                              />
+                              <ImageIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                            </label>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">合作伙伴名称</label>
+                          <input
+                            type="text"
+                            value={newLogoName}
+                            onChange={(e) => setNewLogoName(e.target.value)}
+                            placeholder="合作伙伴名称"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          onClick={addPartnerLogo}
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                        >
+                          添加Logo
+                        </button>
+                      </div>
+                    </div>
 
                     {/* 现有Logo列表 */}
                     <div>
