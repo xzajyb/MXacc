@@ -580,7 +580,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                                 )}
                               </div>
                               <div>
-                              <div>
+                                  <div>
                                 <div className="flex items-center space-x-2 flex-wrap">
                                     <p className="font-medium text-gray-900 dark:text-white text-sm">{post.author.nickname}</p>
                                   {/* 管理员标签 */}

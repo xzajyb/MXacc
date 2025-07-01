@@ -123,20 +123,20 @@ const RegisterPage = () => {
                 className="flex items-center justify-center mb-4"
               >
                 <div className="mx-logo-large">
-                  <img 
-                    src="/logo.svg" 
-                    alt="MX Logo" 
-                    className="w-full h-full object-contain"
-                  />
+                <img 
+                  src="/logo.svg" 
+                  alt="MX Logo" 
+                  className="w-full h-full object-contain"
+                />
                 </div>
                 <PartnerLogos loginPage={true} className="ml-2" />
               </motion.div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                 创建账号
-              </h1>
+          </h1>
               <p className="text-slate-600 dark:text-slate-300">
                 加入 梦锡社区
-              </p>
+          </p>
         </div>
 
             {/* Error message */}
