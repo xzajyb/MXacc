@@ -730,6 +730,54 @@ module.exports = async function handler(req, res) {
       
       const { action, postId, commentId, content, images, parentId, replyTo } = body
 
+      // 批量删除帖子（仅管理员可用）
+      if (action === 'bulk-delete-posts') {
+        // 验证管理员权限
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '需要管理员权限' 
+          })
+        }
+
+        const { postIds } = body
+        
+        if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '请提供要删除的帖子ID列表' 
+          })
+        }
+
+        // 将字符串ID转换为ObjectId
+        const objectIds = postIds.map(id => new ObjectId(id))
+        
+        try {
+          // 删除帖子及相关数据
+          const [deletePostsResult, deleteCommentsResult, deleteLikesResult] = await Promise.all([
+            posts.deleteMany({ _id: { $in: objectIds } }),
+            comments.deleteMany({ postId: { $in: objectIds } }),
+            likes.deleteMany({ targetId: { $in: objectIds }, type: 'post' })
+          ])
+          
+          return res.status(200).json({
+            success: true,
+            message: `成功删除${deletePostsResult.deletedCount}个帖子`,
+            data: {
+              deletedPosts: deletePostsResult.deletedCount,
+              deletedComments: deleteCommentsResult.deletedCount,
+              deletedLikes: deleteLikesResult.deletedCount
+            }
+          })
+        } catch (error) {
+          console.error('批量删除帖子失败:', error)
+          return res.status(500).json({
+            success: false,
+            message: '批量删除帖子失败'
+          })
+        }
+      }
+
       // 创建帖子
       if (action === 'create-post') {
         if (!content || content.trim().length === 0) {

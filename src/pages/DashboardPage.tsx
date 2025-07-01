@@ -21,7 +21,8 @@ import {
   Sun,
   Moon,
   Monitor,
-  MessageCircle
+  MessageCircle,
+  Globe
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLogos from '../components/PartnerLogos'
@@ -519,6 +520,18 @@ const DashboardPage: React.FC = () => {
                 <LogOut size={16} />
               </button>
             </div>
+            
+            {/* 官网入口链接 */}
+            <a 
+              href="https://mxos.top" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex items-center justify-center space-x-2 p-2 text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors border-t border-gray-200 dark:border-gray-700 pt-3"
+            >
+              <Globe size={16} />
+              <span>访问官网</span>
+              <span className="font-semibold">mxos.top</span>
+            </a>
           </div>
         </div>
       </div>

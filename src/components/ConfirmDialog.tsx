@@ -128,7 +128,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               </div>
               
               {/* 按钮 */}
-              <div className="flex justify-end space-x-3 p-6 bg-gray-50 dark:bg-gray-750">
+              <div className="flex justify-end space-x-3 p-6 bg-gray-50 dark:bg-gray-800/80">
                 <button
                   onClick={onClose}
                   disabled={loading}

@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { cn } from '../utils/cn'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PartnerLogos from '../components/PartnerLogos'
+import { Globe } from 'lucide-react'
 
 const registerSchema = z.object({
   username: z.string()
@@ -393,6 +394,20 @@ const RegisterPage = () => {
                 立即登录
                 </Link>
             </p>
+          </div>
+          
+          {/* 官网入口链接 */}
+          <div className="mt-4 text-center">
+            <a 
+              href="https://mxos.top" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center space-x-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+            >
+              <Globe size={14} />
+              <span>访问官网</span>
+              <span className="font-semibold">mxos.top</span>
+            </a>
           </div>
         </div>
         </motion.div>
