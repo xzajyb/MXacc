@@ -22,18 +22,17 @@ const PartnerLogos: React.FC<PartnerLogosProps> = ({ className = "", compact = f
     logos: [],
     enabled: true
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // 默认不显示加载状态，避免闪烁
 
+  // 预加载Logo
   useEffect(() => {
     const fetchPartnerLogos = async () => {
       try {
+        // 登录页和注册页不需要token
         const token = localStorage.getItem('token')
-        if (!token) return
-
+        
         const response = await axios.get('/api/user/user-settings?type=partner-logos', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
         })
 
         if (response.data && response.data.partnerLogos) {
@@ -46,6 +45,7 @@ const PartnerLogos: React.FC<PartnerLogosProps> = ({ className = "", compact = f
       }
     }
 
+    // 立即设置loading为false，避免闪烁
     fetchPartnerLogos()
   }, [])
 
@@ -61,7 +61,7 @@ const PartnerLogos: React.FC<PartnerLogosProps> = ({ className = "", compact = f
             src={logo.imageData || logo.url} 
             alt={logo.name} 
             title={logo.name}
-            className={`${compact ? 'max-h-6 max-w-[60px]' : 'max-h-8 max-w-[80px]'} object-contain`}
+            className={`${compact ? 'max-h-6 max-w-[60px]' : 'max-h-8 max-w-[80px]'} object-contain rounded-md`}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none'
             }}

@@ -13,7 +13,21 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // 获取token验证
+    const { type } = req.query || {}
+    
+    // 合作伙伴Logo不需要登录验证
+    if (req.method === 'GET' && type === 'partner-logos') {
+      const client = await clientPromise
+      const db = client.db('mxacc')
+      const systemSettings = db.collection('system_settings')
+      const partnerLogos = await systemSettings.findOne({ _id: 'partner_logos' }) || { logos: [], enabled: true }
+      return res.status(200).json({ 
+        message: '获取合作伙伴Logo成功', 
+        partnerLogos 
+      })
+    }
+    
+    // 其他请求需要token验证
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ message: '需要登录' })
@@ -35,18 +49,8 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ message: '用户不存在' })
     }
 
-    const { type } = req.query || {}
-
     if (req.method === 'GET') {
-      // 获取合作伙伴Logo设置
-      if (type === 'partner-logos') {
-        const systemSettings = db.collection('system_settings')
-        const partnerLogos = await systemSettings.findOne({ _id: 'partner_logos' }) || { logos: [], enabled: true }
-        return res.status(200).json({ 
-          message: '获取合作伙伴Logo成功', 
-          partnerLogos 
-        })
-      } else if (type === 'security') {
+      if (type === 'security') {
         const defaultSecuritySettings = { loginNotifications: false }
         const securitySettings = { ...defaultSecuritySettings, ...user.securitySettings }
         return res.status(200).json({ message: '获取安全设置成功', securitySettings })
