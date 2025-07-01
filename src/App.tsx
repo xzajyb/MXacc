@@ -13,6 +13,7 @@ import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import DebugPage from './pages/DebugPage'
+import WikiPageStandalone from './pages/WikiPageStandalone'
 import LoadingSpinner from './components/LoadingSpinner'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -55,6 +56,7 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/debug" element={<DebugPage />} />
+          <Route path="/wiki" element={<WikiPageStandalone />} />
           
           {/* 受保护的路由 */}
           <Route path="/dashboard" element={
