@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { useAuth } from '../contexts/AuthContext'
 import { cn } from '../utils/cn'
 import LoadingSpinner from '../components/LoadingSpinner'
+import PartnerLogos from '../components/PartnerLogos'
 
 const registerSchema = z.object({
   username: z.string()
@@ -132,6 +133,11 @@ const RegisterPage = () => {
               <p className="text-slate-600 dark:text-slate-300">
                 加入 梦锡社区
           </p>
+          
+          {/* 合作伙伴Logo */}
+          <div className="mt-4">
+            <PartnerLogos authPage={true} />
+          </div>
         </div>
 
             {/* Error message */}

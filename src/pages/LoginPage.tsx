@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { useAuth } from '../contexts/AuthContext'
 import { cn } from '../utils/cn'
 import LoadingSpinner from '../components/LoadingSpinner'
+import PartnerLogos from '../components/PartnerLogos'
 
 const loginSchema = z.object({
   emailOrUsername: z.string().min(1, '请输入邮箱或用户名'),
@@ -86,6 +87,11 @@ const LoginPage = () => {
               <p className="text-slate-600 dark:text-slate-300">
                 登录到您的 梦锡账号
           </p>
+          
+          {/* 合作伙伴Logo */}
+          <div className="mt-4">
+            <PartnerLogos authPage={true} />
+          </div>
         </div>
 
             {/* Error message */}
