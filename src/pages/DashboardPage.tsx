@@ -34,9 +34,10 @@ import SecurityPage from './SecurityPage'
 import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
+import WikiPage from './WikiPage'
 import SystemNotifications from '../components/SystemNotifications'
 
-type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
+type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social' | 'wiki'
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
@@ -67,6 +68,12 @@ const DashboardPage: React.FC = () => {
       label: '社交中心',
       icon: MessageCircle,
       description: '与朋友分享动态，发现有趣内容'
+    },
+    {
+      id: 'wiki',
+      label: '帮助文档',
+      icon: Globe,
+      description: '查看平台介绍和使用指南'
     },
     {
       id: 'profile',
@@ -178,6 +185,8 @@ const DashboardPage: React.FC = () => {
       switch (activeView) {
         case 'social':
           return <SocialPage embedded={true} onUnreadCountChange={setSocialUnreadCount} />
+        case 'wiki':
+          return <WikiPage embedded={true} />
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':
