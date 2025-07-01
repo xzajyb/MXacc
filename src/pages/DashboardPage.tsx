@@ -31,7 +31,7 @@ import PartnerLogos from '../components/PartnerLogos'
 import ProfilePage from './ProfilePage'
 import SettingsPage from './SettingsPage'
 import SecurityPage from './SecurityPage'
-// import AdminPage from './AdminPage'  // 暂时注释，等修复语法错误
+import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import WikiPage from './WikiPage'
@@ -236,7 +236,7 @@ const DashboardPage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="text-center text-gray-500">管理员功能暂时不可用</div>
+              <AdminPage embedded={true} />
             )
           ) : (
             <div>权限不足</div>
