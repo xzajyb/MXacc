@@ -730,54 +730,6 @@ module.exports = async function handler(req, res) {
       
       const { action, postId, commentId, content, images, parentId, replyTo } = body
 
-      // 批量删除帖子（仅管理员可用）
-      if (action === 'bulk-delete-posts') {
-        // 验证管理员权限
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ 
-            success: false, 
-            message: '需要管理员权限' 
-          })
-        }
-
-        const { postIds } = body
-        
-        if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '请提供要删除的帖子ID列表' 
-          })
-        }
-
-        // 将字符串ID转换为ObjectId
-        const objectIds = postIds.map(id => new ObjectId(id))
-        
-        try {
-          // 删除帖子及相关数据
-          const [deletePostsResult, deleteCommentsResult, deleteLikesResult] = await Promise.all([
-            posts.deleteMany({ _id: { $in: objectIds } }),
-            comments.deleteMany({ postId: { $in: objectIds } }),
-            likes.deleteMany({ targetId: { $in: objectIds }, type: 'post' })
-          ])
-          
-          return res.status(200).json({
-            success: true,
-            message: `成功删除${deletePostsResult.deletedCount}个帖子`,
-            data: {
-              deletedPosts: deletePostsResult.deletedCount,
-              deletedComments: deleteCommentsResult.deletedCount,
-              deletedLikes: deleteLikesResult.deletedCount
-            }
-          })
-        } catch (error) {
-          console.error('批量删除帖子失败:', error)
-          return res.status(500).json({
-            success: false,
-            message: '批量删除帖子失败'
-          })
-        }
-      }
-
       // 创建帖子
       if (action === 'create-post') {
         if (!content || content.trim().length === 0) {
@@ -1468,6 +1420,80 @@ module.exports = async function handler(req, res) {
     // DELETE: 删除内容
     if (req.method === 'DELETE') {
       const { action, id } = req.query
+
+      // 批量删除帖子（管理员专用）
+      if (action === 'batch-delete-posts') {
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '需要管理员权限' })
+        }
+
+        const { postIds } = req.body
+        
+        if (!postIds || !Array.isArray(postIds) || postIds.length === 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '帖子ID列表不能为空' 
+          })
+        }
+
+        // 验证所有ID的格式
+        const validObjectIds = []
+        for (const postId of postIds) {
+          try {
+            validObjectIds.push(new ObjectId(postId))
+          } catch (error) {
+            return res.status(400).json({ 
+              success: false, 
+              message: `无效的帖子ID: ${postId}` 
+            })
+          }
+        }
+
+        // 检查哪些帖子存在
+        const existingPosts = await posts.find({ 
+          _id: { $in: validObjectIds } 
+        }).toArray()
+
+        if (existingPosts.length === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '没有找到要删除的帖子' 
+          })
+        }
+
+        // 批量删除帖子及相关数据
+        const deletePromises = []
+        const existingPostIds = existingPosts.map(post => post._id)
+
+        // 删除帖子
+        deletePromises.push(posts.deleteMany({ _id: { $in: existingPostIds } }))
+        
+        // 删除相关评论
+        deletePromises.push(comments.deleteMany({ postId: { $in: existingPostIds } }))
+        
+        // 删除相关点赞
+        deletePromises.push(likes.deleteMany({ 
+          targetId: { $in: existingPostIds }, 
+          type: 'post' 
+        }))
+
+        const results = await Promise.all(deletePromises)
+        const deletedPostsCount = results[0].deletedCount
+        const deletedCommentsCount = results[1].deletedCount
+        const deletedLikesCount = results[2].deletedCount
+
+        return res.status(200).json({
+          success: true,
+          message: `成功删除 ${deletedPostsCount} 个帖子`,
+          data: {
+            deletedPosts: deletedPostsCount,
+            deletedComments: deletedCommentsCount,
+            deletedLikes: deletedLikesCount,
+            requestedCount: postIds.length,
+            notFound: postIds.length - deletedPostsCount
+          }
+        })
+      }
 
       // 删除帖子（支持作者和管理员删除）
       if (action === 'post') {
