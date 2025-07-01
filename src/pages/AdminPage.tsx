@@ -38,7 +38,7 @@ interface AdminPageProps {
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
   const { showToast } = useToast()
-  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles'>('email')
+  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partnerLogos'>('email')
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -132,6 +132,18 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [selectedUserForTitle, setSelectedUserForTitle] = useState('')
   const [selectedTitleForAssign, setSelectedTitleForAssign] = useState('')
   const [userTitles, setUserTitles] = useState<any[]>([])
+  
+  // 合作伙伴Logo管理相关状态
+  const [partnerLogosEnabled, setPartnerLogosEnabled] = useState(true)
+  const [partnerLogos, setPartnerLogos] = useState<any[]>([])
+  const [partnerLogosLoading, setPartnerLogosLoading] = useState(false)
+  const [showAddLogoDialog, setShowAddLogoDialog] = useState(false)
+  const [showEditLogoDialog, setShowEditLogoDialog] = useState(false)
+  const [selectedLogo, setSelectedLogo] = useState<any>(null)
+  const [logoName, setLogoName] = useState('')
+  const [logoImageUrl, setLogoImageUrl] = useState('')
+  const [logoLink, setLogoLink] = useState('')
+  const [processingLogo, setProcessingLogo] = useState(false)
   
   // 预设颜色选项
   const presetColors = [
@@ -437,16 +449,193 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     
     setTitlesLoading(true)
     try {
-      const response = await axios.get('/api/social/content?action=title-management&subAction=titles', {
+      const response = await axios.get('/api/social/content?action=titles', {
         headers: { Authorization: `Bearer ${token}` }
       })
       setTitlesList(response.data.data.titles)
-    } catch (error: any) {
+    } catch (error) {
       console.error('加载头衔列表失败:', error)
-      showToast(error.response?.data?.message || '加载头衔列表失败', 'error')
     } finally {
       setTitlesLoading(false)
     }
+  }
+
+  // 加载合作伙伴Logo列表
+  const loadPartnerLogos = async () => {
+    if (!token) return
+    
+    setPartnerLogosLoading(true)
+    try {
+      const response = await axios.get('/api/admin/system-settings', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setPartnerLogos(response.data.data.logos || [])
+      setPartnerLogosEnabled(response.data.data.enabled !== false)
+    } catch (error) {
+      console.error('加载合作伙伴Logo列表失败:', error)
+    } finally {
+      setPartnerLogosLoading(false)
+    }
+  }
+
+  // 添加合作伙伴Logo
+  const handleAddLogo = async () => {
+    if (!token || !logoName || !logoImageUrl) return
+    
+    setProcessingLogo(true)
+    try {
+      // 创建新的Logo对象
+      const newLogo = {
+        id: Date.now().toString(),
+        name: logoName,
+        imageUrl: logoImageUrl,
+        link: logoLink || undefined
+      }
+      
+      // 添加到现有列表
+      const updatedLogos = [...partnerLogos, newLogo]
+      
+      // 保存到服务器
+      await axios.put('/api/admin/system-settings', {
+        type: 'partnerLogos',
+        settings: {
+          enabled: partnerLogosEnabled,
+          logos: updatedLogos
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      // 更新状态
+      setPartnerLogos(updatedLogos)
+      setShowAddLogoDialog(false)
+      resetLogoForm()
+      showToast('合作伙伴Logo添加成功', 'success')
+    } catch (error) {
+      console.error('添加合作伙伴Logo失败:', error)
+      showToast('添加失败，请重试', 'error')
+    } finally {
+      setProcessingLogo(false)
+    }
+  }
+
+  // 更新合作伙伴Logo
+  const handleUpdateLogo = async () => {
+    if (!token || !selectedLogo || !logoName || !logoImageUrl) return
+    
+    setProcessingLogo(true)
+    try {
+      // 更新Logo对象
+      const updatedLogo = {
+        ...selectedLogo,
+        name: logoName,
+        imageUrl: logoImageUrl,
+        link: logoLink || undefined
+      }
+      
+      // 更新列表
+      const updatedLogos = partnerLogos.map(logo => 
+        logo.id === selectedLogo.id ? updatedLogo : logo
+      )
+      
+      // 保存到服务器
+      await axios.put('/api/admin/system-settings', {
+        type: 'partnerLogos',
+        settings: {
+          enabled: partnerLogosEnabled,
+          logos: updatedLogos
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      // 更新状态
+      setPartnerLogos(updatedLogos)
+      setShowEditLogoDialog(false)
+      resetLogoForm()
+      showToast('合作伙伴Logo更新成功', 'success')
+    } catch (error) {
+      console.error('更新合作伙伴Logo失败:', error)
+      showToast('更新失败，请重试', 'error')
+    } finally {
+      setProcessingLogo(false)
+    }
+  }
+
+  // 删除合作伙伴Logo
+  const handleDeleteLogo = async (logoId: string) => {
+    if (!token) return
+    
+    if (!window.confirm('确定要删除这个合作伙伴Logo吗？')) {
+      return
+    }
+    
+    try {
+      // 从列表中移除
+      const updatedLogos = partnerLogos.filter(logo => logo.id !== logoId)
+      
+      // 保存到服务器
+      await axios.put('/api/admin/system-settings', {
+        type: 'partnerLogos',
+        settings: {
+          enabled: partnerLogosEnabled,
+          logos: updatedLogos
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      // 更新状态
+      setPartnerLogos(updatedLogos)
+      showToast('合作伙伴Logo已删除', 'success')
+    } catch (error) {
+      console.error('删除合作伙伴Logo失败:', error)
+      showToast('删除失败，请重试', 'error')
+    }
+  }
+
+  // 切换合作伙伴Logo显示状态
+  const togglePartnerLogosEnabled = async () => {
+    if (!token) return
+    
+    try {
+      const newEnabled = !partnerLogosEnabled
+      
+      // 保存到服务器
+      await axios.put('/api/admin/system-settings', {
+        type: 'partnerLogos',
+        settings: {
+          enabled: newEnabled,
+          logos: partnerLogos
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      // 更新状态
+      setPartnerLogosEnabled(newEnabled)
+      showToast(`合作伙伴Logo已${newEnabled ? '启用' : '禁用'}`, 'success')
+    } catch (error) {
+      console.error('切换合作伙伴Logo状态失败:', error)
+      showToast('操作失败，请重试', 'error')
+    }
+  }
+
+  // 打开编辑Logo对话框
+  const openEditLogoDialog = (logo: any) => {
+    setSelectedLogo(logo)
+    setLogoName(logo.name)
+    setLogoImageUrl(logo.imageUrl)
+    setLogoLink(logo.link || '')
+    setShowEditLogoDialog(true)
+  }
+
+  // 重置Logo表单
+  const resetLogoForm = () => {
+    setLogoName('')
+    setLogoImageUrl('')
+    setLogoLink('')
+    setSelectedLogo(null)
   }
 
   // 创建头衔
@@ -1011,6 +1200,18 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     return templateMap[templateId] || templateMap['custom']
   }
 
+  useEffect(() => {
+    if (activeTab === 'titles') {
+      loadTitles()
+    }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'partnerLogos') {
+      loadPartnerLogos()
+    }
+  }, [activeTab])
+
   return (
     <>
       <div className={embedded ? "space-y-6" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
@@ -1084,6 +1285,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 >
                   <UserIcon className="h-5 w-5 inline mr-2" />
                   头衔管理
+                </button>
+                <button
+                  onClick={() => setActiveTab('partnerLogos')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'partnerLogos'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <UserIcon className="h-5 w-5 inline mr-2" />
+                  合作伙伴Logo管理
                 </button>
               </nav>
             </div>
@@ -2299,159 +2511,158 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
 
             {/* 头衔管理内容 */}
             {activeTab === 'titles' && (
-              <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* 左侧：头衔列表 */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                          <UserIcon className="w-5 h-5 mr-2" />
-                          头衔管理
-                        </h2>
-                        <button
-                          onClick={() => setShowCreateTitleDialog(true)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                        >
-                          创建头衔
-                        </button>
-                      </div>
-                    </div>
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">头衔管理</h3>
+                  <button
+                    onClick={() => setShowCreateTitleDialog(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    创建新头衔
+                  </button>
+                </div>
 
-                    <div className="max-h-[600px] overflow-y-auto">
-                      {titlesLoading ? (
-                        <div className="p-8 text-center">
-                          <Loader className="w-8 h-8 animate-spin mx-auto text-blue-600" />
-                          <p className="mt-2 text-gray-500 dark:text-gray-400">加载中...</p>
-                        </div>
-                      ) : titlesList.length === 0 ? (
-                        <div className="p-8 text-center">
-                          <UserIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-500 dark:text-gray-400">暂无头衔</p>
-                        </div>
-                      ) : (
-                        <div className="divide-y divide-gray-200 dark:divide-gray-600">
-                          {titlesList.map((title) => (
-                            <div key={title._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div
-                                    className="w-4 h-4 rounded-full border-2 border-gray-300"
-                                    style={{ backgroundColor: title.color }}
-                                  ></div>
-                                  <div>
-                                    <h3 className="font-medium text-gray-900 dark:text-white">
-                                      {title.name}
-                                    </h3>
-                                    {title.description && (
-                                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        {title.description}
-                                      </p>
-                                    )}
-                                    <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                      <span>颜色: {title.color}</span>
-                                      <span>用户数: {title.userCount || 0}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <button
-                                    onClick={() => openEditTitleDialog(title)}
-                                    className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                                  >
-                                    编辑
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteTitle(title._id)}
-                                    className="px-3 py-1 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-                                  >
-                                    删除
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                {/* 头衔列表 */}
+                {titlesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader className="w-8 h-8 text-blue-500 animate-spin" />
                   </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">头衔名称</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">颜色</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">描述</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                        {titlesList.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                              暂无头衔数据
+                            </td>
+                          </tr>
+                        ) : (
+                          titlesList.map(title => (
+                            <tr key={title.id}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <span 
+                                    className="inline-block w-4 h-4 rounded-full mr-2" 
+                                    style={{ backgroundColor: title.color }}
+                                  ></span>
+                                  <span className="font-medium text-gray-900 dark:text-white">{title.name}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                                {title.color}
+                              </td>
+                              <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
+                                {title.description || '-'}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => openEditTitleDialog(title)}
+                                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                                >
+                                  编辑
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTitle(title.id)}
+                                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                >
+                                  删除
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-                  {/* 右侧：头衔分配 */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                    <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                          头衔分配
-                        </h2>
+                <div className="mt-8">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">头衔分配</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        选择用户
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="搜索用户..."
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                         <button
-                          onClick={() => setShowAssignTitleDialog(true)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                          onClick={handleSearch}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400"
                         >
-                          分配头衔
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                          </svg>
                         </button>
                       </div>
-                    </div>
-
-                    <div className="p-6">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            选择用户查看头衔
-                          </label>
-                          <select
-                            value={selectedUserForTitle}
-                            onChange={(e) => {
-                              setSelectedUserForTitle(e.target.value)
-                              if (e.target.value) {
-                                loadUserTitles(e.target.value)
-                              }
+                      <div className="mt-2 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md">
+                        {users.map(user => (
+                          <div
+                            key={user._id}
+                            onClick={() => {
+                              setSelectedUserForTitle(user._id)
+                              loadUserTitles(user._id)
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className={`px-4 py-2 cursor-pointer ${
+                              selectedUserForTitle === user._id
+                                ? 'bg-blue-50 dark:bg-blue-900/20'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                            }`}
                           >
-                            <option value="">选择用户</option>
-                            {users.map((user) => (
-                              <option key={user._id} value={user._id}>
-                                {user.username} ({user.email})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {selectedUserForTitle && (
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                              用户当前头衔
-                            </h3>
+                            <div className="font-medium text-gray-900 dark:text-white">{user.username}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      {selectedUserForTitle && (
+                        <>
+                          <div className="flex justify-between items-center mb-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              已分配的头衔
+                            </label>
+                            <button
+                              onClick={() => setShowAssignTitleDialog(true)}
+                              className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            >
+                              分配头衔
+                            </button>
+                          </div>
+                          <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4">
                             {userTitles.length === 0 ? (
-                              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                              <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                                 该用户暂无头衔
-                              </p>
+                              </div>
                             ) : (
                               <div className="space-y-2">
-                                {userTitles.map((userTitle) => (
-                                  <div
-                                    key={userTitle._id}
-                                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                                  >
-                                    <div className="flex items-center space-x-3">
-                                      <div
-                                        className="w-3 h-3 rounded-full"
-                                        style={{ backgroundColor: userTitle.title?.color }}
-                                      ></div>
-                                      <div>
-                                        <span className="font-medium text-gray-900 dark:text-white">
-                                          {userTitle.title?.name}
-                                        </span>
-                                        {userTitle.title?.description && (
-                                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                                            {userTitle.title.description}
-                                          </p>
-                                        )}
-                                      </div>
+                                {userTitles.map(title => (
+                                  <div key={title.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                    <div className="flex items-center">
+                                      <span 
+                                        className="inline-block w-3 h-3 rounded-full mr-2" 
+                                        style={{ backgroundColor: title.color }}
+                                      ></span>
+                                      <span className="font-medium text-gray-900 dark:text-white">{title.name}</span>
                                     </div>
                                     <button
-                                      onClick={() => handleRemoveUserTitle(userTitle.userId, userTitle.titleId)}
-                                      className="px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                                      onClick={() => handleRemoveUserTitle(selectedUserForTitle, title.id)}
+                                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 text-sm"
                                     >
                                       移除
                                     </button>
@@ -2460,378 +2671,120 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                               </div>
                             )}
                           </div>
-                        )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 合作伙伴Logo管理内容 */}
+            {activeTab === 'partnerLogos' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">合作伙伴Logo管理</h3>
+                  <div className="space-x-2">
+                    <button
+                      onClick={togglePartnerLogosEnabled}
+                      className={`px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                        partnerLogosEnabled 
+                          ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500 text-white'
+                          : 'bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white'
+                      }`}
+                    >
+                      {partnerLogosEnabled ? '已启用' : '已禁用'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        resetLogoForm()
+                        setShowAddLogoDialog(true)
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                      添加新Logo
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <Info className="h-5 w-5 text-yellow-400" />
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">使用说明</h3>
+                      <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                        <p>1. 合作伙伴Logo将显示在系统侧边栏底部</p>
+                        <p>2. 用户可以在个人设置中选择是否显示Logo</p>
+                        <p>3. 建议上传透明背景的PNG图片，尺寸建议为200x80像素</p>
+                        <p>4. 可以为Logo添加链接，用户点击Logo时将在新窗口打开</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* 创建头衔对话框 */}
-                {showCreateTitleDialog && createPortal(
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
-                      <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            创建新头衔
-                          </h3>
-                          <button
-                            onClick={() => {
-                              setShowCreateTitleDialog(false)
-                              setTitleName('')
-                              setTitleColor('#3B82F6')
-                              setTitleDescription('')
-                            }}
-                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
+                {/* Logo列表 */}
+                {partnerLogosLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader className="w-8 h-8 text-blue-500 animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    {partnerLogos.length === 0 ? (
+                      <div className="text-center py-12 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                        <div className="text-gray-500 dark:text-gray-400 mb-2">暂无合作伙伴Logo</div>
+                        <button
+                          onClick={() => {
+                            resetLogoForm()
+                            setShowAddLogoDialog(true)
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+                        >
+                          添加Logo
+                        </button>
                       </div>
-                      
-                      <div className="p-6 space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            头衔名称 *
-                          </label>
-                          <input
-                            type="text"
-                            value={titleName}
-                            onChange={(e) => setTitleName(e.target.value)}
-                            placeholder="例如：活跃用户、贡献者"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            头衔颜色 *
-                          </label>
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-3 gap-2">
-                              {presetColors.map((preset) => (
-                                <button
-                                  key={preset.value}
-                                  onClick={() => setTitleColor(preset.value)}
-                                  className={`flex items-center space-x-2 p-2 rounded-md border-2 transition-colors ${
-                                    titleColor === preset.value
-                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                                  }`}
-                                >
-                                  <div
-                                    className="w-4 h-4 rounded-full"
-                                    style={{ backgroundColor: preset.value }}
-                                  ></div>
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                                    {preset.name}
-                                  </span>
-                                </button>
-                              ))}
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {partnerLogos.map(logo => (
+                          <div 
+                            key={logo.id}
+                            className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 flex flex-col"
+                          >
+                            <div className="flex-1">
+                              <div className="h-24 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-md mb-3 p-2">
+                                <img 
+                                  src={logo.imageUrl} 
+                                  alt={logo.name} 
+                                  className="max-h-20 max-w-full object-contain"
+                                />
+                              </div>
+                              <div className="font-medium text-gray-900 dark:text-white mb-1">{logo.name}</div>
+                              {logo.link && (
+                                <div className="text-sm text-gray-500 dark:text-gray-400 truncate mb-2">
+                                  链接: <a href={logo.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">{logo.link}</a>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="color"
-                                value={titleColor}
-                                onChange={(e) => setTitleColor(e.target.value)}
-                                className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
-                              />
-                              <input
-                                type="text"
-                                value={titleColor}
-                                onChange={(e) => setTitleColor(e.target.value)}
-                                placeholder="#3B82F6"
-                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
+                            <div className="flex justify-end space-x-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                              <button
+                                onClick={() => openEditLogoDialog(logo)}
+                                className="px-3 py-1 text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded"
+                              >
+                                编辑
+                              </button>
+                              <button
+                                onClick={() => handleDeleteLogo(logo.id)}
+                                className="px-3 py-1 text-sm bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 rounded"
+                              >
+                                删除
+                              </button>
                             </div>
                           </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            头衔描述
-                          </label>
-                          <textarea
-                            value={titleDescription}
-                            onChange={(e) => setTitleDescription(e.target.value)}
-                            placeholder="描述这个头衔的含义和获得条件..."
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-
-                        <div className="flex space-x-3">
-                          <button
-                            onClick={() => {
-                              setShowCreateTitleDialog(false)
-                              setTitleName('')
-                              setTitleColor('#3B82F6')
-                              setTitleDescription('')
-                            }}
-                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            取消
-                          </button>
-                          <button
-                            onClick={handleCreateTitle}
-                            disabled={processingTitle}
-                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                          >
-                            {processingTitle ? (
-                              <>
-                                <Loader className="h-4 w-4 animate-spin mr-2" />
-                                创建中...
-                              </>
-                            ) : (
-                              '创建头衔'
-                            )}
-                          </button>
-                        </div>
+                        ))}
                       </div>
-                    </div>
-                  </div>,
-                  document.body
-                )}
-
-                {/* 编辑头衔对话框 */}
-                {showEditTitleDialog && selectedTitle && createPortal(
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
-                      <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            编辑头衔
-                          </h3>
-                          <button
-                            onClick={() => {
-                              setShowEditTitleDialog(false)
-                              setSelectedTitle(null)
-                              setTitleName('')
-                              setTitleColor('#3B82F6')
-                              setTitleDescription('')
-                            }}
-                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="p-6 space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            头衔名称 *
-                          </label>
-                          <input
-                            type="text"
-                            value={titleName}
-                            onChange={(e) => setTitleName(e.target.value)}
-                            placeholder="例如：活跃用户、贡献者"
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            头衔颜色 *
-                          </label>
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-3 gap-2">
-                              {presetColors.map((preset) => (
-                                <button
-                                  key={preset.value}
-                                  onClick={() => setTitleColor(preset.value)}
-                                  className={`flex items-center space-x-2 p-2 rounded-md border-2 transition-colors ${
-                                    titleColor === preset.value
-                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                                  }`}
-                                >
-                                  <div
-                                    className="w-4 h-4 rounded-full"
-                                    style={{ backgroundColor: preset.value }}
-                                  ></div>
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                                    {preset.name}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="color"
-                                value={titleColor}
-                                onChange={(e) => setTitleColor(e.target.value)}
-                                className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
-                              />
-                              <input
-                                type="text"
-                                value={titleColor}
-                                onChange={(e) => setTitleColor(e.target.value)}
-                                placeholder="#3B82F6"
-                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            头衔描述
-                          </label>
-                          <textarea
-                            value={titleDescription}
-                            onChange={(e) => setTitleDescription(e.target.value)}
-                            placeholder="描述这个头衔的含义和获得条件..."
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-
-                        <div className="flex space-x-3">
-                          <button
-                            onClick={() => {
-                              setShowEditTitleDialog(false)
-                              setSelectedTitle(null)
-                              setTitleName('')
-                              setTitleColor('#3B82F6')
-                              setTitleDescription('')
-                            }}
-                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            取消
-                          </button>
-                          <button
-                            onClick={handleUpdateTitle}
-                            disabled={processingTitle}
-                            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                          >
-                            {processingTitle ? (
-                              <>
-                                <Loader className="h-4 w-4 animate-spin mr-2" />
-                                更新中...
-                              </>
-                            ) : (
-                              '更新头衔'
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>,
-                  document.body
-                )}
-
-                {/* 分配头衔对话框 */}
-                {showAssignTitleDialog && createPortal(
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
-                      <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            分配头衔
-                          </h3>
-                          <button
-                            onClick={() => {
-                              setShowAssignTitleDialog(false)
-                              setSelectedUserForTitle('')
-                              setSelectedTitleForAssign('')
-                            }}
-                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <div className="p-6 space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            选择用户 *
-                          </label>
-                          <select
-                            value={selectedUserForTitle}
-                            onChange={(e) => setSelectedUserForTitle(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">选择用户</option>
-                            {users.map((user) => (
-                              <option key={user._id} value={user._id}>
-                                {user.username} ({user.email})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            选择头衔 *
-                          </label>
-                          <select
-                            value={selectedTitleForAssign}
-                            onChange={(e) => setSelectedTitleForAssign(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">选择头衔</option>
-                            {titlesList.map((title) => (
-                              <option key={title._id} value={title._id}>
-                                {title.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {selectedTitleForAssign && (
-                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                              <div
-                                className="w-4 h-4 rounded-full"
-                                style={{ 
-                                  backgroundColor: titlesList.find(t => t._id === selectedTitleForAssign)?.color 
-                                }}
-                              ></div>
-                              <span className="font-medium text-gray-900 dark:text-white">
-                                {titlesList.find(t => t._id === selectedTitleForAssign)?.name}
-                              </span>
-                            </div>
-                            {titlesList.find(t => t._id === selectedTitleForAssign)?.description && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {titlesList.find(t => t._id === selectedTitleForAssign)?.description}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        <div className="flex space-x-3">
-                          <button
-                            onClick={() => {
-                              setShowAssignTitleDialog(false)
-                              setSelectedUserForTitle('')
-                              setSelectedTitleForAssign('')
-                            }}
-                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            取消
-                          </button>
-                          <button
-                            onClick={handleAssignTitle}
-                            disabled={assigningTitle}
-                            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                          >
-                            {assigningTitle ? (
-                              <>
-                                <Loader className="h-4 w-4 animate-spin mr-2" />
-                                分配中...
-                              </>
-                            ) : (
-                              '分配头衔'
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>,
-                  document.body
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -3150,6 +3103,220 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* 分配头衔对话框 */}
+        {showAssignTitleDialog && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">分配头衔</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      选择头衔
+                    </label>
+                    <select
+                      value={selectedTitleForAssign}
+                      onChange={(e) => setSelectedTitleForAssign(e.target.value)}
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    >
+                      <option value="">-- 选择头衔 --</option>
+                      {titlesList.map(title => (
+                        <option key={title.id} value={title.id}>{title.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2 rounded-b-lg">
+                <button
+                  onClick={() => setShowAssignTitleDialog(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleAssignTitle}
+                  disabled={!selectedTitleForAssign || assigningTitle}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {assigningTitle ? '分配中...' : '分配'}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* 添加Logo对话框 */}
+        {showAddLogoDialog && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">添加合作伙伴Logo</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      名称
+                    </label>
+                    <input
+                      type="text"
+                      value={logoName}
+                      onChange={(e) => setLogoName(e.target.value)}
+                      placeholder="输入合作伙伴名称"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      图片URL
+                    </label>
+                    <input
+                      type="text"
+                      value={logoImageUrl}
+                      onChange={(e) => setLogoImageUrl(e.target.value)}
+                      placeholder="输入Logo图片URL"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      建议使用透明背景的PNG图片，尺寸约为200x80像素
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      链接URL（可选）
+                    </label>
+                    <input
+                      type="text"
+                      value={logoLink}
+                      onChange={(e) => setLogoLink(e.target.value)}
+                      placeholder="输入链接URL（可选）"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  {logoImageUrl && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        预览
+                      </label>
+                      <div className="h-24 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-md p-2">
+                        <img 
+                          src={logoImageUrl} 
+                          alt="Logo预览" 
+                          className="max-h-20 max-w-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200x80?text=加载失败'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2 rounded-b-lg">
+                <button
+                  onClick={() => setShowAddLogoDialog(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleAddLogo}
+                  disabled={!logoName || !logoImageUrl || processingLogo}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processingLogo ? '添加中...' : '添加'}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* 编辑Logo对话框 */}
+        {showEditLogoDialog && selectedLogo && createPortal(
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">编辑合作伙伴Logo</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      名称
+                    </label>
+                    <input
+                      type="text"
+                      value={logoName}
+                      onChange={(e) => setLogoName(e.target.value)}
+                      placeholder="输入合作伙伴名称"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      图片URL
+                    </label>
+                    <input
+                      type="text"
+                      value={logoImageUrl}
+                      onChange={(e) => setLogoImageUrl(e.target.value)}
+                      placeholder="输入Logo图片URL"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      建议使用透明背景的PNG图片，尺寸约为200x80像素
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      链接URL（可选）
+                    </label>
+                    <input
+                      type="text"
+                      value={logoLink}
+                      onChange={(e) => setLogoLink(e.target.value)}
+                      placeholder="输入链接URL（可选）"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  {logoImageUrl && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        预览
+                      </label>
+                      <div className="h-24 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-md p-2">
+                        <img 
+                          src={logoImageUrl} 
+                          alt="Logo预览" 
+                          className="max-h-20 max-w-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200x80?text=加载失败'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2 rounded-b-lg">
+                <button
+                  onClick={() => setShowEditLogoDialog(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleUpdateLogo}
+                  disabled={!logoName || !logoImageUrl || processingLogo}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processingLogo ? '更新中...' : '更新'}
+                </button>
               </div>
             </div>
           </div>,

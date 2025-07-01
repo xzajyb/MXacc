@@ -33,6 +33,7 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
+import PartnerLogos from '../components/PartnerLogos'
 
 type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
@@ -481,6 +482,9 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
 
+            {/* 合作伙伴Logo */}
+            <PartnerLogos className="mb-4" />
+            
             {/* 用户信息 */}
             <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">

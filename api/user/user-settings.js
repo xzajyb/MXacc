@@ -54,7 +54,8 @@ module.exports = async function handler(req, res) {
             showFollowing: true
           },
           language: 'zh-CN',
-          timezone: 'Asia/Shanghai'
+          timezone: 'Asia/Shanghai',
+          partnerLogos: { enabled: true }
         }
         const settings = { ...defaultSettings, ...user.settings }
         return res.status(200).json({ message: '获取设置成功', settings })
@@ -137,6 +138,14 @@ module.exports = async function handler(req, res) {
           const validTimezones = ['Asia/Shanghai', 'Asia/Tokyo', 'America/New_York', 'Europe/London']
           if (validTimezones.includes(settings.timezone)) {
             validatedSettings.timezone = settings.timezone
+          }
+        }
+        
+        // 合作伙伴logo设置
+        if (settings.partnerLogos && typeof settings.partnerLogos === 'object') {
+          validatedSettings.partnerLogos = {}
+          if (typeof settings.partnerLogos.enabled === 'boolean') {
+            validatedSettings.partnerLogos.enabled = settings.partnerLogos.enabled
           }
         }
 
