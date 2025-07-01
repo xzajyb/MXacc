@@ -3714,18 +3714,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
           document.body
         )}
 
-        {/* 批量删除对话框 */}
-        {showBulkDeleteDialog && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
-            onClick={() => {
-              setShowBulkDeleteDialog(false)
-              setSelectedPosts([])
-              setProcessingBulkDelete(false)
-            }}
-          >
-            <div 
-      </div>
       {/* 批量删除确认对话框 */}
       <ConfirmDialog
         isOpen={showBulkDeleteDialog}
