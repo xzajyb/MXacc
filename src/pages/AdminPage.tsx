@@ -1167,7 +1167,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const handleRebuildWiki = async () => {
     setRebuildingWiki(true)
     try {
-      const response = await axios.post('/api/wiki/rebuild', {}, {
+      const response = await axios.post('/api/social/content?action=wiki&type=rebuild', {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
 

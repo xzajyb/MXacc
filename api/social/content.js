@@ -1928,6 +1928,39 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ success: false, message: '不支持的操作类型' })
     }
 
+    // Wiki重建功能
+    if (req.method === 'POST' && req.query.action === 'wiki' && req.query.type === 'rebuild') {
+      if (currentUser.role !== 'admin') {
+        return res.status(403).json({ 
+          success: false, 
+          message: '需要管理员权限' 
+        })
+      }
+
+      try {
+        console.log('🔧 管理员', currentUser.username, '触发Wiki重建...')
+
+        // 调用Wiki构建脚本
+        const buildWiki = require('../../scripts/build-wiki')
+        await buildWiki()
+
+        console.log('✅ Wiki重建完成')
+
+        return res.status(200).json({
+          success: true,
+          message: 'Wiki重建成功！文档已更新',
+          timestamp: new Date().toISOString()
+        })
+
+      } catch (error) {
+        console.error('❌ Wiki重建失败:', error)
+        return res.status(500).json({
+          success: false,
+          message: error.message || 'Wiki重建失败'
+        })
+      }
+    }
+
     return res.status(405).json({ 
       success: false, 
       message: '方法不允许' 
