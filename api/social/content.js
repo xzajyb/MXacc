@@ -30,6 +30,21 @@ async function checkUserBanStatus(db, userId) {
   return activeBan
 }
 
+// 检查用户发帖频率限制
+async function checkPostRateLimit(db, userId) {
+  // 获取5分钟前的时间点
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  
+  // 查询用户在过去5分钟内发布的帖子数量
+  const recentPostsCount = await db.collection('posts').countDocuments({
+    authorId: new ObjectId(userId),
+    createdAt: { $gt: fiveMinutesAgo }
+  });
+  
+  // 如果发帖数量已达到3个，则返回true表示已达到限制
+  return recentPostsCount >= 3;
+}
+
 // 获取用户信息（包含头衔）
 async function getUserById(users, userId, db = null) {
   const user = await users.findOne(
@@ -729,6 +744,15 @@ module.exports = async function handler(req, res) {
             success: false, 
             message: '帖子内容不能超过1000个字符' 
           })
+        }
+        
+        // 检查发帖频率限制
+        const isRateLimited = await checkPostRateLimit(db, decoded.userId);
+        if (isRateLimited) {
+          return res.status(429).json({
+            success: false,
+            message: '发帖过于频繁，请稍后再试（5分钟内最多发布3个帖子）'
+          });
         }
 
         const newPost = {

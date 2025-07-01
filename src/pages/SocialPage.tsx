@@ -518,6 +518,13 @@ const SocialPage: React.FC<SocialPageProps> = ({ embedded = false, onUnreadCount
         showSuccess('帖子发布成功')
       } else {
         const errorData = await response.json()
+        
+        // 检查是否是发帖频率限制错误
+        if (response.status === 429) {
+          showError(errorData.message || '发帖过于频繁，请稍后再试')
+          return
+        }
+        
         // 检查是否是封禁错误
         const isBanError = await handleBanErrorResponse(errorData)
         if (isBanError) {
