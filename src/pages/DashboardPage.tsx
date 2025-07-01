@@ -23,7 +23,7 @@ import {
   Monitor,
   MessageCircle,
   Globe,
-  Book
+  BookOpen
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLogos from '../components/PartnerLogos'
@@ -72,9 +72,9 @@ const DashboardPage: React.FC = () => {
     },
     {
       id: 'wiki',
-      label: 'Wiki知识库',
-      icon: Book,
-      description: '浏览文档和知识库，管理员可编辑'
+      label: 'Wiki文档',
+      icon: BookOpen,
+      description: '知识库管理和文档协作平台'
     },
     {
       id: 'profile',
@@ -113,8 +113,8 @@ const DashboardPage: React.FC = () => {
   }
 
   const handleNavClick = (viewId: ActiveView) => {
-    // 如果邮箱未验证，除了验证邮箱、个人资料、社交功能和Wiki，其他功能都禁用
-    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social' && viewId !== 'wiki') {
+    // 如果邮箱未验证，除了验证邮箱、个人资料和社交功能，其他功能都禁用
+    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social') {
       showWarning('请先验证邮箱后再使用此功能')
       return
     }
@@ -305,7 +305,7 @@ const DashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {navigationItems.filter(item => item.id !== 'home').map((item) => {
                   const Icon = item.icon
-                  const isDisabled = !user?.isEmailVerified && item.id !== 'verify-email' && item.id !== 'profile' && item.id !== 'social' && item.id !== 'wiki'
+                  const isDisabled = !user?.isEmailVerified && item.id !== 'verify-email' && item.id !== 'profile' && item.id !== 'social'
                   return (
                     <motion.div
                       key={item.id}
@@ -331,8 +331,6 @@ const DashboardPage: React.FC = () => {
                             ? 'bg-gray-100 dark:bg-gray-700' 
                             : item.id === 'social'
                             ? 'bg-green-50 dark:bg-green-900/20'
-                            : item.id === 'wiki'
-                            ? 'bg-purple-50 dark:bg-purple-900/20'
                             : 'bg-blue-50 dark:bg-blue-900/20'
                         }`}>
                           <Icon className={`w-6 h-6 ${
@@ -340,8 +338,6 @@ const DashboardPage: React.FC = () => {
                               ? 'text-gray-400' 
                               : item.id === 'social'
                               ? 'text-green-600 dark:text-green-400'
-                              : item.id === 'wiki'
-                              ? 'text-purple-600 dark:text-purple-400'
                               : 'text-blue-600 dark:text-blue-400'
                           }`} />
                         </div>

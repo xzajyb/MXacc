@@ -189,6 +189,145 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       const { action, type = 'feed', page = 1, limit = 10, postId, commentId } = req.query
 
+      // 获取Wiki内容
+      if (action === 'wiki') {
+        const { subAction } = req.query
+
+        // 获取Wiki文档列表
+        if (subAction === 'docs') {
+          const { category, page = 1, limit = 50 } = req.query
+          
+          let query = { isPublic: true }
+          if (category) {
+            query.category = category
+          }
+
+          const docs = await db.collection('wiki_docs')
+            .find(query)
+            .sort({ order: 1, createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit))
+            .toArray()
+
+          // 获取作者信息
+          for (const doc of docs) {
+            doc.author = await getUserById(users, doc.authorId)
+            doc.updatedByUser = await getUserById(users, doc.updatedBy)
+          }
+
+          return res.status(200).json({
+            success: true,
+            docs: docs.map(doc => ({
+              id: doc._id.toString(),
+              title: doc.title,
+              slug: doc.slug,
+              category: doc.category,
+              author: doc.author,
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt,
+              updatedBy: doc.updatedByUser,
+              order: doc.order,
+              parentId: doc.parentId?.toString()
+            }))
+          })
+        }
+
+        // 获取单个Wiki文档
+        if (subAction === 'doc') {
+          const { docId, slug } = req.query
+
+          let query = { isPublic: true }
+          if (docId) {
+            query._id = new ObjectId(docId)
+          } else if (slug) {
+            query.slug = slug
+          } else {
+            return res.status(400).json({ success: false, message: '请提供文档ID或slug' })
+          }
+
+          const doc = await db.collection('wiki_docs').findOne(query)
+
+          if (!doc) {
+            return res.status(404).json({ success: false, message: '文档不存在' })
+          }
+
+          // 获取作者信息
+          doc.author = await getUserById(users, doc.authorId)
+          doc.updatedByUser = await getUserById(users, doc.updatedBy)
+
+          return res.status(200).json({
+            success: true,
+            doc: {
+              id: doc._id.toString(),
+              title: doc.title,
+              content: doc.content,
+              slug: doc.slug,
+              category: doc.category,
+              author: doc.author,
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt,
+              updatedBy: doc.updatedByUser,
+              order: doc.order,
+              parentId: doc.parentId?.toString()
+            }
+          })
+        }
+
+        // 获取分类列表
+        if (subAction === 'categories') {
+          const categories = await db.collection('wiki_categories')
+            .find({})
+            .sort({ order: 1, name: 1 })
+            .toArray()
+
+          return res.status(200).json({
+            success: true,
+            categories: categories.map(cat => ({
+              id: cat._id.toString(),
+              name: cat.name,
+              description: cat.description,
+              slug: cat.slug,
+              icon: cat.icon,
+              order: cat.order
+            }))
+          })
+        }
+
+        // 获取文档树结构
+        if (subAction === 'tree') {
+          const allDocs = await db.collection('wiki_docs')
+            .find({ isPublic: true })
+            .sort({ order: 1, title: 1 })
+            .toArray()
+
+          // 构建树结构
+          const buildTree = (docs, parentId = null) => {
+            return docs
+              .filter(doc => {
+                if (parentId === null) return !doc.parentId
+                return doc.parentId?.toString() === parentId
+              })
+              .map(doc => ({
+                id: doc._id.toString(),
+                title: doc.title,
+                slug: doc.slug,
+                category: doc.category,
+                order: doc.order,
+                children: buildTree(docs, doc._id.toString())
+              }))
+          }
+
+          const tree = buildTree(allDocs)
+
+          return res.status(200).json({
+            success: true,
+            tree
+          })
+        }
+
+        return res.status(400).json({ success: false, message: '无效的wiki操作' })
+      }
+
       // 获取帖子列表
       if (action === 'posts' || !action) {
         let query = {}
@@ -703,59 +842,172 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // Wiki功能
-      if (action === 'wiki-list') {
-        // 获取Wiki文档列表
-        const wiki = db.collection('wiki_documents')
-        
-        let query = { isPublic: true }
-        
-        // 管理员可以看到所有文档
-        if (currentUser.role === 'admin') {
-          query = {}
+      // Wiki管理功能
+      if (action === 'wiki-management') {
+        const { subAction } = req.body
+
+        // 检查管理员权限
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ success: false, message: '无管理员权限' })
         }
 
-        const documents = await wiki
-          .find(query)
-          .sort({ order: 1, createdAt: -1 })
-          .toArray()
+        // 创建或更新Wiki文档
+        if (subAction === 'save-doc') {
+          const { docId, title, content, slug, category, isPublic, parentId, order } = req.body
 
-        // 获取作者信息
-        const authorIds = [...new Set(documents.map(doc => doc.authorId))]
-        const authors = await users.find({ 
-          _id: { $in: authorIds.map(id => new ObjectId(id)) } 
-        }).project({ 
-          username: 1, 
-          'profile.nickname': 1 
-        }).toArray()
-
-        const authorMap = {}
-        authors.forEach(author => {
-          authorMap[author._id.toString()] = {
-            id: author._id.toString(),
-            username: author.username,
-            nickname: author.profile?.nickname || author.username
+          if (!title || !content) {
+            return res.status(400).json({ success: false, message: '标题和内容不能为空' })
           }
-        })
 
-        const documentsWithAuthors = documents.map(doc => ({
-          ...doc,
-          id: doc._id.toString(),
-          authorId: doc.authorId.toString(),
-          author: authorMap[doc.authorId.toString()] || {
-            id: doc.authorId.toString(),
-            username: '未知用户',
-            nickname: '未知用户'
+          const wikiDoc = {
+            title,
+            content,
+            slug: slug || title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/gi, '-'),
+            category: category || 'general',
+            isPublic: isPublic !== false,
+            parentId: parentId ? new ObjectId(parentId) : null,
+            order: order || 0,
+            authorId: new ObjectId(decoded.userId),
+            updatedAt: new Date(),
+            updatedBy: new ObjectId(decoded.userId)
           }
-        }))
 
-        return res.status(200).json({
-          success: true,
-          data: {
-            documents: documentsWithAuthors
+          if (docId) {
+            // 更新文档
+            const result = await db.collection('wiki_docs').updateOne(
+              { _id: new ObjectId(docId) },
+              { $set: wikiDoc }
+            )
+            
+            if (result.matchedCount === 0) {
+              return res.status(404).json({ success: false, message: '文档不存在' })
+            }
+
+            return res.status(200).json({ 
+              success: true, 
+              message: '文档更新成功',
+              docId: docId
+            })
+          } else {
+            // 创建新文档
+            wikiDoc.createdAt = new Date()
+            wikiDoc.createdBy = new ObjectId(decoded.userId)
+            
+            const result = await db.collection('wiki_docs').insertOne(wikiDoc)
+            
+            return res.status(201).json({ 
+              success: true, 
+              message: '文档创建成功',
+              docId: result.insertedId.toString()
+            })
           }
-        })
+        }
+
+        // 删除Wiki文档
+        if (subAction === 'delete-doc') {
+          const { docId } = req.body
+
+          if (!docId) {
+            return res.status(400).json({ success: false, message: '文档ID不能为空' })
+          }
+
+          // 检查是否有子文档
+          const childDocs = await db.collection('wiki_docs').findOne({
+            parentId: new ObjectId(docId)
+          })
+
+          if (childDocs) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '请先删除子文档'
+            })
+          }
+
+          const result = await db.collection('wiki_docs').deleteOne({
+            _id: new ObjectId(docId)
+          })
+
+          if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, message: '文档不存在' })
+          }
+
+          return res.status(200).json({ 
+            success: true, 
+            message: '文档删除成功'
+          })
+        }
+
+        // 创建分类
+        if (subAction === 'create-category') {
+          const { name, description, slug, icon, order } = req.body
+
+          if (!name) {
+            return res.status(400).json({ success: false, message: '分类名称不能为空' })
+          }
+
+          const category = {
+            name,
+            description: description || '',
+            slug: slug || name.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/gi, '-'),
+            icon: icon || '📁',
+            order: order || 0,
+            createdAt: new Date(),
+            createdBy: new ObjectId(decoded.userId)
+          }
+
+          const result = await db.collection('wiki_categories').insertOne(category)
+
+          return res.status(201).json({
+            success: true,
+            message: '分类创建成功',
+            categoryId: result.insertedId.toString()
+          })
+        }
+
+        // 批量导入Markdown文件
+        if (subAction === 'import-docs') {
+          const { docs } = req.body // docs: [{ title, content, path, category }]
+
+          if (!Array.isArray(docs) || docs.length === 0) {
+            return res.status(400).json({ success: false, message: '导入数据无效' })
+          }
+
+          const importedDocs = []
+          
+          for (const doc of docs) {
+            const wikiDoc = {
+              title: doc.title,
+              content: doc.content,
+              slug: doc.path || doc.title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/gi, '-'),
+              category: doc.category || 'imported',
+              isPublic: true,
+              parentId: null,
+              order: 0,
+              authorId: new ObjectId(decoded.userId),
+              createdAt: new Date(),
+              createdBy: new ObjectId(decoded.userId),
+              updatedAt: new Date(),
+              updatedBy: new ObjectId(decoded.userId)
+            }
+
+            const result = await db.collection('wiki_docs').insertOne(wikiDoc)
+            importedDocs.push({
+              title: doc.title,
+              docId: result.insertedId.toString()
+            })
+          }
+
+          return res.status(200).json({
+            success: true,
+            message: `成功导入 ${importedDocs.length} 个文档`,
+            imported: importedDocs
+          })
+        }
+
+        return res.status(400).json({ success: false, message: '无效的操作' })
       }
+
+
 
       return res.status(400).json({ 
         success: false, 
@@ -1298,128 +1550,6 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      // Wiki文档创建
-      if (action === 'create-wiki') {
-        // 只有管理员可以创建Wiki文档
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ success: false, message: '需要管理员权限' })
-        }
-
-        const { title, content, path, tags, isPublic, type, parentId, order } = body
-
-        if (!title || !content) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '标题和内容不能为空' 
-          })
-        }
-
-        const wiki = db.collection('wiki_documents')
-
-        // 检查路径是否已存在
-        if (path) {
-          const existingDoc = await wiki.findOne({ path: path.trim() })
-          if (existingDoc) {
-            return res.status(400).json({ 
-              success: false, 
-              message: '路径已存在' 
-            })
-          }
-        }
-
-        const newDoc = {
-          title: title.trim(),
-          content: content.trim(),
-          path: path?.trim() || `/${title.toLowerCase().replace(/\s+/g, '-')}`,
-          parentId: parentId ? new ObjectId(parentId) : null,
-          type: type || 'document',
-          tags: Array.isArray(tags) ? tags : [],
-          authorId: new ObjectId(decoded.userId),
-          isPublic: isPublic !== false,
-          order: order || 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-
-        const result = await wiki.insertOne(newDoc)
-
-        return res.status(201).json({
-          success: true,
-          message: 'Wiki文档创建成功',
-          data: {
-            id: result.insertedId.toString(),
-            ...newDoc,
-            authorId: newDoc.authorId.toString(),
-            parentId: newDoc.parentId?.toString()
-          }
-        })
-      }
-
-      // Wiki文档更新
-      if (action === 'update-wiki') {
-        // 只有管理员可以更新Wiki文档
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ success: false, message: '需要管理员权限' })
-        }
-
-        const { id, title, content, path, tags, isPublic, type, parentId, order } = body
-
-        if (!id) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Wiki文档ID不能为空' 
-          })
-        }
-
-        const wiki = db.collection('wiki_documents')
-
-        // 检查文档是否存在
-        const existingDoc = await wiki.findOne({ _id: new ObjectId(id) })
-        if (!existingDoc) {
-          return res.status(404).json({ 
-            success: false, 
-            message: 'Wiki文档不存在' 
-          })
-        }
-
-        // 检查路径是否与其他文档冲突
-        if (path && path !== existingDoc.path) {
-          const pathConflict = await wiki.findOne({ 
-            path: path.trim(),
-            _id: { $ne: new ObjectId(id) }
-          })
-          if (pathConflict) {
-            return res.status(400).json({ 
-              success: false, 
-              message: '路径已被其他文档使用' 
-            })
-          }
-        }
-
-        const updateData = {
-          updatedAt: new Date()
-        }
-
-        if (title) updateData.title = title.trim()
-        if (content) updateData.content = content.trim()
-        if (path) updateData.path = path.trim()
-        if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : []
-        if (isPublic !== undefined) updateData.isPublic = isPublic
-        if (type) updateData.type = type
-        if (parentId !== undefined) updateData.parentId = parentId ? new ObjectId(parentId) : null
-        if (order !== undefined) updateData.order = order
-
-        await wiki.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: updateData }
-        )
-
-        return res.status(200).json({
-          success: true,
-          message: 'Wiki文档更新成功'
-        })
-      }
-
       return res.status(400).json({ 
         success: false, 
         message: '不支持的操作' 
@@ -1822,48 +1952,6 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           success: true,
           message: '用户头衔移除成功'
-        })
-      }
-
-      // 删除Wiki文档（管理员专用）
-      if (action === 'delete-wiki') {
-        if (!id) {
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Wiki文档ID不能为空' 
-          })
-        }
-
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ success: false, message: '需要管理员权限' })
-        }
-
-        const wiki = db.collection('wiki_documents')
-        const document = await wiki.findOne({ _id: new ObjectId(id) })
-        
-        if (!document) {
-          return res.status(404).json({ 
-            success: false, 
-            message: 'Wiki文档不存在' 
-          })
-        }
-
-        // 如果是文件夹类型，检查是否有子文档
-        if (document.type === 'folder') {
-          const hasChildren = await wiki.countDocuments({ parentId: new ObjectId(id) })
-          if (hasChildren > 0) {
-            return res.status(400).json({ 
-              success: false, 
-              message: '文件夹中还有子文档，请先删除子文档' 
-            })
-          }
-        }
-
-        await wiki.deleteOne({ _id: new ObjectId(id) })
-
-        return res.status(200).json({
-          success: true,
-          message: 'Wiki文档删除成功'
         })
       }
 
