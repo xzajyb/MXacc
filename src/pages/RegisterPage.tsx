@@ -128,7 +128,7 @@ const RegisterPage = () => {
                     className="w-full h-full object-contain"
                   />
                 </div>
-                <PartnerLogos compact={true} className="ml-2" />
+                <PartnerLogos loginPage={true} className="ml-2" />
               </motion.div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                 创建账号
