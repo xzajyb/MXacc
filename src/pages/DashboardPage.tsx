@@ -23,7 +23,7 @@ import {
   Monitor,
   MessageCircle,
   Globe,
-  BookOpen
+  Book
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLogos from '../components/PartnerLogos'
@@ -35,10 +35,9 @@ import SecurityPage from './SecurityPage'
 import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
-import WikiPage from './WikiPage'
 import SystemNotifications from '../components/SystemNotifications'
 
-type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social' | 'wiki'
+type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
@@ -72,9 +71,9 @@ const DashboardPage: React.FC = () => {
     },
     {
       id: 'wiki',
-      label: 'Wiki文档',
-      icon: BookOpen,
-      description: '查看和管理知识库文档'
+      label: '文档中心',
+      icon: Book,
+      description: '查看平台文档和使用指南'
     },
     {
       id: 'profile',
@@ -112,13 +111,23 @@ const DashboardPage: React.FC = () => {
     logout()
   }
 
-  const handleNavClick = (viewId: ActiveView) => {
+  const handleNavClick = (viewId: ActiveView | 'wiki') => {
+    // 文档中心直接打开新窗口
+    if (viewId === 'wiki') {
+      const docsUrl = process.env.NODE_ENV === 'production' 
+        ? '/docs/' 
+        : 'http://localhost:5173/docs/'
+      window.open(docsUrl, '_blank')
+      setSidebarOpen(false)
+      return
+    }
+    
     // 如果邮箱未验证，除了验证邮箱、个人资料和社交功能，其他功能都禁用
     if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social') {
       showWarning('请先验证邮箱后再使用此功能')
       return
     }
-    setActiveView(viewId)
+    setActiveView(viewId as ActiveView)
     setSidebarOpen(false) // 移动端点击后关闭侧边栏
   }
 
@@ -186,8 +195,6 @@ const DashboardPage: React.FC = () => {
       switch (activeView) {
         case 'social':
           return <SocialPage embedded={true} onUnreadCountChange={setSocialUnreadCount} />
-        case 'wiki':
-          return <WikiPage />
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':

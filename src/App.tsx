@@ -9,7 +9,6 @@ import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import SecurityPage from './pages/SecurityPage'
 import AdminPage from './pages/AdminPage'
-import WikiPage from './pages/WikiPage'
 import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -56,9 +55,6 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/debug" element={<DebugPage />} />
-          
-          {/* Wiki页面 - 公开访问 */}
-          <Route path="/wiki" element={<WikiPage />} />
           
           {/* 受保护的路由 */}
           <Route path="/dashboard" element={

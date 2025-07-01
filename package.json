@@ -10,7 +10,12 @@
     "dev": "node ./node_modules/vite/bin/vite.js",
     "build": "node build.js",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
-    "type-check": "npx tsc --noEmit"
+    "type-check": "npx tsc --noEmit",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "docs:generate": "node scripts/build-wiki.js",
+    "docs:full": "npm run docs:generate && npm run docs:build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
@@ -53,7 +58,6 @@
     "three": "^0.160.1",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
-    "vitepress": "^1.6.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -67,6 +71,7 @@
     "@typescript-eslint/parser": "^6.14.0",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5"
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "vitepress": "^1.6.3"
   }
 }
