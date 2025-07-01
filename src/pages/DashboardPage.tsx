@@ -114,8 +114,7 @@ const DashboardPage: React.FC = () => {
   const handleNavClick = (viewId: ActiveView | 'wiki') => {
     // 文档中心直接打开新窗口
     if (viewId === 'wiki') {
-      // 暂时直接显示API数据，等VitePress配置完成后再改为实际的文档站点
-      window.open('/api/social/content?action=wiki&type=list', '_blank')
+      window.open('/docs/', '_blank')
       setSidebarOpen(false)
       return
     }
