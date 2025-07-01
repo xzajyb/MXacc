@@ -10,8 +10,7 @@
     "dev": "node ./node_modules/vite/bin/vite.js",
     "build": "node build.js",
     "preview": "node ./node_modules/vite/bin/vite.js preview",
-    "type-check": "npx tsc --noEmit",
-    "import-wiki": "node scripts/import-tunrenfu-wiki.js"
+    "type-check": "npx tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
@@ -37,6 +36,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.303.0",
     "maath": "^0.10.8",
+    "markdown-it": "^14.1.0",
     "marked": "^12.0.1",
     "mongodb": "^6.3.0",
     "multer": "^2.0.1",
@@ -53,7 +53,7 @@
     "three": "^0.160.1",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
-    "vitepress": "^1.0.0-rc.45",
+    "vitepress": "^1.6.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {

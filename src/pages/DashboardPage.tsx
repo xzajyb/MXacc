@@ -74,7 +74,7 @@ const DashboardPage: React.FC = () => {
       id: 'wiki',
       label: 'Wiki文档',
       icon: BookOpen,
-      description: '知识库管理和文档协作平台'
+      description: '查看和管理知识库文档'
     },
     {
       id: 'profile',
@@ -187,7 +187,7 @@ const DashboardPage: React.FC = () => {
         case 'social':
           return <SocialPage embedded={true} onUnreadCountChange={setSocialUnreadCount} />
         case 'wiki':
-          return <WikiPage embedded={true} />
+          return <WikiPage />
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':

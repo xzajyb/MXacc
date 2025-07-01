@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon, Search, BookOpen } from 'lucide-react'
+import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon, Search } from 'lucide-react'
 import axios from 'axios'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
@@ -38,7 +38,7 @@ interface AdminPageProps {
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
   const { showToast } = useToast()
-  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos' | 'posts' | 'wiki'>('email')
+  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos' | 'posts'>('email')
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -1276,17 +1276,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 >
                   <Trash2 className="h-5 w-5 inline mr-2" />
                   帖子管理
-                </button>
-                <button
-                  onClick={() => setActiveTab('wiki')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'wiki'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <BookOpen className="h-5 w-5 inline mr-2" />
-                  Wiki管理
                 </button>
               </nav>
             </div>
@@ -3686,134 +3675,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
           document.body
         )}
       </div>
-      
-            {/* Wiki管理内容 */}
-            {activeTab === 'wiki' && (
-              <div className="max-w-6xl mx-auto">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
-                    <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
-                    Wiki文档管理
-                  </h2>
-                  
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center">
-                        <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                          Wiki系统已集成
-                        </h3>
-                        <p className="text-blue-800 dark:text-blue-200 mb-4">
-                          完整的Wiki文档管理系统已经集成到平台中，您可以通过导航菜单中的"Wiki文档"来管理知识库内容。
-                        </p>
-                        
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-                              <h4 className="font-medium text-gray-900 dark:text-white mb-2">📝 文档管理</h4>
-                              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                <li>• 创建和编辑Wiki文档</li>
-                                <li>• 支持Markdown格式</li>
-                                <li>• 文档分类管理</li>
-                                <li>• 访问权限控制</li>
-                              </ul>
-                            </div>
-                            
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-                              <h4 className="font-medium text-gray-900 dark:text-white mb-2">📂 内容导入</h4>
-                              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                <li>• 批量导入Markdown文档</li>
-                                <li>• 屯人服Wiki内容移植</li>
-                                <li>• 自动分类整理</li>
-                                <li>• 历史版本管理</li>
-                              </ul>
-                            </div>
-                            
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-                              <h4 className="font-medium text-gray-900 dark:text-white mb-2">🏷️ 分类管理</h4>
-                              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                <li>• 创建文档分类</li>
-                                <li>• 自定义分类图标</li>
-                                <li>• 分类排序管理</li>
-                                <li>• 分类描述设置</li>
-                              </ul>
-                            </div>
-                            
-                            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
-                              <h4 className="font-medium text-gray-900 dark:text-white mb-2">🔍 搜索浏览</h4>
-                              <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                <li>• 全文搜索功能</li>
-                                <li>• 分类筛选浏览</li>
-                                <li>• 树状结构展示</li>
-                                <li>• 快速访问入口</li>
-                              </ul>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                            <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                              🚀 屯人服Wiki导入说明
-                            </h4>
-                            <div className="text-sm text-green-700 dark:text-green-400 space-y-2">
-                              <p>系统已经准备好了屯人服Wiki的完整内容，包括：</p>
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                <span>• 服务器介绍</span>
-                                <span>• 加入指南</span>
-                                <span>• 服务器规则</span>
-                                <span>• 绑定系统</span>
-                                <span>• 传送点系统</span>
-                                <span>• 假人系统</span>
-                                <span>• 枪械系统</span>
-                                <span>• 指令大全</span>
-                                <span>• 常见问题</span>
-                              </div>
-                              <p className="mt-2">
-                                <strong>导入方法：</strong>访问导航菜单中的"Wiki文档" → "批量导入"，或使用命令行工具：
-                                <code className="bg-green-100 dark:bg-green-800 px-2 py-1 rounded text-xs ml-2">
-                                  npm run import-wiki
-                                </code>
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-3 mt-6">
-                          <button
-                            onClick={() => window.open('/wiki', '_blank')}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                          >
-                            <BookOpen className="w-4 h-4" />
-                            <span>打开Wiki系统</span>
-                          </button>
-                          
-                          <button
-                            onClick={() => navigator.clipboard.writeText('npm run import-wiki')}
-                            className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                          >
-                            <span>📋</span>
-                            <span>复制导入命令</span>
-                          </button>
-                          
-                          <a
-                            href="https://wiki.506521.xyz"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors flex items-center space-x-2"
-                          >
-                            <span>🔗</span>
-                            <span>访问原Wiki</span>
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-      
             {/* 批量删除确认对话框 */}
         {showBatchDeleteDialog && createPortal(
           <div 

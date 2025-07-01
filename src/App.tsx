@@ -9,11 +9,11 @@ import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import SecurityPage from './pages/SecurityPage'
 import AdminPage from './pages/AdminPage'
+import WikiPage from './pages/WikiPage'
 import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import DebugPage from './pages/DebugPage'
-import WikiPage from './pages/WikiPage'
 import LoadingSpinner from './components/LoadingSpinner'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -57,6 +57,9 @@ function App() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/debug" element={<DebugPage />} />
           
+          {/* Wiki页面 - 公开访问 */}
+          <Route path="/wiki" element={<WikiPage />} />
+          
           {/* 受保护的路由 */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
@@ -76,13 +79,6 @@ function App() {
           <Route path="/security" element={
             <ProtectedRoute>
               <SecurityPage />
-            </ProtectedRoute>
-          } />
-          
-          {/* Wiki文档 */}
-          <Route path="/wiki" element={
-            <ProtectedRoute>
-              <WikiPage />
             </ProtectedRoute>
           } />
           
