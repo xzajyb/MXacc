@@ -129,6 +129,74 @@ module.exports = async function handler(req, res) {
     const wikis = db.collection('wikis')
     const wikiCategories = db.collection('wiki_categories')
 
+    // Wiki公开访问处理（不需要验证身份）
+    if (req.method === 'GET' && req.query.action === 'wiki') {
+      const { type = 'list', categoryId, slug } = req.query
+
+      // 获取分类列表
+      if (type === 'categories') {
+        const categories = await wikiCategories.find({ isVisible: true }).sort({ order: 1, name: 1 }).toArray()
+        return res.status(200).json({
+          success: true,
+          data: categories.map(cat => ({
+            id: cat._id.toString(),
+            name: cat.name,
+            slug: cat.slug,
+            description: cat.description,
+            order: cat.order,
+            isVisible: cat.isVisible,
+            createdAt: cat.createdAt
+          }))
+        })
+      }
+
+      // 获取单篇文档
+      if (type === 'document' && slug) {
+        const doc = await wikis.findOne({ slug: slug, isPublished: true })
+        if (!doc) {
+          return res.status(404).json({ success: false, message: '文档不存在' })
+        }
+
+        return res.status(200).json({
+          success: true,
+          data: {
+            id: doc._id.toString(),
+            title: doc.title,
+            slug: doc.slug,
+            content: doc.content,
+            categoryId: doc.categoryId?.toString(),
+            order: doc.order,
+            isPublished: doc.isPublished,
+            createdAt: doc.createdAt,
+            updatedAt: doc.updatedAt,
+            author: doc.author
+          }
+        })
+      }
+
+      // 获取文档列表
+      let query = { isPublished: true }
+      if (categoryId) {
+        query.categoryId = new ObjectId(categoryId)
+      }
+
+      const docs = await wikis.find(query).sort({ order: 1, createdAt: -1 }).toArray()
+      return res.status(200).json({
+        success: true,
+        data: docs.map(doc => ({
+          id: doc._id.toString(),
+          title: doc.title,
+          slug: doc.slug,
+          categoryId: doc.categoryId?.toString(),
+          order: doc.order,
+          isPublished: doc.isPublished,
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+          author: doc.author
+        }))
+      })
+    }
+
     // 验证用户身份
     console.log('🔍 开始验证用户身份...')
     const decoded = verifyToken(req.headers.authorization)
@@ -1657,73 +1725,7 @@ module.exports = async function handler(req, res) {
       })
     }
 
-    // Wiki 文档管理功能
-    if (req.method === 'GET' && req.query.action === 'wiki') {
-      const { type = 'list', categoryId, slug } = req.query
 
-      // 获取分类列表
-      if (type === 'categories') {
-        const categories = await wikiCategories.find({}).sort({ order: 1, name: 1 }).toArray()
-        return res.status(200).json({
-          success: true,
-          data: categories.map(cat => ({
-            id: cat._id.toString(),
-            name: cat.name,
-            slug: cat.slug,
-            description: cat.description,
-            order: cat.order,
-            isVisible: cat.isVisible,
-            createdAt: cat.createdAt
-          }))
-        })
-      }
-
-      // 获取单篇文档
-      if (type === 'document' && slug) {
-        const doc = await wikis.findOne({ slug: slug, isPublished: true })
-        if (!doc) {
-          return res.status(404).json({ success: false, message: '文档不存在' })
-        }
-
-        return res.status(200).json({
-          success: true,
-          data: {
-            id: doc._id.toString(),
-            title: doc.title,
-            slug: doc.slug,
-            content: doc.content,
-            categoryId: doc.categoryId?.toString(),
-            order: doc.order,
-            isPublished: doc.isPublished,
-            createdAt: doc.createdAt,
-            updatedAt: doc.updatedAt,
-            author: doc.author
-          }
-        })
-      }
-
-      // 获取文档列表
-      let query = { isPublished: true }
-      if (categoryId) {
-        query.categoryId = new ObjectId(categoryId)
-      }
-
-      const docs = await wikis.find(query).sort({ order: 1, createdAt: -1 }).toArray()
-      return res.status(200).json({
-        success: true,
-        data: docs.map(doc => ({
-          id: doc._id.toString(),
-          title: doc.title,
-          slug: doc.slug,
-          categoryId: doc.categoryId?.toString(),
-          order: doc.order,
-          isPublished: doc.isPublished,
-          createdAt: doc.createdAt,
-          updatedAt: doc.updatedAt,
-          author: doc.author
-        }))
-      })
-    }
 
     // Wiki 管理功能（管理员专用）
     if (req.method === 'POST' && req.body.action === 'wiki') {

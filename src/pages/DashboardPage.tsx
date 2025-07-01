@@ -36,9 +36,8 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
-import WikiPage from '../components/WikiPage'
 
-type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social' | 'wiki'
+type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
@@ -113,8 +112,16 @@ const DashboardPage: React.FC = () => {
   }
 
   const handleNavClick = (viewId: ActiveView | 'wiki') => {
-    // 如果邮箱未验证，除了验证邮箱、个人资料、社交功能和文档中心，其他功能都禁用
-    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social' && viewId !== 'wiki') {
+    // 文档中心直接打开新窗口
+    if (viewId === 'wiki') {
+      // 暂时直接显示API数据，等VitePress配置完成后再改为实际的文档站点
+      window.open('/api/social/content?action=wiki&type=list', '_blank')
+      setSidebarOpen(false)
+      return
+    }
+    
+    // 如果邮箱未验证，除了验证邮箱、个人资料和社交功能，其他功能都禁用
+    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social') {
       showWarning('请先验证邮箱后再使用此功能')
       return
     }
@@ -242,8 +249,6 @@ const DashboardPage: React.FC = () => {
           )
         case 'verify-email':
           return <VerifyEmailPage embedded={true} />
-        case 'wiki':
-          return <WikiPage />
         case 'home':
         default:
           return (
