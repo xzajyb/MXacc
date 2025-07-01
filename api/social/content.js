@@ -249,21 +249,6 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      // 获取合作伙伴logo
-      if (action === 'partner-logos') {
-        // 获取系统设置中的合作伙伴logo
-        const systemSettings = db.collection('system_settings')
-        const settings = await systemSettings.findOne({ type: 'partnerLogos' }) || {
-          enabled: true,
-          logos: []
-        }
-
-        return res.status(200).json({
-          success: true,
-          data: settings
-        })
-      }
-      
       // 获取评论列表（支持多级树状评论）
       if (action === 'comments') {
         if (!postId) {

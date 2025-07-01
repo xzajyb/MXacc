@@ -28,6 +28,7 @@ module.exports = async function handler(req, res) {
     const client = await clientPromise
     const db = client.db('mxacc')
     const users = db.collection('users')
+    const systemSettings = db.collection('system_settings')
 
     // 检查管理员权限
     const adminUser = await users.findOne({ _id: new ObjectId(decoded.userId) })
@@ -39,6 +40,15 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
+      // 处理合作伙伴Logo设置
+      if (req.query.action === 'partner-logos') {
+        const partnerLogos = await systemSettings.findOne({ _id: 'partner_logos' }) || { logos: [] }
+        return res.status(200).json({
+          success: true,
+          data: partnerLogos
+        })
+      }
+
       const { 
         page = 1, 
         limit = 20, 
@@ -116,6 +126,51 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
+      // 处理合作伙伴Logo设置
+      if (req.body.action === 'update-partner-logos') {
+        const { logos, enabled } = req.body
+        
+        // 验证数据格式
+        if (enabled !== undefined && typeof enabled !== 'boolean') {
+          return res.status(400).json({ message: '无效的启用状态' })
+        }
+        
+        if (logos !== undefined) {
+          if (!Array.isArray(logos)) {
+            return res.status(400).json({ message: '无效的Logo数据格式' })
+          }
+          
+          // 验证每个Logo对象
+          for (const logo of logos) {
+            if (!logo.url || typeof logo.url !== 'string') {
+              return res.status(400).json({ message: '无效的Logo URL' })
+            }
+            if (!logo.name || typeof logo.name !== 'string') {
+              return res.status(400).json({ message: '无效的Logo名称' })
+            }
+          }
+        }
+        
+        // 更新或创建合作伙伴Logo设置
+        await systemSettings.updateOne(
+          { _id: 'partner_logos' },
+          { 
+            $set: { 
+              logos: logos || [],
+              enabled: enabled !== undefined ? enabled : true,
+              updatedAt: new Date(),
+              updatedBy: decoded.userId
+            } 
+          },
+          { upsert: true }
+        )
+        
+        return res.status(200).json({
+          success: true,
+          message: '合作伙伴Logo设置已更新'
+        })
+      }
+
       // 更新用户状态
       const { userId, action } = req.body
 

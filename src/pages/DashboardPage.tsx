@@ -24,6 +24,7 @@ import {
   MessageCircle
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import PartnerLogos from '../components/PartnerLogos'
 
 // 导入各功能组件
 import ProfilePage from './ProfilePage'
@@ -33,7 +34,6 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
-import PartnerLogos from '../components/PartnerLogos'
 
 type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
@@ -420,9 +420,10 @@ const DashboardPage: React.FC = () => {
       }`}>
         <div className="flex flex-col h-full">
           {/* Logo区域 - 固定高度 */}
-          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <img src="/logo.svg" alt="Logo" className="w-10 h-10" />
-              <div>
+            <PartnerLogos />
+            <div>
               <h1 className="font-bold text-xl text-gray-900 dark:text-white">梦锡账号</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">统一管理</p>
             </div>
@@ -482,9 +483,6 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 合作伙伴Logo */}
-            <PartnerLogos className="mb-4" />
-            
             {/* 用户信息 */}
             <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">

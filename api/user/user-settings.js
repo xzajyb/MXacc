@@ -38,7 +38,15 @@ module.exports = async function handler(req, res) {
     const { type } = req.query || {}
 
     if (req.method === 'GET') {
-      if (type === 'security') {
+      // 获取合作伙伴Logo设置
+      if (type === 'partner-logos') {
+        const systemSettings = db.collection('system_settings')
+        const partnerLogos = await systemSettings.findOne({ _id: 'partner_logos' }) || { logos: [], enabled: true }
+        return res.status(200).json({ 
+          message: '获取合作伙伴Logo成功', 
+          partnerLogos 
+        })
+      } else if (type === 'security') {
         const defaultSecuritySettings = { loginNotifications: false }
         const securitySettings = { ...defaultSecuritySettings, ...user.securitySettings }
         return res.status(200).json({ message: '获取安全设置成功', securitySettings })
@@ -54,8 +62,7 @@ module.exports = async function handler(req, res) {
             showFollowing: true
           },
           language: 'zh-CN',
-          timezone: 'Asia/Shanghai',
-          partnerLogos: { enabled: true }
+          timezone: 'Asia/Shanghai'
         }
         const settings = { ...defaultSettings, ...user.settings }
         return res.status(200).json({ message: '获取设置成功', settings })
@@ -138,14 +145,6 @@ module.exports = async function handler(req, res) {
           const validTimezones = ['Asia/Shanghai', 'Asia/Tokyo', 'America/New_York', 'Europe/London']
           if (validTimezones.includes(settings.timezone)) {
             validatedSettings.timezone = settings.timezone
-          }
-        }
-        
-        // 合作伙伴logo设置
-        if (settings.partnerLogos && typeof settings.partnerLogos === 'object') {
-          validatedSettings.partnerLogos = {}
-          if (typeof settings.partnerLogos.enabled === 'boolean') {
-            validatedSettings.partnerLogos.enabled = settings.partnerLogos.enabled
           }
         }
 
