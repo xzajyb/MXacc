@@ -2,11 +2,94 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="refresh" content="5;url=https://mxacc.mxos.top/docs/guide" />
-    <title>自动跳转页面</title>
+    <meta http-equiv="refresh" content="2;url=https://mxacc.mxos.top/docs/guide" />
+    <title>正在跳转到 MXacc 文档中心...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #5b8cff 0%, #7f53ff 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+        color: #fff;
+        transition: background 0.5s;
+      }
+      .card {
+        background: rgba(255,255,255,0.15);
+        border-radius: 18px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.18);
+        padding: 2.5rem 2rem 2rem 2rem;
+        text-align: center;
+        max-width: 350px;
+      }
+      .logo {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 1.2rem;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(91,140,255,0.12);
+      }
+      h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin: 0 0 0.7rem 0;
+        letter-spacing: 0.02em;
+      }
+      p {
+        font-size: 1.05rem;
+        margin: 0.5rem 0 0 0;
+      }
+      a {
+        color: #fff;
+        text-decoration: underline;
+        font-weight: 500;
+        transition: color 0.2s;
+      }
+      a:hover {
+        color: #ffe066;
+      }
+      .spinner {
+        margin: 1.2rem auto 0 auto;
+        border: 4px solid rgba(255,255,255,0.25);
+        border-top: 4px solid #fff;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg);}
+        100% { transform: rotate(360deg);}
+      }
+      @media (max-width: 480px) {
+        .card { padding: 1.5rem 0.7rem 1.2rem 0.7rem; max-width: 95vw;}
+        h1 { font-size: 1.15rem;}
+        .logo { width: 48px; height: 48px;}
+      }
+    </style>
   </head>
   <body>
-    <h1>正在跳转...</h1>
-    <p>如果没有自动跳转，请点击 <a href="https://mxacc.mxos.top/docs/guide">这里</a>。</p>
+    <div class="card">
+      <div class="logo">
+        <img src="/logo.svg" alt="MXacc" style="width:40px;height:40px;display:block;" />
+      </div>
+      <h1>正在跳转到 MXacc 文档中心...</h1>
+      <div class="spinner"></div>
+      <p style="margin-top:1.2rem;">
+        如果没有自动跳转，<a href="https://mxacc.mxos.top/docs/guide">请点击这里</a>。
+      </p>
+    </div>
   </body>
 </html>
