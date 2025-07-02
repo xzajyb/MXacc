@@ -19,6 +19,7 @@ interface DocContent {
   createdAt: string
   updatedAt: string
   tags: string[]
+  toc?: TocItem[] // 预设目录
 }
 
 interface Category {
@@ -118,6 +119,11 @@ const DocsPage: React.FC = () => {
       const data = await response.json()
       if (data.success) {
         setCurrentDoc(data.doc)
+        
+        // 如果文档有预设目录，立即设置
+        if (data.doc.toc && data.doc.toc.length > 0) {
+          setCurrentToc(data.doc.toc)
+        }
       } else {
         setError(data.message || '获取文档内容失败')
       }
@@ -234,7 +240,12 @@ const DocsPage: React.FC = () => {
 
   // 处理目录更新
   const handleTocUpdate = (toc: TocItem[]) => {
-    setCurrentToc(toc)
+    // 优先使用预设目录，如果没有则使用提取的目录
+    if (currentDoc?.toc && currentDoc.toc.length > 0) {
+      setCurrentToc(currentDoc.toc)
+    } else {
+      setCurrentToc(toc)
+    }
   }
 
   // 检测桌面端并自动打开侧边栏
@@ -359,7 +370,12 @@ const DocsPage: React.FC = () => {
             {isAdmin && (
               <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <button
-                  onClick={() => setShowEditor(true)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('点击新建文档按钮')
+                    setShowEditor(true)
+                  }}
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 text-sm font-medium"
                   title="新建文档"
                 >
@@ -367,7 +383,12 @@ const DocsPage: React.FC = () => {
                   <span>新建文档</span>
                 </button>
                 <button
-                  onClick={() => setEditMode(!editMode)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('点击编辑模式按钮')
+                    setEditMode(!editMode)
+                  }}
                   className={`w-full px-4 py-3 rounded-xl transition-colors flex items-center justify-center space-x-2 text-sm font-medium ${
                     editMode 
                       ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
