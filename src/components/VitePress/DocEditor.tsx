@@ -1,36 +1,26 @@
 import React, { useState, useEffect } from 'react'
-import { X, Save, Eye, Code, FileText, Tag, Globe, Lock, Upload, Plus, Trash2, FolderPlus, Edit3 } from 'lucide-react'
+import { X, Save, Eye, Code, FileText, Tag, Globe, Lock, Plus, Trash2, FolderPlus } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTheme } from '@/contexts/ThemeContext'
 import MarkdownRenderer from './MarkdownRenderer'
-
-interface Category {
-  id: string
-  name: string
-  slug: string
-  parentId?: string
-  children?: Category[]
-  path: string
-}
 
 interface DocEditorProps {
   isOpen: boolean
   onClose: () => void
   onSave: (docData: any) => void
   initialDoc?: any
-  categories?: Category[]
-  onCategoryChange?: () => void
 }
 
-const DocEditor: React.FC<DocEditorProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  initialDoc,
-  categories: externalCategories,
-  onCategoryChange
-}) => {
-  const { isDark } = useTheme()
+interface Category {
+  _id: string
+  name: string
+  englishName: string
+  path: string
+  parentId?: string
+  level: number
+}
+
+const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialDoc }) => {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
@@ -42,18 +32,165 @@ const DocEditor: React.FC<DocEditorProps> = ({
   const [saving, setSaving] = useState(false)
   
   // 分类管理状态
-  const [categories, setCategories] = useState<Category[]>([
-    { id: 'guide', name: '指南', slug: 'guide', path: '/guide' },
-    { id: 'api', name: 'API 文档', slug: 'api', path: '/api' },
-    { id: 'tutorial', name: '教程', slug: 'tutorial', path: '/tutorial' },
-    { id: 'faq', name: '常见问题', slug: 'faq', path: '/faq' },
-    { id: 'development', name: '开发', slug: 'development', path: '/development' }
-  ])
+  const [categories, setCategories] = useState<Category[]>([])
   const [showCategoryManager, setShowCategoryManager] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
-  const [newCategorySlug, setNewCategorySlug] = useState('')
+  const [newCategoryEnglishName, setNewCategoryEnglishName] = useState('')
   const [selectedParentCategory, setSelectedParentCategory] = useState('')
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+
+  // 预设分类映射
+  const categoryMapping: Record<string, string> = {
+    '指南': 'guide',
+    'API文档': 'api',
+    '教程': 'tutorial',
+    '常见问题': 'faq',
+    '开发': 'development',
+    '安全': 'security',
+    '部署': 'deployment',
+    '高级用法': 'advanced',
+    '入门': 'getting-started',
+    '配置': 'configuration',
+    '故障排除': 'troubleshooting'
+  }
+
+  // 生成英文路径
+  const generateEnglishPath = (chineseName: string) => {
+    if (categoryMapping[chineseName]) {
+      return categoryMapping[chineseName]
+    }
+    
+    return chineseName
+      .toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+  }
+
+  // 获取分类列表
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/social/content?action=get-categories', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        setCategories(data.categories || [])
+      }
+    } catch (error) {
+      console.error('获取分类失败:', error)
+    }
+  }
+
+  // 创建分类
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert('分类名称不能为空')
+      return
+    }
+
+    const englishName = newCategoryEnglishName || generateEnglishPath(newCategoryName)
+
+    try {
+      const response = await fetch('/api/social/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          action: 'create-category',
+          name: newCategoryName.trim(),
+          englishName: englishName,
+          parentId: selectedParentCategory || null
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // 刷新分类列表
+        await fetchCategories()
+        // 重置表单
+        setNewCategoryName('')
+        setNewCategoryEnglishName('')
+        setSelectedParentCategory('')
+        alert('分类创建成功')
+      } else {
+        alert(data.message || '创建分类失败')
+      }
+    } catch (error) {
+      console.error('创建分类失败:', error)
+      alert('创建分类失败')
+    }
+  }
+
+  // 删除分类
+  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+    if (!confirm(`确定要删除分类"${categoryName}"吗？`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/social/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          action: 'delete-category',
+          categoryId: categoryId
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // 刷新分类列表
+        await fetchCategories()
+        alert('分类删除成功')
+      } else {
+        alert(data.message || '删除分类失败')
+      }
+    } catch (error) {
+      console.error('删除分类失败:', error)
+      alert('删除分类失败')
+    }
+  }
+
+  // 构建层级分类树
+  const buildCategoryTree = (categories: Category[], parentId: string | null = null): Category[] => {
+    return categories
+      .filter(cat => cat.parentId === parentId)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  // 渲染分类选项（带层级缩进）
+  const renderCategoryOptions = (categories: Category[], level = 0): JSX.Element[] => {
+    const result: JSX.Element[] = []
+    const rootCategories = buildCategoryTree(categories, null)
+    
+    const renderLevel = (cats: Category[], currentLevel: number) => {
+      cats.forEach(cat => {
+        const indent = '　'.repeat(currentLevel)
+        result.push(
+          <option key={cat._id} value={cat.englishName}>
+            {indent}{cat.name}
+          </option>
+        )
+        
+        const children = buildCategoryTree(categories, cat._id)
+        if (children.length > 0) {
+          renderLevel(children, currentLevel + 1)
+        }
+      })
+    }
+    
+    renderLevel(rootCategories, level)
+    return result
+  }
 
   // 从标题自动生成 slug
   const generateSlug = (title: string) => {
@@ -64,136 +201,6 @@ const DocEditor: React.FC<DocEditorProps> = ({
       .replace(/^-|-$/g, '')
   }
 
-  // 生成分类英文地址
-  const generateCategorySlug = (name: string) => {
-    const slugMap: { [key: string]: string } = {
-      '指南': 'guide',
-      'API 文档': 'api',
-      '教程': 'tutorial',
-      '常见问题': 'faq',
-      '开发': 'development',
-      '部署': 'deployment',
-      '配置': 'configuration',
-      '安全': 'security',
-      '最佳实践': 'best-practices',
-      '故障排除': 'troubleshooting'
-    }
-    
-    return slugMap[name] || name
-      .toLowerCase()
-      .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-  }
-
-  // 构建分类路径
-  const buildCategoryPath = (categoryId: string, parentId?: string): string => {
-    if (!parentId) {
-      const cat = categories.find(c => c.id === categoryId)
-      return `/${cat?.slug || categoryId}`
-    }
-    
-    const parent = categories.find(c => c.id === parentId)
-    const current = categories.find(c => c.id === categoryId)
-    
-    if (parent && current) {
-      return `${parent.path}/${current.slug}`
-    }
-    
-    return `/${current?.slug || categoryId}`
-  }
-
-  // 获取扁平化的分类列表（用于下拉选择）
-  const getFlatCategories = (cats: Category[], level = 0): Category[] => {
-    let result: Category[] = []
-    
-    cats.forEach(cat => {
-      const indentedCat = {
-        ...cat,
-        name: '　'.repeat(level) + cat.name
-      }
-      result.push(indentedCat)
-      
-      if (cat.children && cat.children.length > 0) {
-        result = result.concat(getFlatCategories(cat.children, level + 1))
-      }
-    })
-    
-    return result
-  }
-
-  // 添加新分类
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim()) return
-    
-    const slug = newCategorySlug || generateCategorySlug(newCategoryName)
-    const id = `cat_${Date.now()}`
-    const path = buildCategoryPath(id, selectedParentCategory || undefined)
-    
-    const newCategory: Category = {
-      id,
-      name: newCategoryName.trim(),
-      slug,
-      parentId: selectedParentCategory || undefined,
-      path
-    }
-
-    if (selectedParentCategory) {
-      // 添加到父分类的 children
-      setCategories(prev => {
-        const updateParent = (cats: Category[]): Category[] => {
-          return cats.map(cat => {
-            if (cat.id === selectedParentCategory) {
-              return {
-                ...cat,
-                children: [...(cat.children || []), newCategory]
-              }
-            }
-            if (cat.children) {
-              return {
-                ...cat,
-                children: updateParent(cat.children)
-              }
-            }
-            return cat
-          })
-        }
-        return updateParent(prev)
-      })
-    } else {
-      // 添加为顶级分类
-      setCategories(prev => [...prev, newCategory])
-    }
-
-    // 重置表单
-    setNewCategoryName('')
-    setNewCategorySlug('')
-    setSelectedParentCategory('')
-    
-    // 通知父组件分类已变更
-    onCategoryChange?.()
-  }
-
-  // 删除分类
-  const handleDeleteCategory = (categoryId: string) => {
-    if (window.confirm('确定要删除这个分类吗？这将影响所有属于该分类的文档。')) {
-      setCategories(prev => {
-        const removeCategory = (cats: Category[]): Category[] => {
-          return cats.filter(cat => {
-            if (cat.id === categoryId) return false
-            if (cat.children) {
-              cat.children = removeCategory(cat.children)
-            }
-            return true
-          })
-        }
-        return removeCategory(prev)
-      })
-      
-      onCategoryChange?.()
-    }
-  }
-
   // 处理标题变化
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle)
@@ -202,11 +209,11 @@ const DocEditor: React.FC<DocEditorProps> = ({
     }
   }
 
-  // 处理分类名称变化时自动生成英文地址
-  const handleCategoryNameChange = (name: string) => {
-    setNewCategoryName(name)
-    if (!newCategorySlug) {
-      setNewCategorySlug(generateCategorySlug(name))
+  // 处理中文分类名变化，自动生成英文名
+  const handleCategoryNameChange = (chineseName: string) => {
+    setNewCategoryName(chineseName)
+    if (!newCategoryEnglishName) {
+      setNewCategoryEnglishName(generateEnglishPath(chineseName))
     }
   }
 
@@ -240,13 +247,11 @@ const DocEditor: React.FC<DocEditorProps> = ({
 
     setSaving(true)
     try {
-      const selectedCategory = categories.find(c => c.id === category)
       const docData = {
         title: title.trim(),
         slug: slug || generateSlug(title),
         content: content.trim(),
         category,
-        categoryPath: selectedCategory?.path || `/${category}`,
         tags,
         isPublic,
         ...(initialDoc?._id && { docId: initialDoc._id })
@@ -262,12 +267,6 @@ const DocEditor: React.FC<DocEditorProps> = ({
   }
 
   // 初始化数据
-  useEffect(() => {
-    if (externalCategories) {
-      setCategories(externalCategories)
-    }
-  }, [externalCategories])
-
   useEffect(() => {
     if (initialDoc) {
       setTitle(initialDoc.title || '')
@@ -287,9 +286,14 @@ const DocEditor: React.FC<DocEditorProps> = ({
     }
   }, [initialDoc, isOpen])
 
-  if (!isOpen) return null
+  // 组件打开时获取分类列表
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories()
+    }
+  }, [isOpen])
 
-  const flatCategories = getFlatCategories(categories)
+  if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
@@ -387,11 +391,11 @@ const DocEditor: React.FC<DocEditorProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {categories.find(c => c.id === category)?.path || `/${category}`}/{slug}
+                  /{category}/{slug}
                 </p>
               </div>
 
-              {/* 分类管理 */}
+              {/* 分类 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -399,98 +403,108 @@ const DocEditor: React.FC<DocEditorProps> = ({
                   </label>
                   <button
                     onClick={() => setShowCategoryManager(!showCategoryManager)}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm flex items-center space-x-1"
                   >
-                    <FolderPlus size={12} />
+                    <FolderPlus size={14} />
                     <span>管理分类</span>
                   </button>
                 </div>
-                
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  {flatCategories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
+                  <option value="guide">指南</option>
+                  <option value="api">API 文档</option>
+                  <option value="tutorial">教程</option>
+                  <option value="faq">常见问题</option>
+                  <option value="development">开发</option>
+                  {renderCategoryOptions(categories)}
                 </select>
-
-                {/* 分类管理面板 */}
-                {showCategoryManager && (
-                  <div className="mt-4 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg space-y-4">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white">分类管理</h4>
-                    
-                    {/* 添加新分类 */}
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">分类名称</label>
-                        <input
-                          type="text"
-                          value={newCategoryName}
-                          onChange={(e) => handleCategoryNameChange(e.target.value)}
-                          placeholder="输入分类名称"
-                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">英文地址</label>
-                        <input
-                          type="text"
-                          value={newCategorySlug}
-                          onChange={(e) => setNewCategorySlug(e.target.value)}
-                          placeholder="自动生成"
-                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">父分类（可选）</label>
-                        <select
-                          value={selectedParentCategory}
-                          onChange={(e) => setSelectedParentCategory(e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="">顶级分类</option>
-                          {flatCategories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <button
-                        onClick={handleAddCategory}
-                        disabled={!newCategoryName.trim()}
-                        className="w-full px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center space-x-1"
-                      >
-                        <Plus size={12} />
-                        <span>添加分类</span>
-                      </button>
-                    </div>
-
-                    {/* 现有分类列表 */}
-                    <div className="max-h-32 overflow-y-auto space-y-1">
-                      {flatCategories.map((cat) => (
-                        <div key={cat.id} className="flex items-center justify-between text-xs py-1">
-                          <span className="truncate text-gray-700 dark:text-gray-300">{cat.name}</span>
-                          <button
-                            onClick={() => handleDeleteCategory(cat.id)}
-                            className="text-red-500 hover:text-red-700 p-1"
-                            title="删除分类"
-                          >
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {/* 分类管理器 */}
+              {showCategoryManager && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">分类管理</h4>
+                  
+                  {/* 创建新分类 */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        分类名称（中文）*
+                      </label>
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => handleCategoryNameChange(e.target.value)}
+                        placeholder="例如：安全指南"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        英文地址
+                      </label>
+                      <input
+                        type="text"
+                        value={newCategoryEnglishName}
+                        onChange={(e) => setNewCategoryEnglishName(e.target.value)}
+                        placeholder="自动生成"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                        父分类（可选）
+                      </label>
+                      <select
+                        value={selectedParentCategory}
+                        onChange={(e) => setSelectedParentCategory(e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      >
+                        <option value="">无父分类</option>
+                        {renderCategoryOptions(categories)}
+                      </select>
+                    </div>
+                    
+                    <button
+                      onClick={handleCreateCategory}
+                      className="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-sm"
+                    >
+                      <Plus size={14} />
+                      <span>创建分类</span>
+                    </button>
+                  </div>
+                  
+                  {/* 现有分类列表 */}
+                  {categories.length > 0 && (
+                    <div>
+                      <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">现有分类</h5>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {categories.map((cat) => (
+                          <div
+                            key={cat._id}
+                            className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded text-sm"
+                          >
+                            <span className="truncate text-gray-900 dark:text-white">
+                              {'　'.repeat(cat.level)}{cat.name}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteCategory(cat._id, cat.name)}
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 标签 */}
               <div>

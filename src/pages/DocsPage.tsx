@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronLeft, ChevronRight, ArrowUp } from 'lucide-react'
+import { Search, X, FileText, Plus, Edit, Trash2, Settings, ArrowUp } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
 import MarkdownRenderer from '@/components/VitePress/MarkdownRenderer'
@@ -13,6 +13,7 @@ interface DocContent {
   slug: string
   content: string
   category: string
+  categoryPath?: string
   path: string
   isPublic: boolean
   author: string
@@ -28,6 +29,12 @@ interface Category {
   subcategories?: Category[]
 }
 
+interface TocItem {
+  id: string
+  text: string
+  level: number
+}
+
 const DocsPage: React.FC = () => {
   const { user } = useAuth()
   const { isDark } = useTheme()
@@ -35,25 +42,18 @@ const DocsPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([])
   const [currentDoc, setCurrentDoc] = useState<DocContent | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false) // 移动端导航状态
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingDoc, setEditingDoc] = useState<DocContent | null>(null)
-  const [showFloatingNav, setShowFloatingNav] = useState(window.innerWidth >= 1024) // 桌面端默认显示，移动端默认隐藏
-  const [showMobileSearch, setShowMobileSearch] = useState(false) // 移动端搜索按钮状态
-  
-  // 文章目录相关
-  interface TocItem {
-    id: string
-    title: string
-    level: number
-  }
-  
-  const [toc, setToc] = useState<TocItem[]>([])
+  const [tocItems, setTocItems] = useState<TocItem[]>([])
 
-  // 提取文章目录
+  // 管理员权限检查
+  const isAdmin = user?.role === 'admin'
+
+  // 从Markdown内容提取目录
   const extractToc = (content: string): TocItem[] => {
     const lines = content.split('\n')
     const tocItems: TocItem[] = []
@@ -62,16 +62,13 @@ const DocsPage: React.FC = () => {
       const match = line.match(/^(#{1,4})\s+(.+)$/)
       if (match) {
         const level = match[1].length
-        const title = match[2].trim()
-        const id = title
-          .toLowerCase()
-          .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '')
+        const text = match[2].trim()
+        // 使用和MarkdownRenderer相同的ID生成逻辑
+        const id = text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
         
         tocItems.push({
-          id: id || `heading-${index}`,
-          title,
+          id,
+          text,
           level
         })
       }
@@ -80,26 +77,39 @@ const DocsPage: React.FC = () => {
     return tocItems
   }
 
-  // 滚动到指定标题
+  // 平滑滚动到指定标题
   const scrollToHeading = (id: string) => {
     const element = document.getElementById(id)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      // 移动端点击后关闭导航
-      if (window.innerWidth < 1024) {
-        setShowFloatingNav(false)
-        setShowMobileSearch(false)
-      }
+    }
+    // 移动端关闭导航
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false)
     }
   }
 
-  // 返回顶部
+  // 滚动到顶部
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false)
+    }
   }
 
-  // 管理员权限检查
-  const isAdmin = user?.role === 'admin'
+  // 检测窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(false) // 桌面端不需要显示移动端导航
+      }
+    }
+    
+    window.addEventListener('resize', handleResize)
+    handleResize() // 初始检查
+    
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // 获取文档列表
   const fetchDocs = async () => {
@@ -127,35 +137,52 @@ const DocsPage: React.FC = () => {
     }
   }
 
-  // 组织文档结构
+  // 组织文档结构（按分类路径树状排序）
   const organizeDocs = (docsData: DocContent[]) => {
     const categoryMap = new Map<string, Category>()
     
     docsData.forEach(doc => {
-      const category = doc.category || 'guide'
-      if (!categoryMap.has(category)) {
-        categoryMap.set(category, {
-          name: getCategoryName(category),
-          path: category,
+      const categoryPath = doc.categoryPath || doc.category || 'guide'
+      const categoryName = getCategoryDisplayName(categoryPath)
+      
+      if (!categoryMap.has(categoryPath)) {
+        categoryMap.set(categoryPath, {
+          name: categoryName,
+          path: categoryPath,
           docs: []
         })
       }
-      categoryMap.get(category)!.docs.push(doc)
+      categoryMap.get(categoryPath)!.docs.push(doc)
     })
     
-    setCategories(Array.from(categoryMap.values()))
+    // 按分类路径排序
+    const sortedCategories = Array.from(categoryMap.values()).sort((a, b) => {
+      return a.path.localeCompare(b.path)
+    })
+    
+    setCategories(sortedCategories)
   }
 
-  // 获取分类显示名称
-  const getCategoryName = (category: string): string => {
-    const categoryNames: Record<string, string> = {
+  // 获取分类显示名称（中文）
+  const getCategoryDisplayName = (categoryPath: string): string => {
+    const pathMapping: Record<string, string> = {
       'guide': '指南',
       'api': 'API 文档',
       'development': '开发',
       'tutorial': '教程',
-      'faq': '常见问题'
+      'faq': '常见问题',
+      'security': '安全',
+      'deployment': '部署',
+      'advanced': '高级用法',
+      'getting-started': '入门指南',
+      'configuration': '配置',
+      'troubleshooting': '故障排除'
     }
-    return categoryNames[category] || category
+    
+    // 处理嵌套路径，如 guide/advanced/security
+    const pathParts = categoryPath.split('/')
+    const displayParts = pathParts.map(part => pathMapping[part] || part)
+    return displayParts.join(' / ')
   }
 
   // 获取单个文档内容
@@ -171,6 +198,9 @@ const DocsPage: React.FC = () => {
       const data = await response.json()
       if (data.success) {
         setCurrentDoc(data.doc)
+        // 提取目录
+        const toc = extractToc(data.doc.content)
+        setTocItems(toc)
       } else {
         setError(data.message || '获取文档内容失败')
       }
@@ -282,65 +312,22 @@ const DocsPage: React.FC = () => {
     )
   }
 
-  // 监听文档变化，提取目录
-  useEffect(() => {
-    if (currentDoc) {
-      const tocItems = extractToc(currentDoc.content)
-      setToc(tocItems)
-    } else {
-      setToc([])
-    }
-  }, [currentDoc])
-
-  // 监听窗口大小变化
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setShowFloatingNav(true)
-        setShowMobileSearch(false)
-      } else {
-        setShowFloatingNav(false)
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
   return (
     <div className={`min-h-screen bg-white dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* 移动端搜索按钮 */}
-      <button
-        onClick={() => setShowMobileSearch(true)}
-        className="fixed top-4 right-4 lg:hidden z-40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
-      >
-        <Search size={20} />
-      </button>
-
-      {/* 左侧文档导航 (桌面端固定，移动端弹出) */}
-      <div className={`fixed left-0 top-0 h-full z-30 transition-all duration-300 lg:translate-x-0 ${
-        showFloatingNav || showMobileSearch ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 w-80 flex flex-col">
-          
-          {/* 顶部Logo区域 */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+      {/* 桌面端固定左侧导航 */}
+      <div className="hidden lg:block fixed left-0 top-0 h-screen w-80 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 z-40">
+        <div className="flex flex-col h-full">
+          {/* Logo区域 */}
+          <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
             <div className="flex items-center space-x-3">
-              <img src="/logo.svg" alt="MXacc" className="w-8 h-8" />
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-white" />
+              </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white">文档中心</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">MXacc Documentation</p>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white">MXacc</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400">文档中心</p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                setShowFloatingNav(false)
-                setShowMobileSearch(false)
-              }}
-              className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <X size={18} />
-            </button>
           </div>
 
           {/* 搜索框 */}
@@ -381,57 +368,30 @@ const DocsPage: React.FC = () => {
             </div>
           )}
 
-          {/* 文章目录 (仅在有当前文档时显示) */}
-          {currentDoc && toc.length > 0 && (
-            <div className="px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">文章目录</h3>
-                <button
-                  onClick={scrollToTop}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
-                  title="返回顶部"
-                >
-                  <ArrowUp size={12} />
-                  <span>顶部</span>
-                </button>
-              </div>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                {toc.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => scrollToHeading(item.id)}
-                    className={`block w-full text-left px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors ${
-                      item.level === 1 ? 'font-semibold text-gray-900 dark:text-white' :
-                      item.level === 2 ? 'text-gray-700 dark:text-gray-300 pl-3' :
-                      item.level === 3 ? 'text-gray-600 dark:text-gray-400 pl-5' :
-                      'text-gray-500 dark:text-gray-500 pl-7'
-                    }`}
-                    title={item.title}
-                  >
-                    <span className="truncate block">{item.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 文档分类和列表 */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-4">
+          <div className="flex-1 flex overflow-hidden">
+            {/* 文档列表 */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {categories.map((category) => (
                 <div key={category.path}>
                   <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                     {category.name}
                   </h4>
                   <ul className="space-y-1">
-                    {category.docs.map((doc) => (
+                    {category.docs
+                      .filter(doc => 
+                        !searchQuery || 
+                        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        doc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+                      )
+                      .map((doc) => (
                       <li key={doc._id}>
                         <button
                           onClick={() => fetchDoc(doc._id)}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
                             currentDoc?._id === doc._id
-                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                           }`}
                         >
                           <FileText size={14} />
@@ -467,24 +427,178 @@ const DocsPage: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* 文档目录 */}
+            {currentDoc && tocItems.length > 0 && (
+              <div className="w-64 border-l border-gray-200/50 dark:border-gray-700/50 p-4 overflow-y-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">文档目录</h4>
+                  <button
+                    onClick={scrollToTop}
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
+                    title="返回顶部"
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                </div>
+                <nav className="space-y-1">
+                  {tocItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => scrollToHeading(item.id)}
+                      className="block w-full text-left text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 py-1 transition-colors"
+                      style={{ 
+                        paddingLeft: `${(item.level - 1) * 12}px`,
+                        fontWeight: item.level === 1 ? 'bold' : 'normal'
+                      }}
+                    >
+                      {item.text}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 移动端遮罩 */}
-      {(showFloatingNav || showMobileSearch) && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-20 lg:hidden"
-          onClick={() => {
-            setShowFloatingNav(false)
-            setShowMobileSearch(false)
-          }}
-        />
+      {/* 移动端搜索按钮 */}
+      <div className="lg:hidden fixed top-4 right-4 z-50">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
+        >
+          <Search size={20} />
+        </button>
+      </div>
+
+      {/* 移动端导航面板 */}
+      {sidebarOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          {/* 遮罩层 */}
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setSidebarOpen(false)}
+          />
+          
+          {/* 导航面板 */}
+          <div className="absolute left-0 top-0 h-full w-80 max-w-[90vw] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl transform transition-transform">
+            <div className="flex flex-col h-full">
+              {/* 头部 */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold text-gray-900 dark:text-white">MXacc</h1>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">文档中心</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* 搜索和内容 */}
+              <div className="flex-1 overflow-hidden">
+                {/* 搜索框 */}
+                <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="text"
+                      placeholder="搜索文档..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {/* 内容区域 */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {/* 当前文档目录 */}
+                  {currentDoc && tocItems.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">当前文档目录</h4>
+                        <button
+                          onClick={scrollToTop}
+                          className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
+                          title="返回顶部"
+                        >
+                          <ArrowUp size={14} />
+                        </button>
+                      </div>
+                      <nav className="space-y-1 mb-6 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                        {tocItems.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => scrollToHeading(item.id)}
+                            className="block w-full text-left text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 py-1 transition-colors"
+                            style={{ 
+                              paddingLeft: `${(item.level - 1) * 12}px`,
+                              fontWeight: item.level === 1 ? 'bold' : 'normal'
+                            }}
+                          >
+                            {item.text}
+                          </button>
+                        ))}
+                      </nav>
+                    </div>
+                  )}
+
+                  {/* 文档列表 */}
+                  <div className="space-y-4">
+                    {categories.map((category) => (
+                      <div key={category.path}>
+                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                          {category.name}
+                        </h4>
+                        <ul className="space-y-1">
+                          {category.docs
+                            .filter(doc => 
+                              !searchQuery || 
+                              doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              doc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+                            )
+                            .map((doc) => (
+                            <li key={doc._id}>
+                              <button
+                                onClick={() => {
+                                  fetchDoc(doc._id)
+                                  setSidebarOpen(false)
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
+                                  currentDoc?._id === doc._id
+                                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
+                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                }`}
+                              >
+                                <FileText size={14} />
+                                <span className="truncate flex-1">{doc.title}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 主内容区域 */}
-      <main className="min-h-screen lg:ml-80 transition-all duration-300">
-        <div className="max-w-4xl mx-auto px-6 py-8 lg:px-8">
+      <main className="lg:ml-80 min-h-screen">
+        <div className="max-w-4xl mx-auto px-6 py-8">
           {currentDoc ? (
             <article className="vitepress-content">
               {/* 使用 VitePress 风格的 Markdown 渲染器 */}
