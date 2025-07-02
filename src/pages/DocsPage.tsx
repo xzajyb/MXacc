@@ -363,7 +363,7 @@ const DocsPage: React.FC = () => {
       
 
       {/* 桌面端悬浮导航 - 确保移动端完全隐藏 */}
-      <div className="desktop-nav hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)] max-lg:!hidden">
+      <div className="desktop-nav hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)]">
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 flex flex-col overflow-hidden max-h-full">
           {/* Logo区域 - 居中显示 */}
           <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50 flex justify-center">
@@ -540,9 +540,9 @@ const DocsPage: React.FC = () => {
       </div>
 
             {/* 移动端抽屉导航 */}
-      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ${
+      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ease-in-out ${
         showMobileNav ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      } ${showMobileNav ? '' : 'pointer-events-none'}`}>
         {/* 抽屉头部 */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">导航菜单</h2>
@@ -711,24 +711,24 @@ const DocsPage: React.FC = () => {
       {/* 移动端遮罩层 */}
       {showMobileNav && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setShowMobileNav(false)}
         />
       )}
 
-      {/* 移动端搜索按钮 - 文章内右上角 */}
+      {/* 移动端菜单按钮 - 调整位置避免贴着文章圆角 */}
       <button
         onClick={() => setShowMobileNav(true)}
-        className="lg:hidden fixed top-6 right-6 z-40 p-3 bg-gray-200/80 dark:bg-gray-700/80 text-gray-600 dark:text-gray-400 rounded-full shadow-lg hover:bg-gray-300/80 dark:hover:bg-gray-600/80 transition-colors backdrop-blur-sm"
+        className="lg:hidden fixed top-6 left-6 z-40 p-3 bg-white/90 dark:bg-gray-800/90 text-gray-600 dark:text-gray-400 rounded-xl shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50"
       >
-        <Search size={18} />
+        <Menu size={18} />
       </button>
 
-      {/* 主内容区域 */}
-      <main className="lg:ml-[20rem] min-h-screen px-6 lg:px-8 py-6 lg:py-8 pr-20 lg:pr-8">
+      {/* 主内容区域 - 调整移动端间距避免与按钮重叠 */}
+      <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-20 lg:py-8">
         <div className="max-w-4xl mx-auto">
           {currentDoc ? (
-            <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+            <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 lg:p-8">
               {/* 使用 VitePress 风格的 Markdown 渲染器 */}
               <div className="vitepress-markdown-content">
                 <MarkdownRenderer content={currentDoc.content} />
@@ -752,13 +752,13 @@ const DocsPage: React.FC = () => {
               )}
             </article>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-12 text-center">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 lg:p-12 text-center">
               <FileText size={64} className="mx-auto text-gray-400 mb-4" />
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
                 欢迎使用文档中心
               </h2>
               <p className="text-gray-500 dark:text-gray-400 mb-6">
-                从左侧导航选择一个文档开始阅读，或使用搜索功能快速查找内容
+                点击左上角菜单按钮选择文档开始阅读，或使用搜索功能快速查找内容
               </p>
               {docs.length === 0 && isAdmin && (
                 <button

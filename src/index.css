@@ -516,9 +516,12 @@
   background: #374151;
 }
 
-/* 确保桌面端导航在移动端完全隐藏 */
+/* 确保PC版导航在移动端完全隐藏 */
 @media (max-width: 1023px) {
   .desktop-nav {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
 } 
