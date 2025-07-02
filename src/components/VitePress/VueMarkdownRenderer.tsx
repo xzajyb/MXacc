@@ -1,14 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react'
 import MarkdownIt from 'markdown-it'
-import markdownItContainer from 'markdown-it-container'
-// 兼容 ESM-only 插件的导入方式
-import * as markdownItEmoji from 'markdown-it-emoji'
-import * as markdownItFootnote from 'markdown-it-footnote'
-import * as markdownItIns from 'markdown-it-ins'
-import * as markdownItMark from 'markdown-it-mark'
-import * as markdownItSub from 'markdown-it-sub'
-import * as markdownItSup from 'markdown-it-sup'
-import * as markdownItTaskLists from 'markdown-it-task-lists'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -44,62 +35,35 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
       typographer: true,
     })
 
-    // 添加插件
-    markdownIt
-      .use(markdownItEmoji)
-      .use(markdownItFootnote)
-      .use(markdownItIns)
-      .use(markdownItMark)
-      .use(markdownItSub)
-      .use(markdownItSup)
-      .use(markdownItTaskLists, { enabled: true })
+    // 暂时移除插件，先确保基本功能正常
+    console.log('Created MarkdownIt instance successfully')
 
-    // 添加容器插件（支持 ::: tip ::: warning 等）
-    markdownIt
-      .use(markdownItContainer, 'tip', {
-        render: (tokens: any, idx: number) => {
-          const token = tokens[idx]
-          if (token.nesting === 1) {
-            const title = token.info.trim().slice(3).trim() || 'TIP'
-            return `<div class="custom-container tip"><p class="custom-container-title"><svg class="icon"><use href="#icon-lightbulb"></use></svg>${title}</p>\n`
-          } else {
-            return `</div>\n`
+    // 自定义容器渲染（不使用插件）
+    const defaultParagraphRender = markdownIt.renderer.rules.paragraph_open || 
+      ((tokens, idx, options, env, renderer) => {
+        return renderer.renderToken(tokens, idx, options)
+      })
+
+    // 处理自定义容器语法
+    markdownIt.renderer.rules.paragraph_open = (tokens, idx, options, env, renderer) => {
+      const token = tokens[idx]
+      const nextToken = tokens[idx + 1]
+      
+      if (nextToken && nextToken.content) {
+        // 检查是否是容器语法
+        if (nextToken.content.startsWith(':::')) {
+          const containerMatch = nextToken.content.match(/^:::(\w+)(.*)/)
+          if (containerMatch) {
+            const containerType = containerMatch[1]
+            const title = containerMatch[2].trim() || containerType.toUpperCase()
+            return `<div class="custom-container ${containerType}">
+              <p class="custom-container-title">${title}</p>`
           }
         }
-      })
-      .use(markdownItContainer, 'warning', {
-        render: (tokens: any, idx: number) => {
-          const token = tokens[idx]
-          if (token.nesting === 1) {
-            const title = token.info.trim().slice(7).trim() || 'WARNING'
-            return `<div class="custom-container warning"><p class="custom-container-title"><svg class="icon"><use href="#icon-warning"></use></svg>${title}</p>\n`
-          } else {
-            return `</div>\n`
-          }
-        }
-      })
-      .use(markdownItContainer, 'danger', {
-        render: (tokens: any, idx: number) => {
-          const token = tokens[idx]
-          if (token.nesting === 1) {
-            const title = token.info.trim().slice(6).trim() || 'DANGER'
-            return `<div class="custom-container danger"><p class="custom-container-title"><svg class="icon"><use href="#icon-danger"></use></svg>${title}</p>\n`
-          } else {
-            return `</div>\n`
-          }
-        }
-      })
-      .use(markdownItContainer, 'info', {
-        render: (tokens: any, idx: number) => {
-          const token = tokens[idx]
-          if (token.nesting === 1) {
-            const title = token.info.trim().slice(4).trim() || 'INFO'
-            return `<div class="custom-container info"><p class="custom-container-title"><svg class="icon"><use href="#icon-info"></use></svg>${title}</p>\n`
-          } else {
-            return `</div>\n`
-          }
-        }
-      })
+      }
+      
+      return defaultParagraphRender(tokens, idx, options, env, renderer)
+    }
 
     // 自定义代码块渲染
     const defaultCodeInlineRender = markdownIt.renderer.rules.code_inline || ((tokens, idx) => tokens[idx].content)
