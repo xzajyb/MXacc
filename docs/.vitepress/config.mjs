@@ -17,6 +17,7 @@ export default defineConfig({
     // 隐藏顶部导航栏
     nav: false,
 
+    // 动态侧边栏将在构建时生成
     sidebar: [
       {
         text: '指南',
@@ -56,8 +57,8 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/xzajyb/MXacc/edit/main/docs/:path',
-      text: '在 GitHub 上编辑此页面'
+      pattern: 'javascript:void(0)',
+      text: '内容由管理员维护'
     },
 
     lastUpdated: {
@@ -71,5 +72,11 @@ export default defineConfig({
 
   markdown: {
     lineNumbers: true
+  },
+
+  // 添加构建钩子来处理数据库内容
+  buildEnd: async (siteConfig) => {
+    // 这里可以添加从数据库获取内容的逻辑
+    console.log('VitePress构建完成，文档已生成')
   }
 }) 
