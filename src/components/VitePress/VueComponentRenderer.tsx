@@ -30,7 +30,7 @@ class VueReactiveState {
   constructor() {
     // 创建响应式代理
     this.state = new Proxy({}, {
-      set: (target, key, value) => {
+      set: (target: any, key, value) => {
         const oldValue = target[key as string]
         target[key as string] = value
         
@@ -41,7 +41,7 @@ class VueReactiveState {
         }
         return true
       },
-      get: (target, key) => {
+      get: (target: any, key) => {
         return target[key as string]
       }
     })
@@ -49,12 +49,12 @@ class VueReactiveState {
 
   // 设置响应式数据
   setReactive(key: string, value: any) {
-    this.state[key] = value
+    (this.state as any)[key] = value
   }
 
   // 获取状态值
   get(key: string) {
-    return this.state[key]
+    return (this.state as any)[key]
   }
 
   // 设置方法
@@ -221,23 +221,45 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
     let processedTemplate = template
     const state = reactiveState.getAllState()
 
+    console.log('Template state:', state) // 调试用
+
     try {
+      // 首先处理插值语法（最重要的修复）
+      processedTemplate = processedTemplate.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, expression) => {
+        try {
+          const cleanExpression = expression.trim()
+          console.log(`Evaluating expression: ${cleanExpression}`)
+          
+          // 创建安全的执行环境
+          const evalFunc = new Function(`
+            const { ${Object.keys(state).join(', ')} } = arguments[0];
+            return ${cleanExpression};
+          `)
+          const result = evalFunc(state)
+          console.log(`Result: ${result}`)
+          return String(result || '')
+        } catch (e) {
+          console.warn(`Failed to evaluate expression: ${expression}`, e)
+          return match // 保持原样如果失败
+        }
+      })
+
       // 处理v-for指令
       processedTemplate = processedTemplate.replace(
         /(<[^>]+)v-for="([^"]+)"([^>]*>)([\s\S]*?)(<\/[^>]+>)/g,
         (match, startTag, forExpr, middleAttrs, content, endTag) => {
           try {
-            const [item, array] = forExpr.split(' in ').map(s => s.trim())
-            const arrayData = state[array]
+            const [item, array] = forExpr.split(' in ').map((s: string) => s.trim())
+            const arrayData = (state as any)[array]
             
             if (Array.isArray(arrayData)) {
-              return arrayData.map((itemData, index) => {
+              return arrayData.map((itemData: any, index: number) => {
                 let itemHtml = startTag + middleAttrs.replace(/v-for="[^"]*"/, '') + '>' + content + endTag
                 
                 // 替换item引用
                 itemHtml = itemHtml.replace(new RegExp(`\\{\\{\\s*${item}\\s*\\}\\}`, 'g'), String(itemData))
                 itemHtml = itemHtml.replace(new RegExp(`\\{\\{\\s*${item}\\.([^}]+)\\s*\\}\\}`, 'g'), 
-                  (_, prop) => String(itemData[prop] || ''))
+                  (_, prop) => String((itemData as any)[prop] || ''))
                 
                 // 处理:key属性
                 itemHtml = itemHtml.replace(/:key="[^"]*"/, `data-key="${index}"`)
@@ -258,10 +280,8 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
         (match, start, condition, rest) => {
           try {
             const evalCondition = new Function(`
-              const state = arguments[0];
-              with(state) {
-                return ${condition};
-              }
+              const { ${Object.keys(state).join(', ')} } = arguments[0];
+              return ${condition};
             `)
             const result = evalCondition(state)
             return result ? match.replace(`v-if="${condition}"`, '') : ''
@@ -274,7 +294,7 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
 
       // 处理v-model
       processedTemplate = processedTemplate.replace(/v-model="([^"]+)"/g, (match, modelVar) => {
-        const value = state[modelVar] || ''
+        const value = (state as any)[modelVar] || ''
         return `value="${value}" oninput="window.updateVueData_${componentId}('${modelVar}', this.value)"`
       })
 
@@ -290,10 +310,8 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
       processedTemplate = processedTemplate.replace(/:class="([^"]+)"/g, (match, classExpr) => {
         try {
           const classFunc = new Function(`
-            const state = arguments[0];
-            with(state) {
-              return ${classExpr};
-            }
+            const { ${Object.keys(state).join(', ')} } = arguments[0];
+            return ${classExpr};
           `)
           const classResult = classFunc(state)
           
@@ -307,23 +325,6 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
           return `class="${classResult}"`
         } catch (e) {
           console.warn('Failed to process :class:', e)
-          return match
-        }
-      })
-
-      // 处理插值语法（最后处理）
-      processedTemplate = processedTemplate.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, expression) => {
-        try {
-          const evalFunc = new Function(`
-            const state = arguments[0];
-            with(state) {
-              return ${expression.trim()};
-            }
-          `)
-          const result = evalFunc(state)
-          return String(result)
-        } catch (e) {
-          console.warn(`Failed to evaluate expression: ${expression}`, e)
           return match
         }
       })
@@ -357,6 +358,12 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
         parseScriptSetup(component.scriptSetup, reactiveState)
       }
 
+      // 注册v-model更新函数（必须在renderTemplate之前）
+      ;(window as any)[`updateVueData_${componentId}`] = (key: string, value: any) => {
+        console.log(`Updating ${key} to:`, value)
+        reactiveState.setReactive(key, value)
+      }
+
       // 注册全局方法
       const state = reactiveState.getAllState()
       Object.keys(state).forEach(key => {
@@ -364,11 +371,6 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
           ;(window as any)[`vueMethod_${componentId}_${key}`] = state[key]
         }
       })
-
-      // 注册v-model更新函数
-      ;(window as any)[`updateVueData_${componentId}`] = (key: string, value: any) => {
-        reactiveState.setReactive(key, value)
-      }
 
       // 添加响应式监听器
       const updateTemplate = () => {
