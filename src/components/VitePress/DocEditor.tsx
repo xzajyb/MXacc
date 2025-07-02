@@ -151,6 +151,9 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
     setNewCategoryName('')
     setNewCategoryEnglish('')
     setParentCategory('')
+    
+    // 显示成功提示
+    alert(`分类 "${newCategory.label}" 已添加到本地，刷新页面前有效`)
   }
 
   // 删除分类
@@ -404,7 +407,10 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                 {/* 分类管理面板 */}
                 {showCategoryManager && (
                   <div className="mt-4 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">分类管理</h4>
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">分类管理</h4>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
+                      📝 提示：分类暂时保存在本地，页面刷新前有效
+                    </p>
                     
                     {/* 添加新分类 */}
                     <div className="space-y-3 mb-4">

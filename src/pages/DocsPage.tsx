@@ -358,12 +358,12 @@ const DocsPage: React.FC = () => {
     )
   }
 
-    return (
+  return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* 移动端搜索按钮 - 右上角悬浮 */}
+            {/* 移动端搜索按钮 - 左上角悬浮，避免遮挡关闭按钮 */}
       <button
         onClick={() => setShowMobileNav(true)}
-        className="lg:hidden fixed top-4 right-4 z-40 p-3 bg-blue-600/90 text-white rounded-full shadow-lg hover:bg-blue-700/90 transition-colors backdrop-blur-sm"
+        className="lg:hidden fixed top-4 left-4 z-40 p-3 bg-blue-600/90 text-white rounded-full shadow-lg hover:bg-blue-700/90 transition-colors backdrop-blur-sm"
       >
         <Search size={20} />
       </button>
@@ -546,7 +546,7 @@ const DocsPage: React.FC = () => {
       </div>
 
       {/* 移动端悬浮导航 */}
-      <div className={`lg:hidden fixed inset-0 z-30 transform transition-transform duration-300 ${
+      <div className={`lg:hidden fixed inset-0 z-50 transform transition-transform duration-300 ${
         showMobileNav ? 'translate-x-0' : '-translate-x-full'
       }`}>
         <div className="h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl flex flex-col overflow-hidden">
@@ -657,7 +657,7 @@ const DocsPage: React.FC = () => {
             <div>
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                 文档导航
-              </h4>
+                  </h4>
               <div className="space-y-1">
                 {filteredCategories.map((category) => {
                   const depth = category.categoryPath.split('/').length - 1
@@ -693,54 +693,54 @@ const DocsPage: React.FC = () => {
                       
                       {expandedCategories.has(category.categoryPath) && (
                         <div className="ml-4 mt-1 space-y-1">
-                          {category.docs.map((doc) => (
-                            <button
+                    {category.docs.map((doc) => (
+                        <button
                               key={doc._id}
                               onClick={() => {
                                 fetchDoc(doc._id)
                                 setShowMobileNav(false) // 移动端点击文档后关闭导航
                               }}
                               className={`w-full text-left px-2 py-1.5 rounded-lg transition-colors flex items-center space-x-2 text-xs backdrop-blur-sm ${
-                                currentDoc?._id === doc._id
+                            currentDoc?._id === doc._id
                                   ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
                                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
-                              }`}
-                            >
+                          }`}
+                        >
                               <FileText size={12} />
-                              <span className="truncate flex-1">{doc.title}</span>
-                              {isAdmin && editMode && (
+                          <span className="truncate flex-1">{doc.title}</span>
+                          {isAdmin && editMode && (
                                 <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleEditDoc(doc)
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditDoc(doc)
                                       setShowMobileNav(false)
-                                    }}
+                                }}
                                     className="p-1 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 rounded"
-                                    title="编辑文档"
-                                  >
+                                title="编辑文档"
+                              >
                                     <Edit size={8} />
-                                  </button>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDeleteDoc(doc._id)
-                                    }}
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteDoc(doc._id)
+                                }}
                                     className="p-1 hover:bg-red-200/80 dark:hover:bg-red-900/80 rounded"
-                                    title="删除文档"
-                                  >
+                                title="删除文档"
+                              >
                                     <Trash2 size={8} />
-                                  </button>
-                                </div>
-                              )}
-                            </button>
+                              </button>
+                            </div>
+                          )}
+                        </button>
                           ))}
                         </div>
                       )}
                     </div>
                   )
                 })}
-              </div>
+                </div>
             </div>
           </div>
         </div>
@@ -749,7 +749,7 @@ const DocsPage: React.FC = () => {
       {/* 移动端遮罩层 */}
       {showMobileNav && (
         <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setShowMobileNav(false)}
         />
       )}
