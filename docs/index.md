@@ -1,216 +1,67 @@
 ---
-layout: page
+# https://vitepress.dev/reference/default-theme-home-page
+layout: home
+
+hero:
+  name: "MXacc 文档中心"
+  text: "梦锡工作室账号管理系统"
+  tagline: 统一身份认证平台 - 安全、高效、易用
+  image:
+    src: /logo.svg
+    alt: MXacc
+  actions:
+    - theme: brand
+      text: 快速开始
+      link: /guide/getting-started
+    - theme: alt
+      text: 在线体验
+      link: https://mxacc.mxos.top
+
+features:
+  - icon: 🔐
+    title: 企业级安全
+    details: 采用JWT令牌认证、邮箱验证、密码加密等多重安全措施，确保账户数据安全。
+  - icon: 👥
+    title: 社交互动
+    details: 内置完整的社交系统，支持帖子发布、评论互动、私信聊天、关注粉丝等功能。
+  - icon: 🛡️
+    title: 隐私保护
+    details: 细粒度的隐私控制，用户可自主设置资料可见性、活动状态等隐私选项。
+  - icon: 🎛️
+    title: 管理后台
+    details: 强大的管理员控制台，支持用户管理、内容审核、系统监控等管理功能。
+  - icon: 📱
+    title: 移动适配
+    details: 响应式设计，完美适配桌面端和移动端，提供一致的用户体验。
+  - icon: 🌐
+    title: 开源定制
+    details: 完全开源，支持自定义部署和二次开发，满足不同场景的需求。
 ---
 
-# MXacc 文档中心
+## 快速了解
 
-欢迎使用 MXacc 账号管理系统文档中心。
+MXacc是梦锡工作室开发的现代化账号管理系统，提供完整的用户认证、授权和管理功能。系统采用前后端分离架构，基于React + Node.js + MongoDB技术栈构建。
 
-<div id="dynamic-wiki-content">
-  <div style="text-align: center; padding: 2rem;">
-    <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
-    <p>正在加载文档内容...</p>
-  </div>
-</div>
+### 🚀 主要特性
 
-<script>
-if (typeof window !== 'undefined') {
-  // 全局变量存储数据
-  let globalDocuments = []
-  let globalCategories = []
+- **安全可靠**: JWT认证 + 邮箱验证 + 密码加密
+- **功能完整**: 用户注册/登录、个人资料、安全设置
+- **社交互动**: 帖子发布、评论系统、私信聊天、关注功能
+- **管理便捷**: 用户管理、内容审核、数据统计
+- **隐私保护**: 细粒度隐私控制、数据安全
+- **界面现代**: 深浅主题切换、响应式设计
+- **易于部署**: Docker支持、Vercel一键部署
 
-  // 等待页面加载完成后执行
-  document.addEventListener('DOMContentLoaded', function() {
-    loadWikiContent()
-  })
+### 📚 文档导航
 
-  async function loadWikiContent() {
-    try {
-      // 获取文档分类和内容
-      const [categoriesRes, documentsRes] = await Promise.all([
-        fetch('/api/social/content?action=wiki&type=categories'),
-        fetch('/api/social/content?action=wiki&type=list')
-      ])
-      
-      const categoriesData = await categoriesRes.json()
-      const documentsData = await documentsRes.json()
-      
-      if (categoriesData.success && documentsData.success) {
-        globalCategories = categoriesData.data || []
-        globalDocuments = documentsData.data || []
-        renderWikiContent(globalCategories, globalDocuments)
-      } else {
-        document.getElementById('dynamic-wiki-content').innerHTML = 
-          '<div style="text-align: center; padding: 2rem; color: red;"><p>加载文档失败，请稍后重试</p></div>'
-      }
-    } catch (error) {
-      console.error('加载Wiki内容失败:', error)
-      document.getElementById('dynamic-wiki-content').innerHTML = 
-        '<div style="text-align: center; padding: 2rem; color: red;"><p>网络错误，请检查连接后重试</p></div>'
-    }
-  }
+- [快速开始](/guide/getting-started) - 了解如何使用MXacc
+- [用户手册](/guide/user-manual) - 详细的功能使用指南
+- [API文档](/api/overview) - 完整的API接口文档
+- [部署指南](/development/deployment) - 系统部署和配置
 
-  function renderWikiContent(categories, documents) {
-    const container = document.getElementById('dynamic-wiki-content')
-    let currentDocument = documents.length > 0 ? documents[0] : null
-    
-    // 构建HTML
-    const html = `
-      <div style="display: flex; gap: 2rem; min-height: 70vh;">
-        <!-- 侧边栏 -->
-        <div id="wiki-sidebar" style="width: 280px; flex-shrink: 0; background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border: 1px solid #e9ecef; max-height: 80vh; overflow-y: auto;">
-          <h3 style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 0.5rem;">文档目录</h3>
-          <div id="categories-list"></div>
-        </div>
-        
-        <!-- 主内容区 -->
-        <div style="flex: 1; min-width: 0;">
-          <div id="document-content" style="background: white; padding: 2rem; border-radius: 8px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <div id="document-header"></div>
-            <div id="document-body"></div>
-          </div>
-        </div>
-      </div>
-    `
-    
-    container.innerHTML = html
-    
-    // 渲染分类和文档列表
-    renderCategories(categories, documents)
-    
-    // 显示当前文档
-    if (currentDocument) {
-      displayDocument(currentDocument, categories)
-    } else {
-      displayWelcome()
-    }
-  }
+### 🔗 相关链接
 
-  function renderCategories(categories, documents) {
-    const categoriesList = document.getElementById('categories-list')
-    let html = ''
-    
-    // 为每个分类生成内容
-    categories.forEach(category => {
-      const categoryDocs = documents.filter(doc => doc.categoryId === category.id)
-      if (categoryDocs.length > 0) {
-        html += `
-          <div style="margin-bottom: 1.5rem;">
-            <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #34495e; font-weight: 600;">${category.name}</h4>
-            <ul style="list-style: none; margin: 0; padding: 0;">
-              ${categoryDocs.map(doc => `
-                <li style="padding: 0.5rem 0.75rem; margin-bottom: 0.25rem; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; font-size: 0.9rem;" 
-                    onmouseover="this.style.background='#e3f2fd'; this.style.color='#1976d2'"
-                    onmouseout="this.style.background=''; this.style.color=''"
-                    onclick="selectDocument('${doc.id}')">
-                  ${doc.title}
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        `
-      }
-    })
-    
-    // 未分类文档
-    const uncategorizedDocs = documents.filter(doc => !doc.categoryId || doc.categoryId === '')
-    if (uncategorizedDocs.length > 0) {
-      html += `
-        <div style="margin-bottom: 1.5rem;">
-          <h4 style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #34495e; font-weight: 600;">未分类</h4>
-          <ul style="list-style: none; margin: 0; padding: 0;">
-            ${uncategorizedDocs.map(doc => `
-              <li style="padding: 0.5rem 0.75rem; margin-bottom: 0.25rem; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; font-size: 0.9rem;" 
-                  onmouseover="this.style.background='#e3f2fd'; this.style.color='#1976d2'"
-                  onmouseout="this.style.background=''; this.style.color=''"
-                  onclick="selectDocument('${doc.id}')">
-                ${doc.title}
-              </li>
-            `).join('')}
-          </ul>
-        </div>
-      `
-    }
-    
-    categoriesList.innerHTML = html
-  }
+- [在线体验](https://mxacc.mxos.top) - 试用MXacc系统
+- [GitHub仓库](https://github.com/xzajyb/MXacc) - 查看源代码
+- [问题反馈](https://github.com/xzajyb/MXacc/issues) - 报告Bug或建议
 
-  function selectDocument(docId) {
-    const doc = globalDocuments.find(d => d.id === docId)
-    if (doc) {
-      displayDocument(doc, globalCategories)
-      
-      // 更新选中状态
-      document.querySelectorAll('#categories-list li').forEach(li => {
-        li.style.background = ''
-        li.style.color = ''
-      })
-      event.target.style.background = '#2196f3'
-      event.target.style.color = 'white'
-    }
-  }
-
-  function displayDocument(doc, categories) {
-    const header = document.getElementById('document-header')
-    const body = document.getElementById('document-body')
-    
-    const categoryName = getCategoryName(doc.categoryId, categories)
-    const updateDate = doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString('zh-CN') : '未知'
-    
-    header.innerHTML = `
-      <h1 style="margin: 0 0 0.5rem 0; color: #2c3e50; font-size: 2rem;">${doc.title}</h1>
-      <div style="display: flex; gap: 1rem; font-size: 0.9rem; color: #6c757d; margin-bottom: 2rem; border-bottom: 1px solid #e9ecef; padding-bottom: 1rem;">
-        <span style="background: #e3f2fd; color: #1976d2; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 500;">${categoryName}</span>
-        <span>最后更新：${updateDate}</span>
-      </div>
-    `
-    
-    body.innerHTML = `<div style="line-height: 1.6; color: #2c3e50;">${doc.content}</div>`
-  }
-
-  function displayWelcome() {
-    const header = document.getElementById('document-header')
-    const body = document.getElementById('document-body')
-    
-    header.innerHTML = `
-      <h1 style="margin: 0 0 0.5rem 0; color: #2c3e50; font-size: 2rem;">欢迎使用 MXacc 文档中心</h1>
-    `
-    
-    body.innerHTML = `
-      <div style="text-align: center; padding: 3rem; color: #6c757d;">
-        <p>请从左侧选择一篇文档查看。</p>
-        <p>如果您是管理员，可以通过管理控制台创建和编辑文档。</p>
-        <p style="margin-top: 2rem; font-style: italic;">文档内容通过数据库动态加载，管理员可在后台实时编辑。</p>
-      </div>
-    `
-  }
-
-  function getCategoryName(categoryId, categories) {
-    if (!categoryId) return '未分类'
-    const category = categories.find(cat => cat.id === categoryId)
-    return category ? category.name : '未分类'
-  }
-
-  // 为全局函数设置window属性，避免作用域问题
-  window.selectDocument = selectDocument
-}
-</script>
-
-<style>
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  #dynamic-wiki-content > div {
-    flex-direction: column !important;
-  }
-  
-  #wiki-sidebar {
-    width: 100% !important;
-    max-height: 40vh !important;
-  }
-}
-</style> 

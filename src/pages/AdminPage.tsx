@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon, Search, Book, Plus, Edit, FolderPlus } from 'lucide-react'
+import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon, Search } from 'lucide-react'
 import axios from 'axios'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
@@ -38,7 +38,7 @@ interface AdminPageProps {
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
   const { showToast } = useToast()
-  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos' | 'posts' | 'wiki'>('email')
+  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos' | 'posts'>('email')
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -150,28 +150,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
 
-  // Wiki文档管理相关状态
-  const [wikiCategories, setWikiCategories] = useState<any[]>([])
-  const [wikiDocuments, setWikiDocuments] = useState<any[]>([])
-  const [wikiLoading, setWikiLoading] = useState(false)
-  const [showCreateCategoryDialog, setShowCreateCategoryDialog] = useState(false)
-  const [showCreateDocumentDialog, setShowCreateDocumentDialog] = useState(false)
-  const [showEditDocumentDialog, setShowEditDocumentDialog] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<any>(null)
-  const [selectedDocument, setSelectedDocument] = useState<any>(null)
-  const [categoryName, setCategoryName] = useState('')
-  const [categorySlug, setCategorySlug] = useState('')
-  const [categoryDescription, setCategoryDescription] = useState('')
-  const [categoryOrder, setCategoryOrder] = useState(0)
-  const [documentTitle, setDocumentTitle] = useState('')
-  const [documentSlug, setDocumentSlug] = useState('')
-  const [documentContent, setDocumentContent] = useState('')
-  const [documentCategoryId, setDocumentCategoryId] = useState('')
-  const [documentOrder, setDocumentOrder] = useState(0)
-  const [documentPublished, setDocumentPublished] = useState(true)
-  const [processingWiki, setProcessingWiki] = useState(false)
-  const [rebuildingWiki, setRebuildingWiki] = useState(false)
-
   // 预设颜色选项
   const presetColors = [
     { name: 'Blue', value: '#3B82F6' },
@@ -260,9 +238,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       loadPartnerLogos()
     } else if (activeTab === 'posts' && token) {
       loadPosts()
-    } else if (activeTab === 'wiki' && token) {
-      loadWikiCategories()
-      loadWikiDocuments()
     }
   }, [activeTab, currentPage, token, postsPage, postsSearchTerm])
 
@@ -980,231 +955,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     }
   }
 
-  // ===== Wiki 文档管理函数 =====
-  
-  // 加载文档分类
-  const loadWikiCategories = async () => {
-    try {
-      const response = await axios.get('/api/social/content?action=wiki&type=categories', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.data.success) {
-        setWikiCategories(response.data.data)
-      }
-    } catch (error: any) {
-      console.error('加载文档分类失败:', error)
-      showToast(error.response?.data?.message || '加载文档分类失败', 'error')
-    }
-  }
-
-  // 加载文档列表
-  const loadWikiDocuments = async () => {
-    setWikiLoading(true)
-    try {
-      const response = await axios.get('/api/social/content?action=wiki&type=list', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (response.data.success) {
-        setWikiDocuments(response.data.data)
-      }
-    } catch (error: any) {
-      console.error('加载文档列表失败:', error)
-      showToast(error.response?.data?.message || '加载文档列表失败', 'error')
-    } finally {
-      setWikiLoading(false)
-    }
-  }
-
-  // 创建分类
-  const handleCreateCategory = async () => {
-    if (!categoryName.trim() || !categorySlug.trim()) {
-      showToast('分类名称和标识符不能为空', 'error')
-      return
-    }
-
-    setProcessingWiki(true)
-    try {
-      const response = await axios.post('/api/social/content', {
-        action: 'wiki',
-        type: 'create-category',
-        name: categoryName.trim(),
-        slug: categorySlug.trim(),
-        description: categoryDescription.trim(),
-        order: categoryOrder
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (response.data.success) {
-        showToast('分类创建成功', 'success')
-        setShowCreateCategoryDialog(false)
-        setCategoryName('')
-        setCategorySlug('')
-        setCategoryDescription('')
-        setCategoryOrder(0)
-        loadWikiCategories()
-      }
-    } catch (error: any) {
-      console.error('创建分类失败:', error)
-      showToast(error.response?.data?.message || '创建分类失败', 'error')
-    } finally {
-      setProcessingWiki(false)
-    }
-  }
-
-  // 创建文档
-  const handleCreateDocument = async () => {
-    if (!documentTitle.trim() || !documentSlug.trim() || !documentContent.trim()) {
-      showToast('标题、标识符和内容不能为空', 'error')
-      return
-    }
-
-    setProcessingWiki(true)
-    try {
-      const response = await axios.post('/api/social/content', {
-        action: 'wiki',
-        type: 'create-document',
-        title: documentTitle.trim(),
-        slug: documentSlug.trim(),
-        content: documentContent.trim(),
-        categoryId: documentCategoryId || null,
-        order: documentOrder,
-        isPublished: documentPublished
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (response.data.success) {
-        showToast('文档创建成功', 'success')
-        setShowCreateDocumentDialog(false)
-        resetDocumentForm()
-        loadWikiDocuments()
-      }
-    } catch (error: any) {
-      console.error('创建文档失败:', error)
-      showToast(error.response?.data?.message || '创建文档失败', 'error')
-    } finally {
-      setProcessingWiki(false)
-    }
-  }
-
-  // 更新文档
-  const handleUpdateDocument = async () => {
-    if (!selectedDocument || !documentTitle.trim() || !documentContent.trim()) {
-      showToast('标题和内容不能为空', 'error')
-      return
-    }
-
-    setProcessingWiki(true)
-    try {
-      const response = await axios.put('/api/social/content', {
-        action: 'wiki',
-        type: 'update-document',
-        id: selectedDocument.id,
-        title: documentTitle.trim(),
-        slug: documentSlug.trim(),
-        content: documentContent.trim(),
-        categoryId: documentCategoryId || null,
-        order: documentOrder,
-        isPublished: documentPublished
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (response.data.success) {
-        showToast('文档更新成功', 'success')
-        setShowEditDocumentDialog(false)
-        resetDocumentForm()
-        loadWikiDocuments()
-      }
-    } catch (error: any) {
-      console.error('更新文档失败:', error)
-      showToast(error.response?.data?.message || '更新文档失败', 'error')
-    } finally {
-      setProcessingWiki(false)
-    }
-  }
-
-  // 删除文档
-  const handleDeleteDocument = async (documentId: string) => {
-    if (!confirm('确定要删除这篇文档吗？此操作不可恢复。')) return
-
-    try {
-      const response = await axios.delete(`/api/social/content?action=wiki&type=document&id=${documentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (response.data.success) {
-        showToast('文档删除成功', 'success')
-        loadWikiDocuments()
-      }
-    } catch (error: any) {
-      console.error('删除文档失败:', error)
-      showToast(error.response?.data?.message || '删除文档失败', 'error')
-    }
-  }
-
-  // 删除分类
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('确定要删除这个分类吗？请确保分类下没有文档。')) return
-
-    try {
-      const response = await axios.delete(`/api/social/content?action=wiki&type=category&id=${categoryId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (response.data.success) {
-        showToast('分类删除成功', 'success')
-        loadWikiCategories()
-      }
-    } catch (error: any) {
-      console.error('删除分类失败:', error)
-      showToast(error.response?.data?.message || '删除分类失败', 'error')
-    }
-  }
-
-  // 重建Wiki静态文件
-  const handleRebuildWiki = async () => {
-    setRebuildingWiki(true)
-    try {
-      const response = await axios.post('/api/social/content?action=wiki&type=rebuild', {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-
-      if (response.data.success) {
-        showToast('Wiki重建成功！', 'success')
-      }
-    } catch (error: any) {
-      console.error('重建Wiki失败:', error)
-      showToast(error.response?.data?.message || '重建Wiki失败', 'error')
-    } finally {
-      setRebuildingWiki(false)
-    }
-  }
-
-  // 重置文档表单
-  const resetDocumentForm = () => {
-    setDocumentTitle('')
-    setDocumentSlug('')
-    setDocumentContent('')
-    setDocumentCategoryId('')
-    setDocumentOrder(0)
-    setDocumentPublished(true)
-    setSelectedDocument(null)
-  }
-
-  // 打开编辑文档弹窗
-  const openEditDocumentDialog = (document: any) => {
-    setSelectedDocument(document)
-    setDocumentTitle(document.title)
-    setDocumentSlug(document.slug)
-    setDocumentContent(document.content || '')
-    setDocumentCategoryId(document.categoryId || '')
-    setDocumentOrder(document.order || 0)
-    setDocumentPublished(document.isPublished !== false)
-    setShowEditDocumentDialog(true)
-  }
-
   // 获取模板预览HTML
   const getTemplatePreview = (templateId: string, data: any) => {
     // 确保数据有默认值
@@ -1526,17 +1276,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 >
                   <Trash2 className="h-5 w-5 inline mr-2" />
                   帖子管理
-                </button>
-                <button
-                  onClick={() => setActiveTab('wiki')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === 'wiki'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
-                >
-                  <Book className="h-5 w-5 inline mr-2" />
-                  文档管理
                 </button>
               </nav>
             </div>
@@ -2134,7 +1873,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                           placeholder="例如：系统维护通知、新功能上线公告"
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-          </div>
+                      </div>
 
                       {/* 消息内容 */}
                       <div>
@@ -2148,7 +1887,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                           rows={6}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-        </div>
+                      </div>
 
                       {/* 消息范围选择 */}
                       <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-700">
@@ -3618,422 +3357,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
           </div>
         </div>
 
-        {/* Wiki 文档管理标签页 */}
-        {activeTab === 'wiki' && (
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">文档管理</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">管理Wiki文档分类和内容</p>
-                  </div>
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => setShowCreateCategoryDialog(true)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2"
-                    >
-                      <FolderPlus className="h-4 w-4" />
-                      <span>新建分类</span>
-                    </button>
-                    <button
-                      onClick={() => setShowCreateDocumentDialog(true)}
-                      className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center space-x-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>新建文档</span>
-                    </button>
-                    <button
-                      onClick={handleRebuildWiki}
-                      disabled={rebuildingWiki}
-                      className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {rebuildingWiki ? (
-                        <Loader className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Book className="h-4 w-4" />
-                      )}
-                      <span>{rebuildingWiki ? '重建中...' : '重建Wiki'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* 文档分类 */}
-                  <div className="lg:col-span-1">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">文档分类</h3>
-                    <div className="space-y-2">
-                      {wikiCategories.length === 0 ? (
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">暂无分类</p>
-                      ) : (
-                        wikiCategories.map((category) => (
-                          <div key={category._id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900 dark:text-white">{category.name}</h4>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{category.description}</p>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <span className="text-xs text-gray-400">排序: {category.order}</span>
-                                <span className={`text-xs ${category.isVisible ? 'text-green-600' : 'text-red-600'}`}>
-                                  {category.isVisible ? '显示' : '隐藏'}
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleDeleteCategory(category._id)}
-                              className="text-red-600 hover:text-red-800 p-1"
-                              title="删除分类"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 文档列表 */}
-                  <div className="lg:col-span-2">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">文档列表</h3>
-                    {wikiLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader className="h-6 w-6 animate-spin text-blue-600" />
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">加载中...</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {wikiDocuments.length === 0 ? (
-                          <p className="text-gray-500 dark:text-gray-400 text-sm">暂无文档</p>
-                        ) : (
-                          wikiDocuments.map((document) => (
-                            <div key={document._id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-gray-900 dark:text-white">{document.title}</h4>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    {document.categoryId ? 
-                                      wikiCategories.find(c => c._id === document.categoryId)?.name || '未知分类' : 
-                                      '无分类'
-                                    }
-                                  </p>
-                                  <div className="flex items-center space-x-4 mt-2">
-                                    <span className="text-xs text-gray-400">排序: {document.order || 0}</span>
-                                    <span className={`text-xs ${document.isPublished ? 'text-green-600' : 'text-orange-600'}`}>
-                                      {document.isPublished ? '已发布' : '草稿'}
-                                    </span>
-                                    <span className="text-xs text-gray-400">
-                                      {new Date(document.createdAt).toLocaleDateString('zh-CN')}
-                                    </span>
-                                  </div>
-                                  {document.content && (
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
-                                      {document.content.substring(0, 100)}...
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex space-x-2 ml-4">
-                                  <button
-                                    onClick={() => openEditDocumentDialog(document)}
-                                    className="text-blue-600 hover:text-blue-800 p-1"
-                                    title="编辑文档"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteDocument(document._id)}
-                                    className="text-red-600 hover:text-red-800 p-1"
-                                    title="删除文档"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 创建分类对话框 */}
-        {showCreateCategoryDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">新建分类</h3>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">分类名称</label>
-                  <input
-                    type="text"
-                    value={categoryName}
-                    onChange={(e) => setCategoryName(e.target.value)}
-                    placeholder="输入分类名称"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">URL标识符</label>
-                  <input
-                    type="text"
-                    value={categorySlug}
-                    onChange={(e) => setCategorySlug(e.target.value)}
-                    placeholder="输入URL标识符（如：getting-started）"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">描述</label>
-                  <textarea
-                    value={categoryDescription}
-                    onChange={(e) => setCategoryDescription(e.target.value)}
-                    placeholder="输入分类描述"
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">排序</label>
-                  <input
-                    type="number"
-                    value={categoryOrder}
-                    onChange={(e) => setCategoryOrder(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowCreateCategoryDialog(false)
-                      setCategoryName('')
-                      setCategorySlug('')
-                      setCategoryDescription('')
-                      setCategoryOrder(0)
-                    }}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={handleCreateCategory}
-                    disabled={processingWiki}
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {processingWiki ? '创建中...' : '创建分类'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 创建文档对话框 */}
-        {showCreateDocumentDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">新建文档</h3>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">文档标题</label>
-                    <input
-                      type="text"
-                      value={documentTitle}
-                      onChange={(e) => setDocumentTitle(e.target.value)}
-                      placeholder="输入文档标题"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">URL标识符</label>
-                    <input
-                      type="text"
-                      value={documentSlug}
-                      onChange={(e) => setDocumentSlug(e.target.value)}
-                      placeholder="输入URL标识符（如：installation）"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">所属分类</label>
-                    <select
-                      value={documentCategoryId}
-                      onChange={(e) => setDocumentCategoryId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">无分类</option>
-                      {wikiCategories.map((category) => (
-                        <option key={category._id} value={category._id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">排序</label>
-                    <input
-                      type="number"
-                      value={documentOrder}
-                      onChange={(e) => setDocumentOrder(parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    文档内容（Markdown格式）
-                  </label>
-                  <textarea
-                    value={documentContent}
-                    onChange={(e) => setDocumentContent(e.target.value)}
-                    placeholder="请输入Markdown格式的文档内容..."
-                    rows={15}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  />
-                </div>
-                <div className="flex items-center space-x-4">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={documentPublished}
-                      onChange={(e) => setDocumentPublished(e.target.checked)}
-                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">立即发布</span>
-                  </label>
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowCreateDocumentDialog(false)
-                      resetDocumentForm()
-                    }}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={handleCreateDocument}
-                    disabled={processingWiki}
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {processingWiki ? '创建中...' : '创建文档'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 编辑文档对话框 */}
-        {showEditDocumentDialog && selectedDocument && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
-              <div className="p-6 border-b border-gray-200 dark:border-gray-600">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">编辑文档</h3>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">文档标题</label>
-                    <input
-                      type="text"
-                      value={documentTitle}
-                      onChange={(e) => setDocumentTitle(e.target.value)}
-                      placeholder="输入文档标题"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">URL标识符</label>
-                    <input
-                      type="text"
-                      value={documentSlug}
-                      onChange={(e) => setDocumentSlug(e.target.value)}
-                      placeholder="输入URL标识符"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">所属分类</label>
-                    <select
-                      value={documentCategoryId}
-                      onChange={(e) => setDocumentCategoryId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">无分类</option>
-                      {wikiCategories.map((category) => (
-                        <option key={category._id} value={category._id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">排序</label>
-                    <input
-                      type="number"
-                      value={documentOrder}
-                      onChange={(e) => setDocumentOrder(parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    文档内容（Markdown格式）
-                  </label>
-                  <textarea
-                    value={documentContent}
-                    onChange={(e) => setDocumentContent(e.target.value)}
-                    placeholder="请输入Markdown格式的文档内容..."
-                    rows={15}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  />
-                </div>
-                <div className="flex items-center space-x-4">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={documentPublished}
-                      onChange={(e) => setDocumentPublished(e.target.checked)}
-                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">已发布</span>
-                  </label>
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowEditDocumentDialog(false)
-                      resetDocumentForm()
-                    }}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={handleUpdateDocument}
-                    disabled={processingWiki}
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {processingWiki ? '更新中...' : '更新文档'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* 申述处理对话框 */}
         {showAppealDialog && selectedAppeal && createPortal(
           <div 
@@ -4213,7 +3536,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                       <Shield className="w-6 h-6" />
-      </div>
+                    </div>
                     <div>
                       <h2 className="text-xl font-bold">解除封禁</h2>
                       <p className="text-green-100 text-sm">管理员操作确认</p>
@@ -4394,8 +3717,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
           </div>, 
           document.body
         )}
-    </>
-  )
-}
+      </>
+    )
+  }
 
-export default AdminPage 
+  export default AdminPage 

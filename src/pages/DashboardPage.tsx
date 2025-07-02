@@ -22,9 +22,7 @@ import {
   Moon,
   Monitor,
   MessageCircle,
-  Globe,
-  Book,
-  ExternalLink
+  Globe
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLogos from '../components/PartnerLogos'
@@ -38,7 +36,7 @@ import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
 
-type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social' | 'docs'
+type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
@@ -70,13 +68,6 @@ const DashboardPage: React.FC = () => {
       icon: MessageCircle,
       description: '与朋友分享动态，发现有趣内容'
     },
-    {
-      id: 'docs',
-      label: '文档中心',
-      icon: Book,
-      description: '查看系统文档和使用指南（VitePress原生界面）'
-    },
-
     {
       id: 'profile',
       label: t.navigation.profile,
@@ -114,8 +105,8 @@ const DashboardPage: React.FC = () => {
   }
 
   const handleNavClick = (viewId: ActiveView) => {
-    // 如果邮箱未验证，除了验证邮箱、个人资料、社交功能和文档中心，其他功能都禁用
-    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social' && viewId !== 'docs') {
+    // 如果邮箱未验证，除了验证邮箱、个人资料和社交功能，其他功能都禁用
+    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social') {
       showWarning('请先验证邮箱后再使用此功能')
       return
     }
@@ -187,37 +178,6 @@ const DashboardPage: React.FC = () => {
       switch (activeView) {
         case 'social':
           return <SocialPage embedded={true} onUnreadCountChange={setSocialUnreadCount} />
-        case 'docs':
-          return (
-            <div className="h-full flex flex-col">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Book className="w-6 h-6 text-blue-600" />
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">文档中心</h2>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">系统文档和使用指南（VitePress原生界面）</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => window.open('/docs/', '_blank')}
-                    className="inline-flex items-center px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    新窗口打开
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <iframe
-                  src="/docs/guide/getting-started.html"
-                  className="w-full h-full border-0"
-                  title="MXacc 文档中心"
-                  style={{ minHeight: '600px' }}
-                />
-              </div>
-            </div>
-          )
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':

@@ -13,9 +13,7 @@
     "type-check": "npx tsc --noEmit",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs",
-    "docs:generate": "node scripts/build-wiki.js",
-    "docs:full": "npm run docs:generate && npm run docs:build"
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
