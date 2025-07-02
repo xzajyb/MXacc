@@ -6,7 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronUp, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
-import VitePressRenderer from '@/components/VitePress/VitePressRenderer'
+import MarkdownRenderer from '@/components/VitePress/MarkdownRenderer'
 import DocEditor from '@/components/VitePress/DocEditor'
 
 interface DocContent {
@@ -542,21 +542,18 @@ const DocsPage: React.FC = () => {
       </div>
 
             {/* 移动端弹窗导航 - 使用Portal渲染解决层级问题 */}
-      <AnimatePresence>
-        {showMobileNav && typeof document !== 'undefined' && createPortal(
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+      {(() => {
+        console.log('弹窗渲染检查：', { 
+          showMobileNav, 
+          documentExists: typeof document !== 'undefined',
+          shouldRender: showMobileNav && typeof document !== 'undefined'
+        })
+        return showMobileNav && typeof document !== 'undefined' && createPortal(
+          <div
             className="fixed inset-0 bg-black/50 z-[99999] flex items-center justify-center p-4"
             onClick={() => setShowMobileNav(false)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
+            <div
               className="w-full max-w-md max-h-[85vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/50 dark:border-gray-700/50"
               onClick={(e) => e.stopPropagation()}
             >
@@ -726,11 +723,11 @@ const DocsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>,
+            </div>
+          </div>,
           document.body
-        )}
-      </AnimatePresence>
+        )
+      })()}
 
       {/* 主内容区域 */}
       <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-4 lg:py-8">
@@ -739,7 +736,10 @@ const DocsPage: React.FC = () => {
             <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 lg:p-8 relative">
               {/* 移动端搜索按钮 - 位于文章内部右上角 */}
               <button
-                onClick={() => setShowMobileNav(true)}
+                onClick={() => {
+                  console.log('点击搜索按钮，当前状态：', showMobileNav)
+                  setShowMobileNav(true)
+                }}
                 className="lg:hidden absolute top-4 right-4 z-30 p-3 bg-blue-50/80 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-md hover:bg-blue-100/80 dark:hover:bg-blue-900/70 transition-all duration-200 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
               >
                 <Search size={18} />
@@ -747,7 +747,7 @@ const DocsPage: React.FC = () => {
 
               {/* 使用 VitePress 风格的 Markdown 渲染器 */}
               <div className="vitepress-markdown-content">
-                <VitePressRenderer content={currentDoc.content} />
+                <MarkdownRenderer content={currentDoc.content} />
               </div>
 
               {/* 底部编辑链接（仅管理员可见） */}
@@ -771,7 +771,10 @@ const DocsPage: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 lg:p-12 text-center relative">
               {/* 移动端搜索按钮 - 欢迎页面也显示 */}
               <button
-                onClick={() => setShowMobileNav(true)}
+                onClick={() => {
+                  console.log('点击欢迎页搜索按钮，当前状态：', showMobileNav)
+                  setShowMobileNav(true)
+                }}
                 className="lg:hidden absolute top-4 right-4 z-30 p-3 bg-blue-50/80 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-md hover:bg-blue-100/80 dark:hover:bg-blue-900/70 transition-all duration-200 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
               >
                 <Search size={18} />
