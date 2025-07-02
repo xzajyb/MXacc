@@ -363,7 +363,7 @@ const DocsPage: React.FC = () => {
       
 
       {/* 桌面端悬浮导航 - 确保移动端完全隐藏 */}
-      <div className="desktop-nav hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)]">
+      <div className="desktop-nav hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)] max-lg:!hidden">
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 flex flex-col overflow-hidden max-h-full">
           {/* Logo区域 - 居中显示 */}
           <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50 flex justify-center">
@@ -719,13 +719,13 @@ const DocsPage: React.FC = () => {
       {/* 移动端搜索按钮 - 文章内右上角 */}
       <button
         onClick={() => setShowMobileNav(true)}
-        className="lg:hidden fixed top-4 right-4 z-40 p-3 bg-gray-200/80 dark:bg-gray-700/80 text-gray-600 dark:text-gray-400 rounded-full shadow-lg hover:bg-gray-300/80 dark:hover:bg-gray-600/80 transition-colors backdrop-blur-sm"
+        className="lg:hidden fixed top-6 right-6 z-40 p-3 bg-gray-200/80 dark:bg-gray-700/80 text-gray-600 dark:text-gray-400 rounded-full shadow-lg hover:bg-gray-300/80 dark:hover:bg-gray-600/80 transition-colors backdrop-blur-sm"
       >
         <Search size={18} />
       </button>
 
       {/* 主内容区域 */}
-      <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-4 lg:py-8">
+      <main className="lg:ml-[20rem] min-h-screen px-6 lg:px-8 py-6 lg:py-8 pr-20 lg:pr-8">
         <div className="max-w-4xl mx-auto">
           {currentDoc ? (
             <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
