@@ -152,6 +152,12 @@ const DocsPage: React.FC = () => {
       const category = doc.category || 'guide'
       
       if (!categoryMap.has(categoryPath)) {
+        // 从categoryPath提取显示名称，支持多级路径
+        const pathParts = categoryPath.split('/')
+        const displayName = pathParts.length > 1 ? 
+          pathParts[pathParts.length - 1] : 
+          getCategoryName(category)
+        
         categoryMap.set(categoryPath, {
           name: getCategoryName(category),
           categoryPath: categoryPath,
@@ -162,8 +168,15 @@ const DocsPage: React.FC = () => {
       categoryMap.get(categoryPath)!.docs.push(doc)
     })
     
-    // 按分类路径排序，然后按文档创建时间排序
+    // 按分类路径层级和路径排序
     const sortedCategories = Array.from(categoryMap.values()).sort((a, b) => {
+      const aDepth = a.categoryPath.split('/').length
+      const bDepth = b.categoryPath.split('/').length
+      
+      // 先按层级排序，同层级按路径排序
+      if (aDepth !== bDepth) {
+        return aDepth - bDepth
+      }
       return a.categoryPath.localeCompare(b.categoryPath)
     })
     
@@ -345,22 +358,15 @@ const DocsPage: React.FC = () => {
     )
   }
 
-  return (
+    return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* 移动端头部 */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center space-x-3">
-            <img src="/logo.svg" alt="MXacc" className="w-8 h-8 filter blur-[0.5px]" />
-          </div>
-            <button
-            onClick={() => setShowMobileNav(true)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-            >
-            <Search size={20} />
-            </button>
-        </div>
-      </div>
+      {/* 移动端搜索按钮 - 右上角悬浮 */}
+      <button
+        onClick={() => setShowMobileNav(true)}
+        className="lg:hidden fixed top-4 right-4 z-40 p-3 bg-blue-600/90 text-white rounded-full shadow-lg hover:bg-blue-700/90 transition-colors backdrop-blur-sm"
+      >
+        <Search size={20} />
+      </button>
 
       {/* 桌面端悬浮导航 */}
       <div className="hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)]">
@@ -455,76 +461,84 @@ const DocsPage: React.FC = () => {
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                 文档导航
               </h4>
-              <div className="space-y-2">
-                {filteredCategories.map((category) => (
-                  <div key={category.categoryPath}>
-                    <button
-                      onClick={() => toggleCategory(category.categoryPath)}
-                      className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 transition-colors backdrop-blur-sm"
-                    >
-                      {expandedCategories.has(category.categoryPath) ? (
-                        <ChevronDown size={14} />
-                      ) : (
-                        <ChevronRight size={14} />
+              <div className="space-y-1">
+                {filteredCategories.map((category) => {
+                  const depth = category.categoryPath.split('/').length - 1
+                  const isSubCategory = depth > 0
+                  const indentClass = isSubCategory ? `ml-${Math.min(depth * 4, 8)}` : ''
+                  
+                  return (
+                    <div key={category.categoryPath} className={indentClass}>
+                      <button
+                        onClick={() => toggleCategory(category.categoryPath)}
+                        className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 transition-colors backdrop-blur-sm ${
+                          isSubCategory ? 'text-xs' : ''
+                        }`}
+                      >
+                        {expandedCategories.has(category.categoryPath) ? (
+                          <ChevronDown size={12} />
+                        ) : (
+                          <ChevronRight size={12} />
+                        )}
+                        {isSubCategory ? (
+                          <FolderOpen size={12} />
+                        ) : (
+                          <Folder size={12} />
+                        )}
+                        <span className="truncate flex-1 text-left">
+                          {isSubCategory ? 
+                            category.categoryPath.split('/').pop() : 
+                            category.name
+                          }
+                        </span>
+                        <span className="text-xs text-gray-400">({category.docs.length})</span>
+                      </button>
+                      
+                      {expandedCategories.has(category.categoryPath) && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          {category.docs.map((doc) => (
+                            <button
+                              key={doc._id}
+                              onClick={() => fetchDoc(doc._id)}
+                              className={`w-full text-left px-2 py-1.5 rounded-lg transition-colors flex items-center space-x-2 text-xs backdrop-blur-sm ${
+                                currentDoc?._id === doc._id
+                                  ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
+                              }`}
+                            >
+                              <FileText size={12} />
+                              <span className="truncate flex-1">{doc.title}</span>
+                              {isAdmin && editMode && (
+                                <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleEditDoc(doc)
+                                    }}
+                                    className="p-1 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 rounded"
+                                    title="编辑文档"
+                                  >
+                                    <Edit size={8} />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteDoc(doc._id)
+                                    }}
+                                    className="p-1 hover:bg-red-200/80 dark:hover:bg-red-900/80 rounded"
+                                    title="删除文档"
+                                  >
+                                    <Trash2 size={8} />
+                                  </button>
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
                       )}
-                      {category.categoryPath.includes('/') ? (
-                        <FolderOpen size={14} />
-                      ) : (
-                        <Folder size={14} />
-                      )}
-                      <span className="truncate flex-1 text-left">
-                        {category.categoryPath.includes('/') ? 
-                          `└─ ${category.name}` : 
-                          category.name
-                        }
-                      </span>
-                      <span className="text-xs text-gray-400">({category.docs.length})</span>
-                    </button>
-                    
-                    {expandedCategories.has(category.categoryPath) && (
-                      <div className="ml-4 mt-1 space-y-1">
-                        {category.docs.map((doc) => (
-                          <button
-                            key={doc._id}
-                            onClick={() => fetchDoc(doc._id)}
-                            className={`w-full text-left px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
-                              currentDoc?._id === doc._id
-                                ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
-                            }`}
-                          >
-                            <FileText size={14} />
-                            <span className="truncate flex-1">{doc.title}</span>
-                            {isAdmin && editMode && (
-                              <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleEditDoc(doc)
-                                  }}
-                                  className="p-1 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 rounded"
-                                  title="编辑文档"
-                                >
-                                  <Edit size={10} />
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDeleteDoc(doc._id)
-                                  }}
-                                  className="p-1 hover:bg-red-200/80 dark:hover:bg-red-900/80 rounded"
-                                  title="删除文档"
-                                >
-                                  <Trash2 size={10} />
-                                </button>
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -600,7 +614,10 @@ const DocsPage: React.FC = () => {
             {/* 返回顶部按钮 */}
             <div className="mb-4">
               <button
-                onClick={scrollToTop}
+                onClick={() => {
+                  scrollToTop()
+                  setShowMobileNav(false)
+                }}
                 className="w-full px-3 py-2 bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200/90 dark:hover:bg-gray-600/90 transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm"
               >
                 <ChevronUp size={16} />
@@ -618,7 +635,10 @@ const DocsPage: React.FC = () => {
                   {toc.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => scrollToHeading(item.id)}
+                      onClick={() => {
+                        scrollToHeading(item.id)
+                        setShowMobileNav(false)
+                      }}
                       className={`w-full text-left px-3 py-1 rounded-lg text-sm transition-colors hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm ${
                         item.level === 1 ? 'font-semibold text-gray-900 dark:text-white' :
                         item.level === 2 ? 'ml-3 text-gray-700 dark:text-gray-300' :
@@ -633,82 +653,93 @@ const DocsPage: React.FC = () => {
               </div>
             )}
 
-            {/* 文档分类和列表 */}
+                        {/* 文档分类和列表 */}
             <div>
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                 文档导航
-                  </h4>
-              <div className="space-y-2">
-                {filteredCategories.map((category) => (
-                  <div key={category.categoryPath}>
-                    <button
-                      onClick={() => toggleCategory(category.categoryPath)}
-                      className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 transition-colors backdrop-blur-sm"
-                    >
-                      {expandedCategories.has(category.categoryPath) ? (
-                        <ChevronDown size={14} />
-                      ) : (
-                        <ChevronRight size={14} />
+              </h4>
+              <div className="space-y-1">
+                {filteredCategories.map((category) => {
+                  const depth = category.categoryPath.split('/').length - 1
+                  const isSubCategory = depth > 0
+                  const indentClass = isSubCategory ? `ml-${Math.min(depth * 4, 8)}` : ''
+                  
+                  return (
+                    <div key={category.categoryPath} className={indentClass}>
+                      <button
+                        onClick={() => toggleCategory(category.categoryPath)}
+                        className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 transition-colors backdrop-blur-sm ${
+                          isSubCategory ? 'text-xs' : ''
+                        }`}
+                      >
+                        {expandedCategories.has(category.categoryPath) ? (
+                          <ChevronDown size={12} />
+                        ) : (
+                          <ChevronRight size={12} />
+                        )}
+                        {isSubCategory ? (
+                          <FolderOpen size={12} />
+                        ) : (
+                          <Folder size={12} />
+                        )}
+                        <span className="truncate flex-1 text-left">
+                          {isSubCategory ? 
+                            category.categoryPath.split('/').pop() : 
+                            category.name
+                          }
+                        </span>
+                        <span className="text-xs text-gray-400">({category.docs.length})</span>
+                      </button>
+                      
+                      {expandedCategories.has(category.categoryPath) && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          {category.docs.map((doc) => (
+                            <button
+                              key={doc._id}
+                              onClick={() => {
+                                fetchDoc(doc._id)
+                                setShowMobileNav(false) // 移动端点击文档后关闭导航
+                              }}
+                              className={`w-full text-left px-2 py-1.5 rounded-lg transition-colors flex items-center space-x-2 text-xs backdrop-blur-sm ${
+                                currentDoc?._id === doc._id
+                                  ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
+                              }`}
+                            >
+                              <FileText size={12} />
+                              <span className="truncate flex-1">{doc.title}</span>
+                              {isAdmin && editMode && (
+                                <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleEditDoc(doc)
+                                      setShowMobileNav(false)
+                                    }}
+                                    className="p-1 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 rounded"
+                                    title="编辑文档"
+                                  >
+                                    <Edit size={8} />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteDoc(doc._id)
+                                    }}
+                                    className="p-1 hover:bg-red-200/80 dark:hover:bg-red-900/80 rounded"
+                                    title="删除文档"
+                                  >
+                                    <Trash2 size={8} />
+                                  </button>
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
                       )}
-                      {category.categoryPath.includes('/') ? (
-                        <FolderOpen size={14} />
-                      ) : (
-                        <Folder size={14} />
-                      )}
-                      <span className="truncate flex-1 text-left">
-                        {category.categoryPath.includes('/') ? 
-                          `└─ ${category.name}` : 
-                          category.name
-                        }
-                      </span>
-                      <span className="text-xs text-gray-400">({category.docs.length})</span>
-                    </button>
-                    
-                    {expandedCategories.has(category.categoryPath) && (
-                      <div className="ml-4 mt-1 space-y-1">
-                    {category.docs.map((doc) => (
-                        <button
-                            key={doc._id}
-                          onClick={() => fetchDoc(doc._id)}
-                            className={`w-full text-left px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
-                            currentDoc?._id === doc._id
-                                ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
-                          }`}
-                        >
-                          <FileText size={14} />
-                          <span className="truncate flex-1">{doc.title}</span>
-                          {isAdmin && editMode && (
-                              <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditDoc(doc)
-                                    setShowMobileNav(false)
-                                }}
-                                  className="p-1 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 rounded"
-                                title="编辑文档"
-                              >
-                                <Edit size={10} />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDeleteDoc(doc._id)
-                                }}
-                                  className="p-1 hover:bg-red-200/80 dark:hover:bg-red-900/80 rounded"
-                                title="删除文档"
-                              >
-                                <Trash2 size={10} />
-                              </button>
-                            </div>
-                          )}
-                        </button>
-                    ))}
-                      </div>
-                    )}
-                </div>
-              ))}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -724,7 +755,7 @@ const DocsPage: React.FC = () => {
       )}
 
       {/* 主内容区域 */}
-      <main className="lg:ml-[20rem] min-h-screen pt-16 lg:pt-0 px-4 lg:px-8 py-8">
+      <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
           {currentDoc ? (
             <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">

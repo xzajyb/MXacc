@@ -17,7 +17,6 @@ interface Category {
   label: string
   englishPath: string
   parentCategory?: string
-  level?: number
 }
 
 const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialDoc }) => {
@@ -37,17 +36,25 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
   const [newCategoryEnglish, setNewCategoryEnglish] = useState('')
   const [parentCategory, setParentCategory] = useState('')
 
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(false)
-
-  // 默认分类
-  const defaultCategories: Category[] = [
-    { value: 'guide', label: '指南', englishPath: 'guide' },
-    { value: 'api', label: 'API文档', englishPath: 'api' },
-    { value: 'tutorial', label: '教程', englishPath: 'tutorial' },
-    { value: 'faq', label: '常见问题', englishPath: 'faq' },
-    { value: 'development', label: '开发', englishPath: 'development' }
-  ]
+  const [categories, setCategories] = useState<Category[]>(() => {
+    // 从localStorage读取保存的分类
+    const savedCategories = localStorage.getItem('doc-categories')
+    if (savedCategories) {
+      try {
+        return JSON.parse(savedCategories)
+      } catch (e) {
+        console.error('解析分类数据失败:', e)
+      }
+    }
+    // 默认分类
+    return [
+      { value: 'guide', label: '指南', englishPath: 'guide' },
+      { value: 'api', label: 'API文档', englishPath: 'api' },
+      { value: 'tutorial', label: '教程', englishPath: 'tutorial' },
+      { value: 'faq', label: '常见问题', englishPath: 'faq' },
+      { value: 'development', label: '开发', englishPath: 'development' }
+    ]
+  })
 
   // 预设的中英文映射
   const categoryMapping: Record<string, string> = {
@@ -89,78 +96,19 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
       .replace(/^-|-$/g, '')
   }
 
-  // 从后端加载分类
-  const loadCategories = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/social/content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          action: 'manage-categories',
-          categoryAction: 'get'
-        })
-      })
-      
-      const data = await response.json()
-      if (data.success) {
-        // 合并默认分类和自定义分类
-        const allCategories = [...defaultCategories, ...data.categories]
-        setCategories(allCategories)
-      } else {
-        // 如果获取失败，使用默认分类
-        setCategories(defaultCategories)
-      }
-    } catch (error) {
-      console.error('加载分类失败:', error)
-      setCategories(defaultCategories)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // 构建分类路径
   const buildCategoryPath = (categoryValue: string, categories: Category[]): string => {
     const category = categories.find(c => c.value === categoryValue)
     if (!category) return categoryValue
     
     if (category.parentCategory) {
-      const parentPath = buildCategoryPath(category.parentCategory, categories)
-      return `${parentPath}/${category.englishPath}`
+      const parentCategory = categories.find(c => c.value === category.parentCategory)
+      if (parentCategory) {
+        return `${parentCategory.englishPath}/${category.englishPath}`
+      }
     }
     
     return category.englishPath
-  }
-
-  // 排序分类以显示正确的层级结构
-  const sortCategoriesHierarchically = (categories: Category[]): Category[] => {
-    const topLevel = categories.filter(c => !c.parentCategory)
-    const withChildren = categories.filter(c => c.parentCategory)
-    
-    const result: Category[] = []
-    
-    const addCategory = (category: Category, level: number = 0) => {
-      result.push({ ...category, level })
-      
-      // 添加子分类
-      const children = withChildren.filter(c => c.parentCategory === category.value)
-      children.forEach(child => addCategory(child, level + 1))
-    }
-    
-    topLevel.forEach(category => addCategory(category))
-    
-    return result
-  }
-
-  // 获取分类显示名称（带层级缩进）
-  const getCategoryDisplayName = (category: Category, level?: number): string => {
-    const actualLevel = level !== undefined ? level : (category as any).level || 0
-    const indent = '　'.repeat(actualLevel) // 使用全角空格缩进
-    const prefix = actualLevel > 0 ? '└─ ' : ''
-    return `${indent}${prefix}${category.label}`
   }
 
   // 处理标题变化
@@ -178,7 +126,7 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
   }
 
   // 添加新分类
-  const handleAddCategory = async () => {
+  const handleAddCategory = () => {
     if (!newCategoryName.trim()) {
       alert('分类名称不能为空')
       return
@@ -187,97 +135,41 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
     const englishPath = newCategoryEnglish || generateEnglishPath(newCategoryName)
     const categoryValue = englishPath
 
+    const newCategory: Category = {
+      value: categoryValue,
+      label: newCategoryName.trim(),
+      englishPath: englishPath,
+      parentCategory: parentCategory || undefined
+    }
+
     if (categories.find(c => c.value === categoryValue)) {
       alert('该分类已存在')
       return
     }
 
-    try {
-      setLoading(true)
-      const response = await fetch('/api/social/content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          action: 'manage-categories',
-          categoryAction: 'create',
-          categoryData: {
-            value: categoryValue,
-            label: newCategoryName.trim(),
-            englishPath: englishPath,
-            parentCategory: parentCategory || null
-          }
-        })
-      })
-      
-      const data = await response.json()
-      if (data.success) {
-        // 重新加载分类列表
-        await loadCategories()
-        setNewCategoryName('')
-        setNewCategoryEnglish('')
-        setParentCategory('')
-        alert('分类创建成功')
-      } else {
-        alert(data.message || '创建分类失败')
-      }
-    } catch (error) {
-      console.error('创建分类失败:', error)
-      alert('创建分类失败')
-    } finally {
-      setLoading(false)
-    }
+    setCategories([...categories, newCategory])
+    setNewCategoryName('')
+    setNewCategoryEnglish('')
+    setParentCategory('')
   }
 
   // 删除分类
-  const handleDeleteCategory = async (categoryValue: string) => {
-    // 检查是否为默认分类
-    if (defaultCategories.some(c => c.value === categoryValue)) {
-      alert('无法删除默认分类')
+  const handleDeleteCategory = (categoryValue: string) => {
+    if (!confirm('确定要删除这个分类吗？')) return
+    
+    // 检查是否有子分类
+    const hasChildren = categories.some(c => c.parentCategory === categoryValue)
+    if (hasChildren) {
+      alert('该分类下有子分类，请先删除子分类')
       return
     }
 
-    if (!confirm('确定要删除这个分类吗？')) return
+    setCategories(categories.filter(c => c.value !== categoryValue))
     
-    try {
-      setLoading(true)
-      const response = await fetch('/api/social/content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          action: 'manage-categories',
-          categoryAction: 'delete',
-          categoryData: {
-            value: categoryValue
-          }
-        })
-      })
-      
-      const data = await response.json()
-      if (data.success) {
-        // 重新加载分类列表
-        await loadCategories()
-        
-        // 如果删除的是当前选中的分类，重置为默认分类
-        if (category === categoryValue) {
-          setCategory('guide')
-          setCategoryPath('guide')
-        }
-        
-        alert('分类删除成功')
-      } else {
-        alert(data.message || '删除分类失败')
-      }
-    } catch (error) {
-      console.error('删除分类失败:', error)
-      alert('删除分类失败')
-    } finally {
-      setLoading(false)
+    // 如果删除的是当前选中的分类，重置为默认分类
+    if (category === categoryValue) {
+      setCategory('guide')
+      setCategoryPath('guide')
     }
   }
 
@@ -333,28 +225,23 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
 
   // 初始化数据
   useEffect(() => {
-    if (isOpen) {
-      // 加载分类
-      loadCategories()
-      
-      if (initialDoc) {
-        setTitle(initialDoc.title || '')
-        setSlug(initialDoc.slug || '')
-        setContent(initialDoc.content || '')
-        setCategory(initialDoc.category || 'guide')
-        setCategoryPath(initialDoc.categoryPath || buildCategoryPath(initialDoc.category || 'guide', categories))
-        setTags(initialDoc.tags || [])
-        setIsPublic(initialDoc.isPublic !== false)
-      } else {
-        // 重置表单
-        setTitle('')
-        setSlug('')
-        setContent('')
-        setCategory('guide')
-        setCategoryPath('guide')
-        setTags([])
-        setIsPublic(true)
-      }
+    if (initialDoc) {
+      setTitle(initialDoc.title || '')
+      setSlug(initialDoc.slug || '')
+      setContent(initialDoc.content || '')
+      setCategory(initialDoc.category || 'guide')
+      setCategoryPath(initialDoc.categoryPath || buildCategoryPath(initialDoc.category || 'guide', categories))
+      setTags(initialDoc.tags || [])
+      setIsPublic(initialDoc.isPublic !== false)
+    } else {
+      // 重置表单
+      setTitle('')
+      setSlug('')
+      setContent('')
+      setCategory('guide')
+      setCategoryPath('guide')
+      setTags([])
+      setIsPublic(true)
     }
   }, [initialDoc, isOpen])
 
@@ -362,6 +249,11 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
   useEffect(() => {
     setCategoryPath(buildCategoryPath(category, categories))
   }, [category, categories])
+
+  // 保存分类到localStorage
+  useEffect(() => {
+    localStorage.setItem('doc-categories', JSON.stringify(categories))
+  }, [categories])
 
   if (!isOpen) return null
 
@@ -485,13 +377,24 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                   value={category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={loading}
                 >
-                  {sortCategoriesHierarchically(categories).map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {getCategoryDisplayName(cat)}
-                    </option>
-                  ))}
+                  {categories
+                    .sort((a, b) => {
+                      // 按层级排序，父分类在前
+                      const aDepth = a.parentCategory ? 1 : 0
+                      const bDepth = b.parentCategory ? 1 : 0
+                      if (aDepth !== bDepth) return aDepth - bDepth
+                      return a.label.localeCompare(b.label)
+                    })
+                    .map((cat) => {
+                      const indent = cat.parentCategory ? '　　' : '' // 全角空格缩进
+                      const prefix = cat.parentCategory ? '└─ ' : ''
+                      return (
+                        <option key={cat.value} value={cat.value}>
+                          {indent}{prefix}{cat.label}
+                        </option>
+                      )
+                    })}
                 </select>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -523,56 +426,41 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                         value={parentCategory}
                         onChange={(e) => setParentCategory(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        disabled={loading}
                       >
                         <option value="">作为顶级分类</option>
-                        {sortCategoriesHierarchically(categories).map(cat => (
-                          <option key={cat.value} value={cat.value}>
-                            {getCategoryDisplayName(cat)}
-                          </option>
+                        {categories.filter(c => !c.parentCategory).map(cat => (
+                          <option key={cat.value} value={cat.value}>{cat.label}</option>
                         ))}
                       </select>
                       <button
                         onClick={handleAddCategory}
-                        disabled={loading}
-                        className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-1"
+                        className="w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors flex items-center justify-center space-x-1"
                       >
                         <Plus size={14} />
-                        <span>{loading ? '保存中...' : '添加分类'}</span>
+                        <span>添加分类</span>
                       </button>
                     </div>
 
                     {/* 现有分类列表 */}
                     <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {sortCategoriesHierarchically(categories).map((cat) => {
-                        const isDefault = defaultCategories.some(d => d.value === cat.value)
-                        return (
-                          <div key={cat.value} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                            <div className="flex items-center space-x-2">
-                              {cat.parentCategory ? <FolderOpen size={14} /> : <Folder size={14} />}
-                              <span className="text-sm">
-                                {getCategoryDisplayName(cat)}
-                              </span>
-                              <span className="text-xs text-gray-500">({cat.englishPath})</span>
-                              {isDefault && (
-                                <span className="text-xs px-1 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded">
-                                  默认
-                                </span>
-                              )}
-                            </div>
-                            {!isDefault && (
-                              <button
-                                onClick={() => handleDeleteCategory(cat.value)}
-                                className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 rounded"
-                                title="删除分类"
-                                disabled={loading}
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            )}
+                      {categories.map((cat) => (
+                        <div key={cat.value} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                          <div className="flex items-center space-x-2">
+                            {cat.parentCategory ? <FolderOpen size={14} /> : <Folder size={14} />}
+                            <span className="text-sm">
+                              {cat.parentCategory ? `└─ ${cat.label}` : cat.label}
+                            </span>
+                            <span className="text-xs text-gray-500">({cat.englishPath})</span>
                           </div>
-                        )
-                      })}
+                          <button
+                            onClick={() => handleDeleteCategory(cat.value)}
+                            className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 rounded"
+                            title="删除分类"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
