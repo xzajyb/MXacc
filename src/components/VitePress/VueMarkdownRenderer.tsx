@@ -356,26 +356,66 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
         }
       })
 
-      // 处理插值语法
-      Object.entries(allData).forEach(([key, value]) => {
-        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g')
-        processedTemplate = processedTemplate.replace(regex, String(value))
-      })
-
-      // 处理复杂插值（如对象属性访问）
-      processedTemplate = processedTemplate.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, expression) => {
-        try {
-          // 移除可能的函数调用，只处理属性访问
-          if (expression.includes('(') && expression.includes(')')) {
-            return match // 保持原样，不处理函数调用
-          }
-          
-          const func = new Function(...Object.keys(allData), `return ${expression}`)
-          return String(func(...Object.values(allData)))
-        } catch (e) {
-          return match // 如果解析失败，保持原样
-        }
-      })
+             // 处理所有插值语法（包括函数调用和复杂表达式）
+       processedTemplate = processedTemplate.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, expression) => {
+         try {
+           // 清理表达式
+           const cleanExpression = expression.trim()
+           
+           // 创建一个安全的执行环境，包含所有数据和方法
+           const executionContext = {
+             ...allData,
+             ...component.methods,
+             // 添加常用的JavaScript方法
+             join: (arr: any, separator: string) => Array.isArray(arr) ? arr.join(separator) : '',
+             includes: (arr: any, item: any) => Array.isArray(arr) ? arr.includes(item) : false,
+             length: (arr: any) => Array.isArray(arr) ? arr.length : 0
+           }
+           
+           // 特殊处理数组方法调用
+           if (cleanExpression.includes('.join(')) {
+             const joinMatch = cleanExpression.match(/(\w+)\.join\(['"]([^'"]*)['"]\)/)
+             if (joinMatch) {
+               const [, arrayName, separator] = joinMatch
+               const arrayValue = executionContext[arrayName]
+               if (Array.isArray(arrayValue)) {
+                 return arrayValue.join(separator)
+               }
+             }
+           }
+           
+           // 处理length属性
+           if (cleanExpression.includes('.length')) {
+             const lengthMatch = cleanExpression.match(/(\w+)\.length/)
+             if (lengthMatch) {
+               const [, arrayName] = lengthMatch
+               const arrayValue = executionContext[arrayName]
+               if (Array.isArray(arrayValue)) {
+                 return String(arrayValue.length)
+               }
+             }
+           }
+           
+           // 处理函数调用
+           if (cleanExpression.includes('(') && cleanExpression.includes(')')) {
+             // 创建函数执行环境
+             const funcNames = Object.keys(executionContext)
+             const funcValues = Object.values(executionContext)
+             const func = new Function(...funcNames, `return ${cleanExpression}`)
+             const result = func(...funcValues)
+             return String(result)
+           }
+           
+           // 处理简单的属性访问
+           const func = new Function(...Object.keys(executionContext), `return ${cleanExpression}`)
+           const result = func(...Object.values(executionContext))
+           return String(result)
+           
+         } catch (e) {
+           console.warn(`Failed to evaluate expression: ${expression}`, e)
+           return match // 如果解析失败，保持原样
+         }
+       })
 
       // 处理v-for指令（增强版）
       processedTemplate = processedTemplate.replace(
