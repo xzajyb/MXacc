@@ -210,7 +210,7 @@ const DashboardPage: React.FC = () => {
               </div>
               <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <iframe
-                  src="/docs/"
+                  src="/docs/guide/getting-started.html"
                   className="w-full h-full border-0"
                   title="MXacc 文档中心"
                   style={{ minHeight: '600px' }}

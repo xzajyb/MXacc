@@ -14,12 +14,8 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo.svg',
     
-    nav: [
-      { text: '首页', link: '/' },
-      { text: '快速开始', link: '/guide/getting-started' },
-      { text: 'API', link: '/api/overview' },
-      { text: '返回主站', link: 'https://mxacc.mxos.top' }
-    ],
+    // 隐藏顶部导航栏
+    nav: false,
 
     sidebar: [
       {
