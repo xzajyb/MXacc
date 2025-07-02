@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -7,6 +7,13 @@ import { Copy, Check, ExternalLink, AlertTriangle, Info, Lightbulb } from 'lucid
 interface MarkdownRendererProps {
   content: string
   className?: string
+  onTocUpdate?: (toc: TocItem[]) => void
+}
+
+export interface TocItem {
+  id: string
+  title: string
+  level: number
 }
 
 interface CodeBlockProps {
@@ -127,7 +134,7 @@ const CalloutBox: React.FC<{ type: 'tip' | 'warning' | 'danger' | 'info', childr
   )
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '', onTocUpdate }) => {
   // 提取和处理 <style> 标签
   const extractStyles = (text: string) => {
     const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi
@@ -144,6 +151,33 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
   }
 
   const { styles, cleanedText } = extractStyles(content)
+
+  // 提取目录
+  const extractToc = (text: string) => {
+    const lines = text.split('\n')
+    const toc: TocItem[] = []
+    
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim()
+      if (trimmedLine.startsWith('#')) {
+        const level = trimmedLine.match(/^#+/)?.[0].length || 1
+        const title = trimmedLine.replace(/^#+\s*/, '').trim()
+        if (title && level <= 4) { // 只提取 h1-h4
+          const id = `heading-${index}-${title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')}`
+          toc.push({ id, title, level })
+        }
+      }
+    })
+    
+    return toc
+  }
+
+  useEffect(() => {
+    const toc = extractToc(cleanedText)
+    if (onTocUpdate) {
+      onTocUpdate(toc)
+    }
+  }, [cleanedText, onTocUpdate])
 
   const parseMarkdown = (text: string) => {
     const lines = text.split('\n')
@@ -194,16 +228,16 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
       if (line.startsWith('#')) {
         const level = line.match(/^#+/)?.[0].length || 1
         const text = line.replace(/^#+\s*/, '')
-        const id = text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+        const id = `heading-${i}-${text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')}`
         
         const Tag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements
         const classes = {
-          1: 'text-4xl font-bold mt-8 mb-6 text-gray-900 dark:text-white',
-          2: 'text-3xl font-semibold mt-6 mb-4 text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-2',
-          3: 'text-2xl font-medium mt-5 mb-3 text-gray-700 dark:text-gray-200',
-          4: 'text-xl font-medium mt-4 mb-2 text-gray-700 dark:text-gray-200',
-          5: 'text-lg font-medium mt-3 mb-2 text-gray-600 dark:text-gray-300',
-          6: 'text-base font-medium mt-2 mb-1 text-gray-600 dark:text-gray-300'
+          1: 'text-4xl font-bold mt-8 mb-6 text-gray-900 dark:text-white scroll-mt-20',
+          2: 'text-3xl font-semibold mt-6 mb-4 text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-gray-700 pb-2 scroll-mt-20',
+          3: 'text-2xl font-medium mt-5 mb-3 text-gray-700 dark:text-gray-200 scroll-mt-20',
+          4: 'text-xl font-medium mt-4 mb-2 text-gray-700 dark:text-gray-200 scroll-mt-20',
+          5: 'text-lg font-medium mt-3 mb-2 text-gray-600 dark:text-gray-300 scroll-mt-20',
+          6: 'text-base font-medium mt-2 mb-1 text-gray-600 dark:text-gray-300 scroll-mt-20'
         }
         
         elements.push(
