@@ -6,221 +6,120 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017'
 const DB_NAME = 'mxacc'
 
 async function buildWiki() {
-  const client = new MongoClient(MONGODB_URI)
-  
   try {
-    console.log('🔄 连接到 MongoDB...')
-    await client.connect()
+    console.log('🚀 开始构建Wiki文档...')
+    
+    // 连接数据库
+    console.log('📦 连接数据库...')
+    const client = await connectToDatabase()
     const db = client.db(DB_NAME)
     
-    console.log('📚 获取文档数据...')
+    // 获取分类和文档
+    console.log('📚 获取Wiki数据...')
     const categories = await db.collection('wiki_categories')
-      .find({ isVisible: true })
+      .find({ isVisible: { $ne: false } })
       .sort({ order: 1, name: 1 })
       .toArray()
-    
+      
     const documents = await db.collection('wikis')
       .find({ isPublished: true })
       .sort({ order: 1, createdAt: -1 })
       .toArray()
-    
-    console.log(`📂 发现 ${categories.length} 个分类，${documents.length} 篇文档`)
-    
-    // 清理并重建 docs 目录结构
+
+    console.log(`找到 ${categories.length} 个分类和 ${documents.length} 篇文档`)
+
+    // 确保目录存在
+    const vitepressDir = path.join(process.cwd(), 'docs/.vitepress')
     const docsDir = path.join(process.cwd(), 'docs')
+    const publicDir = path.join(process.cwd(), 'public/docs')
     
-    // 保留 .vitepress 目录
-    const vitepressDir = path.join(docsDir, '.vitepress')
-    const vitepressExists = await fs.access(vitepressDir).then(() => true).catch(() => false)
-    
-    if (!vitepressExists) {
-      console.log('❌ .vitepress 目录不存在，请先运行 npx vitepress init')
-      process.exit(1)
-    }
-    
-    // 清理旧的文档文件（保留 .vitepress）
-    const docsContent = await fs.readdir(docsDir)
-    for (const item of docsContent) {
-      if (item !== '.vitepress') {
-        const itemPath = path.join(docsDir, item)
-        const stat = await fs.stat(itemPath)
-        if (stat.isDirectory()) {
-          await fs.rm(itemPath, { recursive: true, force: true })
-        } else {
-          await fs.unlink(itemPath)
-        }
-      }
-    }
-    
-    // 创建首页
-    await fs.writeFile(path.join(docsDir, 'index.md'), `---
-layout: home
+    await fs.ensureDir(vitepressDir)
+    await fs.ensureDir(docsDir)
+    await fs.ensureDir(publicDir)
 
-hero:
-  name: MXacc 文档中心
-  text: 企业级社交管理平台
-  tagline: 功能强大、安全可靠的现代化社交平台解决方案
-  actions:
-    - theme: brand
-      text: 快速开始
-      link: /guide/getting-started
-    - theme: alt
-      text: 查看源码
-      link: https://github.com/yourusername/mxacc
+    // 构建侧边栏
+    const sidebar = buildSidebar(categories, documents)
 
-features:
-  - title: 🚀 现代化架构
-    details: 基于 React 18 + TypeScript + MongoDB 构建，提供出色的开发体验
-  - title: 🔐 企业级安全
-    details: 完整的用户认证、权限管理、数据加密和安全审计
-  - title: 💬 丰富的社交功能
-    details: 支持帖子发布、评论系统、私信聊天、用户关注等完整社交功能
-  - title: 📱 响应式设计
-    details: 适配桌面端和移动端，提供一致的用户体验
-  - title: 🎨 可定制主题
-    details: 支持深色/浅色模式切换，可自定义界面风格
-  - title: ⚡ 高性能
-    details: 优化的数据库查询、缓存策略和前端性能优化
----
-`)
-
-    console.log('✅ 创建首页完成')
-    
-    // 生成侧边栏配置
-    const sidebar = []
-    
-    // 按分类组织文档
-    const categorizedDocs = new Map()
-    const uncategorizedDocs = []
-    
-    for (const doc of documents) {
-      if (doc.categoryId) {
-        const categoryId = doc.categoryId.toString()
-        if (!categorizedDocs.has(categoryId)) {
-          categorizedDocs.set(categoryId, [])
-        }
-        categorizedDocs.get(categoryId).push(doc)
-      } else {
-        uncategorizedDocs.push(doc)
-      }
-    }
-    
-    // 创建分类目录和文档
-    for (const category of categories) {
-      const categoryId = category._id.toString()
-      const categoryDocs = categorizedDocs.get(categoryId) || []
-      
-      if (categoryDocs.length === 0) continue
-      
-      // 创建分类目录
-      const categoryDir = path.join(docsDir, category.slug)
-      await fs.mkdir(categoryDir, { recursive: true })
-      
-      // 创建分类索引页
-      await fs.writeFile(path.join(categoryDir, 'index.md'), `# ${category.name}
-
-${category.description || ''}
-
-## 文档列表
-
-${categoryDocs.map(doc => `- [${doc.title}](./${doc.slug}.md)`).join('\n')}
-`)
-      
-      // 创建分类下的文档
-      const sidebarItems = []
-      for (const doc of categoryDocs) {
-        const docPath = path.join(categoryDir, `${doc.slug}.md`)
-        const frontmatter = `---
-title: ${doc.title}
----
-
-# ${doc.title}
-
-${doc.content}
-
----
-
-*最后更新时间: ${doc.updatedAt.toLocaleDateString('zh-CN')}*  
-*作者: ${doc.author?.displayName || doc.author?.username || '管理员'}*
-`
-        await fs.writeFile(docPath, frontmatter)
-        
-        sidebarItems.push({
-          text: doc.title,
-          link: `/${category.slug}/${doc.slug}`
-        })
-      }
-      
-      sidebar.push({
-        text: category.name,
-        collapsed: false,
-        items: [
-          { text: '概览', link: `/${category.slug}/` },
-          ...sidebarItems
-        ]
-      })
-      
-      console.log(`📁 创建分类 "${category.name}" 完成，包含 ${categoryDocs.length} 篇文档`)
-    }
-    
-    // 处理未分类文档
-    if (uncategorizedDocs.length > 0) {
-      const guideDir = path.join(docsDir, 'guide')
-      await fs.mkdir(guideDir, { recursive: true })
-      
-      const sidebarItems = []
-      for (const doc of uncategorizedDocs) {
-        const docPath = path.join(guideDir, `${doc.slug}.md`)
-        const frontmatter = `---
-title: ${doc.title}
----
-
-# ${doc.title}
-
-${doc.content}
-
----
-
-*最后更新时间: ${doc.updatedAt.toLocaleDateString('zh-CN')}*  
-*作者: ${doc.author?.displayName || doc.author?.username || '管理员'}*
-`
-        await fs.writeFile(docPath, frontmatter)
-        
-        sidebarItems.push({
-          text: doc.title,
-          link: `/guide/${doc.slug}`
-        })
-      }
-      
-      sidebar.unshift({
-        text: '指南',
-        collapsed: false,
-        items: sidebarItems
-      })
-      
-      console.log(`📁 创建 "指南" 分类完成，包含 ${uncategorizedDocs.length} 篇未分类文档`)
-    }
-    
     // 更新 VitePress 配置
     const configPath = path.join(vitepressDir, 'config.mts')
     const configContent = `import { defineConfig } from 'vitepress'
+import { fileURLToPath, URL } from 'node:url'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "MXacc 文档中心",
   description: "MXacc 企业级社交管理平台官方文档",
+  lang: 'zh-CN',
+  base: '/docs/',
+  outDir: '../public/docs',
   
   head: [
-    ['link', { rel: 'icon', href: '/logo.png' }]
+    ['link', { rel: 'icon', href: '/docs/logo.png' }],
+    ['meta', { name: 'theme-color', content: '#667eea' }],
+    ['meta', { name: 'author', content: 'MXacc Team' }],
+    ['meta', { name: 'keywords', content: 'MXacc,文档,API,用户指南,开发指南' }]
   ],
   
+  // VitePress原生markdown配置，支持3D模型和高级功能
+  markdown: {
+    lineNumbers: true,
+    image: {
+      // 启用图像懒加载
+      lazyLoading: true
+    },
+    container: {
+      tipLabel: '提示',
+      warningLabel: '注意',
+      dangerLabel: '警告',
+      infoLabel: '信息',
+      detailsLabel: '详细信息'
+    },
+    math: true,  // 启用数学公式支持
+    attrs: {
+      // 启用属性支持，用于3D模型和自定义组件
+      leftDelimiter: '{',
+      rightDelimiter: '}'
+    }
+  },
+  
+  // Vite配置，支持3D模型文件类型
+  vite: {
+    assetsInclude: [
+      // 支持3D模型文件格式
+      '**/*.gltf',
+      '**/*.glb', 
+      '**/*.fbx',
+      '**/*.obj',
+      '**/*.dae',
+      '**/*.3ds',
+      '**/*.ply',
+      '**/*.stl'
+    ],
+    optimizeDeps: {
+      include: [
+        'three',
+        '@tweenjs/tween.js'
+      ]
+    }
+  },
+  
   themeConfig: {
-    logo: '/logo.png',
+    logo: '/docs/logo.png',
+    siteTitle: 'MXacc 文档',
     
     nav: [
       { text: '首页', link: '/' },
-      { text: '文档', link: '/guide/' },
-      { text: '返回应用', link: '${process.env.FRONTEND_URL || 'http://localhost:5173'}' }
+      { text: '用户指南', link: '/guide/' },
+      { text: 'API文档', link: '/api/' },
+      { text: '开发指南', link: '/dev/' },
+      { 
+        text: '更多',
+        items: [
+          { text: '更新日志', link: '/changelog' },
+          { text: '常见问题', link: '/faq' },
+          { text: '返回应用', link: '${process.env.FRONTEND_URL || 'http://localhost:5173'}' }
+        ]
+      }
     ],
 
     sidebar: ${JSON.stringify(sidebar, null, 6)},
@@ -228,64 +127,98 @@ export default defineConfig({
     socialLinks: [
       { icon: 'github', link: 'https://github.com/yourusername/mxacc' }
     ],
-    
+
     footer: {
-      message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2024 MXacc Team'
+      message: '基于 MIT 许可发布',
+      copyright: 'Copyright © ${new Date().getFullYear()} MXacc Team'
     },
-    
-    search: {
-      provider: 'local'
-    },
-    
+
     editLink: {
-      pattern: 'javascript:void(0)',
-      text: '编辑此页'
+      pattern: 'javascript:void(0)', // 禁用GitHub编辑，因为内容由后台管理
+      text: '内容由管理员维护'
     },
-    
+
     lastUpdated: {
       text: '最后更新于',
       formatOptions: {
         dateStyle: 'short',
         timeStyle: 'medium'
       }
+    },
+
+    docFooter: {
+      prev: '上一页',
+      next: '下一页'
+    },
+
+    outline: {
+      label: '页面导航'
+    },
+
+    returnToTopLabel: '回到顶部',
+    sidebarMenuLabel: '菜单',
+    darkModeSwitchLabel: '主题',
+    lightModeSwitchTitle: '切换到浅色模式',
+    darkModeSwitchTitle: '切换到深色模式',
+
+    search: {
+      provider: 'local',
+      options: {
+        locales: {
+          zh: {
+            translations: {
+              button: {
+                buttonText: '搜索文档',
+                buttonAriaLabel: '搜索文档'
+              },
+              modal: {
+                noResultsText: '无法找到相关结果',
+                resetButtonTitle: '清除查询条件',
+                footer: {
+                  selectText: '选择',
+                  navigateText: '切换'
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 })
 `
-    
+
     await fs.writeFile(configPath, configContent)
-    console.log('⚙️ 更新 VitePress 配置完成')
-    
-    // 复制 logo 文件
-    const publicDir = path.join(docsDir, 'public')
-    await fs.mkdir(publicDir, { recursive: true })
-    
-    const logoSrc = path.join(process.cwd(), 'public', 'logo.png')
-    const logoDest = path.join(publicDir, 'logo.png')
-    
-    try {
-      await fs.copyFile(logoSrc, logoDest)
-      console.log('🖼️ 复制 logo 完成')
-    } catch (error) {
-      console.log('⚠️ logo 文件不存在，跳过复制')
-    }
-    
-    console.log('🎉 Wiki 构建完成！')
-    console.log('💡 运行以下命令启动文档服务：')
-    console.log('   cd docs && npm run docs:dev')
+    console.log('✅ VitePress配置已更新（保留原生功能和3D模型支持）')
+
+    // 生成文档文件
+    console.log('📝 生成文档文件...')
+    await generateDocuments(docsDir, categories, documents)
+
+    // 生成首页
+    await generateIndexPage(docsDir, categories, documents)
+
+    console.log('🎉 Wiki构建完成！')
+    console.log('💡 VitePress原生前端和md渲染器已保留，支持3D模型等高级功能')
     
   } catch (error) {
-    console.error('❌ 构建失败:', error)
-    process.exit(1)
-  } finally {
-    await client.close()
+    console.error('❌ Wiki构建失败:', error)
+    throw error
   }
 }
 
 // 如果直接运行此脚本
 if (require.main === module) {
   buildWiki()
+    .then(() => {
+      console.log('✨ 构建完成')
+      process.exit(0)
+    })
+    .catch((error) => {
+      console.error('构建失败:', error)
+      process.exit(1)
+    })
 }
 
+// 导出函数供API调用
 module.exports = buildWiki 

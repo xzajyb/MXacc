@@ -36,8 +36,9 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
+import WikiPage from './WikiPage'
 
-type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social'
+type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social' | 'wiki-admin'
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
@@ -73,8 +74,14 @@ const DashboardPage: React.FC = () => {
       id: 'wiki',
       label: '文档中心',
       icon: Book,
-      description: '查看平台文档和使用指南'
+      description: '查看系统文档和使用指南（VitePress原生界面）'
     },
+    ...(user?.role === 'admin' ? [{
+      id: 'wiki-admin',
+      label: 'Wiki管理',
+      icon: Settings,
+      description: '管理Wiki文档内容（管理员专用）'
+    }] : []),
     {
       id: 'profile',
       label: t.navigation.profile,
@@ -119,8 +126,8 @@ const DashboardPage: React.FC = () => {
       return
     }
     
-    // 如果邮箱未验证，除了验证邮箱、个人资料和社交功能，其他功能都禁用
-    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social') {
+    // 如果邮箱未验证，除了验证邮箱、个人资料、社交功能和Wiki管理，其他功能都禁用
+    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social' && viewId !== 'wiki-admin') {
       showWarning('请先验证邮箱后再使用此功能')
       return
     }
@@ -192,6 +199,8 @@ const DashboardPage: React.FC = () => {
       switch (activeView) {
         case 'social':
           return <SocialPage embedded={true} onUnreadCountChange={setSocialUnreadCount} />
+        case 'wiki-admin':
+          return <WikiPage embedded={true} />
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':
