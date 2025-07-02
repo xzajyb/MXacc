@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Search, X, FileText, Plus, Edit, Trash2, Settings, ArrowUp } from 'lucide-react'
+import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronUp, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
 import MarkdownRenderer from '@/components/VitePress/MarkdownRenderer'
@@ -13,7 +13,7 @@ interface DocContent {
   slug: string
   content: string
   category: string
-  categoryPath?: string
+  categoryPath: string
   path: string
   isPublic: boolean
   author: string
@@ -24,6 +24,7 @@ interface DocContent {
 
 interface Category {
   name: string
+  categoryPath: string
   path: string
   docs: DocContent[]
   subcategories?: Category[]
@@ -42,18 +43,38 @@ const DocsPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([])
   const [currentDoc, setCurrentDoc] = useState<DocContent | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false) // 移动端导航状态
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingDoc, setEditingDoc] = useState<DocContent | null>(null)
-  const [tocItems, setTocItems] = useState<TocItem[]>([])
+  const [showMobileNav, setShowMobileNav] = useState(false)
+  const [toc, setToc] = useState<TocItem[]>([])
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   // 管理员权限检查
   const isAdmin = user?.role === 'admin'
 
-  // 从Markdown内容提取目录
+  // 获取分类显示名称
+  const getCategoryName = (category: string): string => {
+    const categoryNames: Record<string, string> = {
+      'guide': '指南',
+      'api': 'API 文档',
+      'development': '开发',
+      'tutorial': '教程',
+      'faq': '常见问题',
+      'security': '安全',
+      'deployment': '部署',
+      'configuration': '配置',
+      'troubleshooting': '故障排除',
+      'best-practices': '最佳实践',
+      'advanced': '高级',
+      'basic': '基础'
+    }
+    return categoryNames[category] || category
+  }
+
+  // 提取文档目录
   const extractToc = (content: string): TocItem[] => {
     const lines = content.split('\n')
     const tocItems: TocItem[] = []
@@ -63,8 +84,7 @@ const DocsPage: React.FC = () => {
       if (match) {
         const level = match[1].length
         const text = match[2].trim()
-        // 使用和MarkdownRenderer相同的ID生成逻辑
-        const id = text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+        const id = `heading-${index}-${text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]/g, '-')}`
         
         tocItems.push({
           id,
@@ -77,39 +97,25 @@ const DocsPage: React.FC = () => {
     return tocItems
   }
 
-  // 平滑滚动到指定标题
+  // 滚动到标题
   const scrollToHeading = (id: string) => {
     const element = document.getElementById(id)
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-    // 移动端关闭导航
-    if (window.innerWidth < 1024) {
-      setSidebarOpen(false)
+      element.scrollIntoView({ behavior: 'smooth' })
+      // 移动端点击目录项后关闭导航
+      if (window.innerWidth < 1024) {
+        setShowMobileNav(false)
+      }
     }
   }
 
-  // 滚动到顶部
+  // 返回顶部
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
     if (window.innerWidth < 1024) {
-      setSidebarOpen(false)
+      setShowMobileNav(false)
     }
   }
-
-  // 检测窗口大小变化
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(false) // 桌面端不需要显示移动端导航
-      }
-    }
-    
-    window.addEventListener('resize', handleResize)
-    handleResize() // 初始检查
-    
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
 
   // 获取文档列表
   const fetchDocs = async () => {
@@ -137,17 +143,18 @@ const DocsPage: React.FC = () => {
     }
   }
 
-  // 组织文档结构（按分类路径树状排序）
+  // 组织文档结构 - 按categoryPath树状排序
   const organizeDocs = (docsData: DocContent[]) => {
     const categoryMap = new Map<string, Category>()
     
     docsData.forEach(doc => {
       const categoryPath = doc.categoryPath || doc.category || 'guide'
-      const categoryName = getCategoryDisplayName(categoryPath)
+      const category = doc.category || 'guide'
       
       if (!categoryMap.has(categoryPath)) {
         categoryMap.set(categoryPath, {
-          name: categoryName,
+          name: getCategoryName(category),
+          categoryPath: categoryPath,
           path: categoryPath,
           docs: []
         })
@@ -155,34 +162,24 @@ const DocsPage: React.FC = () => {
       categoryMap.get(categoryPath)!.docs.push(doc)
     })
     
-    // 按分类路径排序
+    // 按分类路径排序，然后按文档创建时间排序
     const sortedCategories = Array.from(categoryMap.values()).sort((a, b) => {
-      return a.path.localeCompare(b.path)
+      return a.categoryPath.localeCompare(b.categoryPath)
+    })
+    
+    sortedCategories.forEach(category => {
+      category.docs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     })
     
     setCategories(sortedCategories)
-  }
-
-  // 获取分类显示名称（中文）
-  const getCategoryDisplayName = (categoryPath: string): string => {
-    const pathMapping: Record<string, string> = {
-      'guide': '指南',
-      'api': 'API 文档',
-      'development': '开发',
-      'tutorial': '教程',
-      'faq': '常见问题',
-      'security': '安全',
-      'deployment': '部署',
-      'advanced': '高级用法',
-      'getting-started': '入门指南',
-      'configuration': '配置',
-      'troubleshooting': '故障排除'
-    }
     
-    // 处理嵌套路径，如 guide/advanced/security
-    const pathParts = categoryPath.split('/')
-    const displayParts = pathParts.map(part => pathMapping[part] || part)
-    return displayParts.join(' / ')
+    // 默认展开第一级分类
+    const firstLevelCategories = new Set(
+      sortedCategories
+        .filter(cat => !cat.categoryPath.includes('/'))
+        .map(cat => cat.categoryPath)
+    )
+    setExpandedCategories(firstLevelCategories)
   }
 
   // 获取单个文档内容
@@ -198,9 +195,7 @@ const DocsPage: React.FC = () => {
       const data = await response.json()
       if (data.success) {
         setCurrentDoc(data.doc)
-        // 提取目录
-        const toc = extractToc(data.doc.content)
-        setTocItems(toc)
+        setToc(extractToc(data.doc.content))
       } else {
         setError(data.message || '获取文档内容失败')
       }
@@ -219,6 +214,20 @@ const DocsPage: React.FC = () => {
       doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   }, [docs, searchQuery])
+
+  // 过滤后的分类
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery) return categories
+    
+    return categories.map(category => ({
+      ...category,
+      docs: category.docs.filter(doc =>
+        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    })).filter(category => category.docs.length > 0)
+  }, [categories, searchQuery])
 
   // 保存文档
   const handleSaveDoc = async (docData: any) => {
@@ -274,6 +283,7 @@ const DocsPage: React.FC = () => {
         // 如果删除的是当前文档，清空当前文档
         if (currentDoc?._id === docId) {
           setCurrentDoc(null)
+          setToc([])
         }
         // 刷新文档列表
         await fetchDocs()
@@ -292,6 +302,29 @@ const DocsPage: React.FC = () => {
     setEditingDoc(doc)
     setShowEditor(true)
   }
+
+  // 切换分类展开状态
+  const toggleCategory = (categoryPath: string) => {
+    const newExpanded = new Set(expandedCategories)
+    if (newExpanded.has(categoryPath)) {
+      newExpanded.delete(categoryPath)
+    } else {
+      newExpanded.add(categoryPath)
+    }
+    setExpandedCategories(newExpanded)
+  }
+
+  // 窗口大小变化监听
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setShowMobileNav(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     fetchDocs()
@@ -314,79 +347,149 @@ const DocsPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-white dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* 桌面端固定左侧导航 */}
-      <div className="hidden lg:block fixed left-0 top-0 h-screen w-80 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 z-40">
-        <div className="flex flex-col h-full">
-          {/* Logo区域 */}
-          <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white">MXacc</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">文档中心</p>
-              </div>
+      {/* 移动端头部 */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <img src="/logo.png" alt="MXacc" className="w-8 h-8" />
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">文档中心</h1>
+          </div>
+          <button
+            onClick={() => setShowMobileNav(true)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <Search size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* 左侧固定导航 */}
+      <div className={`fixed left-0 top-0 bottom-0 w-80 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 z-30 transform transition-transform duration-300 lg:translate-x-0 ${
+        showMobileNav ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        {/* Logo区域 */}
+        <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+          <div className="flex items-center space-x-3">
+            <img src="/logo.png" alt="MXacc" className="w-8 h-8" />
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">MXacc</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400">文档中心</p>
             </div>
           </div>
+        </div>
 
-          {/* 搜索框 */}
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-              <input
-                type="text"
-                placeholder="搜索文档..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+        {/* 搜索框 */}
+        <div className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="搜索文档..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white/50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
+            />
+          </div>
+        </div>
+
+        {/* 操作按钮 */}
+        {isAdmin && (
+          <div className="px-4 pb-4 space-y-2">
+            <button
+              onClick={() => setShowEditor(true)}
+              className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
+            >
+              <Plus size={16} />
+              <span>新建文档</span>
+            </button>
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className={`w-full px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
+                editMode 
+                  ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' 
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <Settings size={16} />
+              <span>{editMode ? '退出编辑' : '编辑模式'}</span>
+            </button>
+          </div>
+        )}
+
+        {/* 文档目录 */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {/* 返回顶部按钮 */}
+          <div className="mb-4">
+            <button
+              onClick={scrollToTop}
+              className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center space-x-2 text-sm"
+            >
+              <ChevronUp size={16} />
+              <span>返回顶部</span>
+            </button>
           </div>
 
-          {/* 操作按钮 */}
-          {isAdmin && (
-            <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 space-y-2">
-              <button
-                onClick={() => setShowEditor(true)}
-                className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
-              >
-                <Plus size={16} />
-                <span>新建文档</span>
-              </button>
-              <button
-                onClick={() => setEditMode(!editMode)}
-                className={`w-full px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
-                  editMode 
-                    ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <Settings size={16} />
-                <span>{editMode ? '退出编辑' : '编辑模式'}</span>
-              </button>
+          {/* 当前文档目录 */}
+          {currentDoc && toc.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                页面目录
+              </h4>
+              <div className="space-y-1">
+                {toc.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => scrollToHeading(item.id)}
+                    className={`w-full text-left px-3 py-1 rounded text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                      item.level === 1 ? 'font-semibold text-gray-900 dark:text-white' :
+                      item.level === 2 ? 'ml-3 text-gray-700 dark:text-gray-300' :
+                      item.level === 3 ? 'ml-6 text-gray-600 dark:text-gray-400' :
+                      'ml-9 text-gray-500 dark:text-gray-500'
+                    }`}
+                  >
+                    {item.text}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          <div className="flex-1 flex overflow-hidden">
-            {/* 文档列表 */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {categories.map((category) => (
-                <div key={category.path}>
-                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    {category.name}
-                  </h4>
-                  <ul className="space-y-1">
-                    {category.docs
-                      .filter(doc => 
-                        !searchQuery || 
-                        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        doc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-                      )
-                      .map((doc) => (
-                      <li key={doc._id}>
+          {/* 文档分类和列表 */}
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              文档导航
+            </h4>
+            <div className="space-y-2">
+              {filteredCategories.map((category) => (
+                <div key={category.categoryPath}>
+                  <button
+                    onClick={() => toggleCategory(category.categoryPath)}
+                    className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {expandedCategories.has(category.categoryPath) ? (
+                      <ChevronDown size={14} />
+                    ) : (
+                      <ChevronRight size={14} />
+                    )}
+                    {category.categoryPath.includes('/') ? (
+                      <FolderOpen size={14} />
+                    ) : (
+                      <Folder size={14} />
+                    )}
+                    <span className="truncate flex-1 text-left">
+                      {category.categoryPath.includes('/') ? 
+                        `└─ ${category.name}` : 
+                        category.name
+                      }
+                    </span>
+                    <span className="text-xs text-gray-400">({category.docs.length})</span>
+                  </button>
+                  
+                  {expandedCategories.has(category.categoryPath) && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {category.docs.map((doc) => (
                         <button
+                          key={doc._id}
                           onClick={() => fetchDoc(doc._id)}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
                             currentDoc?._id === doc._id
@@ -397,7 +500,7 @@ const DocsPage: React.FC = () => {
                           <FileText size={14} />
                           <span className="truncate flex-1">{doc.title}</span>
                           {isAdmin && editMode && (
-                            <div className="flex space-x-1">
+                            <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -421,183 +524,26 @@ const DocsPage: React.FC = () => {
                             </div>
                           )}
                         </button>
-                      </li>
-                    ))}
-                  </ul>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-
-            {/* 文档目录 */}
-            {currentDoc && tocItems.length > 0 && (
-              <div className="w-64 border-l border-gray-200/50 dark:border-gray-700/50 p-4 overflow-y-auto">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">文档目录</h4>
-                  <button
-                    onClick={scrollToTop}
-                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
-                    title="返回顶部"
-                  >
-                    <ArrowUp size={14} />
-                  </button>
-                </div>
-                <nav className="space-y-1">
-                  {tocItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => scrollToHeading(item.id)}
-                      className="block w-full text-left text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 py-1 transition-colors"
-                      style={{ 
-                        paddingLeft: `${(item.level - 1) * 12}px`,
-                        fontWeight: item.level === 1 ? 'bold' : 'normal'
-                      }}
-                    >
-                      {item.text}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* 移动端搜索按钮 */}
-      <div className="lg:hidden fixed top-4 right-4 z-50">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
-        >
-          <Search size={20} />
-        </button>
-      </div>
-
-      {/* 移动端导航面板 */}
-      {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-50">
-          {/* 遮罩层 */}
-          <div 
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setSidebarOpen(false)}
-          />
-          
-          {/* 导航面板 */}
-          <div className="absolute left-0 top-0 h-full w-80 max-w-[90vw] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl shadow-xl transform transition-transform">
-            <div className="flex flex-col h-full">
-              {/* 头部 */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-lg font-bold text-gray-900 dark:text-white">MXacc</h1>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">文档中心</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* 搜索和内容 */}
-              <div className="flex-1 overflow-hidden">
-                {/* 搜索框 */}
-                <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                    <input
-                      type="text"
-                      placeholder="搜索文档..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* 内容区域 */}
-                <div className="flex-1 overflow-y-auto p-4">
-                  {/* 当前文档目录 */}
-                  {currentDoc && tocItems.length > 0 && (
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">当前文档目录</h4>
-                        <button
-                          onClick={scrollToTop}
-                          className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 rounded"
-                          title="返回顶部"
-                        >
-                          <ArrowUp size={14} />
-                        </button>
-                      </div>
-                      <nav className="space-y-1 mb-6 pb-4 border-b border-gray-200/50 dark:border-gray-700/50">
-                        {tocItems.map((item) => (
-                          <button
-                            key={item.id}
-                            onClick={() => scrollToHeading(item.id)}
-                            className="block w-full text-left text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 py-1 transition-colors"
-                            style={{ 
-                              paddingLeft: `${(item.level - 1) * 12}px`,
-                              fontWeight: item.level === 1 ? 'bold' : 'normal'
-                            }}
-                          >
-                            {item.text}
-                          </button>
-                        ))}
-                      </nav>
-                    </div>
-                  )}
-
-                  {/* 文档列表 */}
-                  <div className="space-y-4">
-                    {categories.map((category) => (
-                      <div key={category.path}>
-                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                          {category.name}
-                        </h4>
-                        <ul className="space-y-1">
-                          {category.docs
-                            .filter(doc => 
-                              !searchQuery || 
-                              doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              doc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-                            )
-                            .map((doc) => (
-                            <li key={doc._id}>
-                              <button
-                                onClick={() => {
-                                  fetchDoc(doc._id)
-                                  setSidebarOpen(false)
-                                }}
-                                className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
-                                  currentDoc?._id === doc._id
-                                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
-                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                                }`}
-                              >
-                                <FileText size={14} />
-                                <span className="truncate flex-1">{doc.title}</span>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* 移动端遮罩层 */}
+      {showMobileNav && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={() => setShowMobileNav(false)}
+        />
       )}
 
       {/* 主内容区域 */}
-      <main className="lg:ml-80 min-h-screen">
+      <main className="lg:ml-80 min-h-screen pt-16 lg:pt-0">
         <div className="max-w-4xl mx-auto px-6 py-8">
           {currentDoc ? (
             <article className="vitepress-content">
@@ -610,7 +556,9 @@ const DocsPage: React.FC = () => {
               {isAdmin && (
                 <footer className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                    <span>作者: {currentDoc.author} • 更新于: {new Date(currentDoc.updatedAt).toLocaleDateString('zh-CN')}</span>
+                    <span>
+                      作者: {currentDoc.author} • 更新于: {new Date(currentDoc.updatedAt).toLocaleDateString('zh-CN')}
+                    </span>
                     <button
                       onClick={() => handleEditDoc(currentDoc)}
                       className="text-blue-600 dark:text-blue-400 hover:underline"

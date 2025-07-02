@@ -16,42 +16,6 @@ function verifyToken(authHeader) {
   }
 }
 
-// 分类名称映射表
-const categoryMapping = {
-  '指南': 'guide',
-  'API文档': 'api',
-  '教程': 'tutorial',
-  '常见问题': 'faq',
-  '开发': 'development',
-  '安全': 'security',
-  '部署': 'deployment',
-  '高级用法': 'advanced',
-  '入门': 'getting-started',
-  '配置': 'configuration',
-  '故障排除': 'troubleshooting'
-}
-
-// 生成英文路径
-function generateEnglishPath(chineseName) {
-  // 首先检查预设映射
-  if (categoryMapping[chineseName]) {
-    return categoryMapping[chineseName]
-  }
-  
-  // 如果没有预设映射，生成英文路径
-  return chineseName
-    .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-}
-
-// 构建分类路径
-function buildCategoryPath(categories, categoryName, parentPath = '') {
-  const englishName = generateEnglishPath(categoryName)
-  return parentPath ? `${parentPath}/${englishName}` : englishName
-}
-
 // 检查用户是否被封禁
 async function checkUserBanStatus(db, userId) {
   const activeBan = await db.collection('user_bans').findOne({
@@ -163,7 +127,6 @@ module.exports = async function handler(req, res) {
     const titles = db.collection('user_titles')
     const userTitles = db.collection('user_title_assignments')
     const docs = db.collection('docs') // 添加文档集合
-    const categories = db.collection('doc_categories') // 添加分类集合
 
     // 验证用户身份
     console.log('🔍 开始验证用户身份...')
@@ -225,23 +188,9 @@ module.exports = async function handler(req, res) {
 
     // GET: 获取内容
     if (req.method === 'GET') {
-      const { action, type = 'feed', page = 1, limit = 10, postId, commentId, docId, slug, category } = req.query
+      const { action, type = 'feed', page = 1, limit = 10, postId, commentId, docId, slug, category, categoryPath } = req.query
 
-      // 获取文档分类列表
-      if (action === 'get-categories') {
-        try {
-          const categoriesList = await categories.find({}).sort({ path: 1 }).toArray()
-          return res.status(200).json({
-            success: true,
-            categories: categoriesList
-          })
-        } catch (error) {
-          console.error('获取分类失败:', error)
-          return res.status(500).json({ success: false, message: '获取分类失败' })
-        }
-      }
-
-      // 获取文档列表（按分类路径树状排序）
+      // 获取文档列表
       if (action === 'get-docs') {
         let query = {}
         
@@ -256,7 +205,11 @@ module.exports = async function handler(req, res) {
         }
 
         const docsList = await docs.find(query)
-          .sort({ categoryPath: 1, category: 1, createdAt: -1 }) // 改进的排序：先按分类路径，再按分类，最后按时间
+          .sort({ 
+            categoryPath: 1,  // 首先按分类路径排序
+            category: 1,      // 然后按分类排序
+            createdAt: -1     // 最后按创建时间倒序
+          })
           .toArray()
 
         return res.status(200).json({
@@ -297,6 +250,50 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           success: true,
           doc: doc
+        })
+      }
+
+      // 获取文档分类
+      if (action === 'get-categories') {
+        let query = {}
+        
+        // 非管理员只能看到公开文档的分类
+        if (currentUser.role !== 'admin') {
+          query.isPublic = true
+        }
+
+        const categories = await docs.aggregate([
+          { $match: query },
+          { 
+            $group: { 
+              _id: {
+                category: '$category',
+                categoryPath: '$categoryPath'
+              },
+              count: { $sum: 1 },
+              docs: { 
+                $push: { 
+                  _id: '$_id',
+                  title: '$title',
+                  slug: '$slug',
+                  path: '$path',
+                  categoryPath: '$categoryPath',
+                  updatedAt: '$updatedAt'
+                } 
+              }
+            } 
+          },
+          { $sort: { '_id.categoryPath': 1, '_id.category': 1 } }
+        ]).toArray()
+
+        return res.status(200).json({
+          success: true,
+          categories: categories.map(cat => ({
+            name: cat._id.category,
+            categoryPath: cat._id.categoryPath,
+            count: cat.count,
+            docs: cat.docs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          }))
         })
       }
 
@@ -839,130 +836,7 @@ module.exports = async function handler(req, res) {
         }
       }
       
-      const { action, postId, commentId, content, images, parentId, replyTo, title, slug, category, tags, isPublic, docId } = body
-
-      // 分类管理功能
-      // 创建分类
-      if (action === 'create-category') {
-        // 检查管理员权限
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ 
-            success: false, 
-            message: '只有管理员可以创建分类' 
-          })
-        }
-
-        const { name, englishName, parentId } = body
-        
-        if (!name) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '分类名称不能为空' 
-          })
-        }
-
-        // 生成英文路径
-        const autoEnglishName = generateEnglishPath(name)
-        const finalEnglishName = englishName || autoEnglishName
-
-        // 构建分类路径
-        let categoryPath = finalEnglishName
-        let parentPath = ''
-        
-        if (parentId) {
-          const parentCategory = await categories.findOne({ _id: new ObjectId(parentId) })
-          if (!parentCategory) {
-            return res.status(400).json({ 
-              success: false, 
-              message: '父分类不存在' 
-            })
-          }
-          parentPath = parentCategory.path
-          categoryPath = `${parentPath}/${finalEnglishName}`
-        }
-
-        // 检查分类路径是否已存在
-        const existingCategory = await categories.findOne({ path: categoryPath })
-        if (existingCategory) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '分类路径已存在' 
-          })
-        }
-
-        const newCategory = {
-          name: name.trim(),
-          englishName: finalEnglishName,
-          path: categoryPath,
-          parentId: parentId ? new ObjectId(parentId) : null,
-          level: parentPath ? parentPath.split('/').length : 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-
-        const result = await categories.insertOne(newCategory)
-
-        return res.status(201).json({
-          success: true,
-          message: '分类创建成功',
-          data: {
-            id: result.insertedId,
-            ...newCategory
-          }
-        })
-      }
-
-      // 删除分类
-      if (action === 'delete-category') {
-        // 检查管理员权限
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ 
-            success: false, 
-            message: '只有管理员可以删除分类' 
-          })
-        }
-
-        const { categoryId } = body
-        
-        if (!categoryId) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '分类ID不能为空' 
-          })
-        }
-
-        // 检查是否有子分类
-        const subCategories = await categories.find({ parentId: new ObjectId(categoryId) }).toArray()
-        if (subCategories.length > 0) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '该分类下还有子分类，请先删除子分类' 
-          })
-        }
-
-        // 检查是否有文档使用此分类
-        const docsUsingCategory = await docs.find({ category: categoryId }).toArray()
-        if (docsUsingCategory.length > 0) {
-          return res.status(400).json({ 
-            success: false, 
-            message: '该分类下还有文档，请先移动或删除相关文档' 
-          })
-        }
-
-        const result = await categories.deleteOne({ _id: new ObjectId(categoryId) })
-
-        if (result.deletedCount === 0) {
-          return res.status(404).json({ 
-            success: false, 
-            message: '分类不存在' 
-          })
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: '分类删除成功'
-        })
-      }
+      const { action, postId, commentId, content, images, parentId, replyTo, title, slug, category, categoryPath, tags, isPublic, docId } = body
 
       // 文档管理功能
       // 创建文档
@@ -997,31 +871,13 @@ module.exports = async function handler(req, res) {
           })
         }
 
-        // 构建分类路径
-        let categoryPath = 'guide' // 默认分类
-        if (category) {
-          const categoryDoc = await categories.findOne({ 
-            $or: [
-              { _id: ObjectId.isValid(category) ? new ObjectId(category) : null },
-              { englishName: category },
-              { name: category }
-            ]
-          })
-          
-          if (categoryDoc) {
-            categoryPath = categoryDoc.path
-          } else {
-            categoryPath = generateEnglishPath(category)
-          }
-        }
-
         const newDoc = {
           title: title.trim(),
           slug: docSlug,
           content: content.trim(),
           category: category || 'guide',
-          categoryPath: categoryPath,
-          path: `/${categoryPath}/${docSlug}`,
+          categoryPath: categoryPath || (category || 'guide'),
+          path: `/${categoryPath || (category || 'guide')}/${docSlug}`,
           isPublic: isPublic !== false, // 默认公开
           author: currentUser.username,
           authorId: new ObjectId(decoded.userId),
@@ -1066,54 +922,32 @@ module.exports = async function handler(req, res) {
         if (title) updateData.title = title.trim()
         if (content) updateData.content = content.trim()
         if (category) updateData.category = category
+        if (categoryPath) updateData.categoryPath = categoryPath
         if (tags) updateData.tags = tags
         if (typeof isPublic === 'boolean') updateData.isPublic = isPublic
 
-        // 如果更新了标题、slug或分类，重新生成路径
-        if (title || slug || category) {
-          const newSlug = slug || title?.toLowerCase()
+        // 如果更新了标题或slug，重新生成路径
+        if (title || slug) {
+          const newSlug = slug || title.toLowerCase()
             .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
             .replace(/-+/g, '-')
-            .replace(/^-|-$/g, '') || undefined
+            .replace(/^-|-$/g, '')
           
-          // 如果有新的slug，检查是否与其他文档冲突
-          if (newSlug) {
-            const existingDoc = await docs.findOne({ 
-              slug: newSlug, 
-              _id: { $ne: new ObjectId(docId) } 
+          // 检查新slug是否与其他文档冲突
+          const existingDoc = await docs.findOne({ 
+            slug: newSlug, 
+            _id: { $ne: new ObjectId(docId) } 
+          })
+          
+          if (existingDoc) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '文档URL已存在，请使用不同的标题或自定义URL' 
             })
-            
-            if (existingDoc) {
-              return res.status(400).json({ 
-                success: false, 
-                message: '文档URL已存在，请使用不同的标题或自定义URL' 
-              })
-            }
-            updateData.slug = newSlug
           }
 
-          // 构建分类路径
-          let categoryPath = 'guide' // 默认分类
-          const finalCategory = category || updateData.category || 'guide'
-          
-          if (finalCategory) {
-            const categoryDoc = await categories.findOne({ 
-              $or: [
-                { _id: ObjectId.isValid(finalCategory) ? new ObjectId(finalCategory) : null },
-                { englishName: finalCategory },
-                { name: finalCategory }
-              ]
-            })
-            
-            if (categoryDoc) {
-              categoryPath = categoryDoc.path
-            } else {
-              categoryPath = generateEnglishPath(finalCategory)
-            }
-          }
-
-          updateData.categoryPath = categoryPath
-          updateData.path = `/${categoryPath}/${newSlug || updateData.slug}`
+          updateData.slug = newSlug
+          updateData.path = `/${updateData.categoryPath || updateData.category || 'guide'}/${newSlug}`
         }
 
         const result = await docs.updateOne(

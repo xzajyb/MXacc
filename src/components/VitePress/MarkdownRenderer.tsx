@@ -184,8 +184,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
       // 标题
       if (line.startsWith('#')) {
         const level = line.match(/^#+/)?.[0].length || 1
-        const text = line.replace(/^#+\s*/, '')
-        const id = text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+        const text = line.replace(/^#+\s*/, '').trim()
+        const id = `heading-${i}-${text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]/g, '-')}`
         
         const Tag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements
         const classes = {
