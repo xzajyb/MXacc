@@ -415,6 +415,52 @@ const DocsPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
             </div>
 
+            {/* 移动端也显示文章目录 */}
+            {currentDoc && currentToc.length > 0 && (
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    文章目录
+                  </h4>
+                  <button
+                    onClick={() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                      setSidebarOpen(false)
+                      setShowMobileSearch(false)
+                    }}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    title="返回顶部"
+                  >
+                    ↑ 顶部
+                  </button>
+                </div>
+                <div className="max-h-32 overflow-y-auto">
+                  <ul className="space-y-1">
+                    {currentToc.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => {
+                            scrollToHeading(item.id)
+                            setSidebarOpen(false)
+                            setShowMobileSearch(false)
+                          }}
+                          className={`w-full text-left py-1 px-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                            item.level === 1 
+                              ? 'font-medium text-gray-900 dark:text-white' 
+                              : item.level === 2
+                                ? 'font-normal text-gray-700 dark:text-gray-300 pl-4'
+                                : 'text-gray-600 dark:text-gray-400 pl-6'
+                          }`}
+                        >
+                          <span className="truncate block">{item.title}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {/* 管理员操作 */}
             {isAdmin && (
               <div className="space-y-2">
