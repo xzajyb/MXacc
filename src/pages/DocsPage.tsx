@@ -412,20 +412,20 @@ const DocsPage: React.FC = () => {
                   <span>{editMode ? '退出编辑' : '编辑模式'}</span>
                 </button>
             </div>
-          )}
-
+            )}
+            
           {/* 文档目录 */}
           <div className="flex-1 overflow-y-auto px-4 pb-4 min-h-0">
             {/* 返回顶部按钮 */}
             <div className="mb-4">
-              <button
+            <button
                 onClick={scrollToTop}
                 className="w-full px-3 py-2 bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200/90 dark:hover:bg-gray-600/90 transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm"
-              >
+            >
                 <ChevronUp size={16} />
                 <span>返回顶部</span>
-              </button>
-            </div>
+            </button>
+          </div>
 
             {/* 当前文档目录 */}
             {currentDoc && toc.length > 0 && (
@@ -456,7 +456,7 @@ const DocsPage: React.FC = () => {
             <div>
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                 文档导航
-              </h4>
+                  </h4>
               <div className="space-y-1">
                 {filteredCategories.map((category) => {
                   const depth = category.categoryPath.split('/').length - 1
@@ -492,69 +492,68 @@ const DocsPage: React.FC = () => {
                       
                       {expandedCategories.has(category.categoryPath) && (
                         <div className="ml-4 mt-1 space-y-1">
-                          {category.docs.map((doc) => (
-                            <button
+                    {category.docs.map((doc) => (
+                        <button
                               key={doc._id}
-                              onClick={() => fetchDoc(doc._id)}
+                          onClick={() => fetchDoc(doc._id)}
                               className={`w-full text-left px-2 py-1.5 rounded-lg transition-colors flex items-center space-x-2 text-xs backdrop-blur-sm ${
-                                currentDoc?._id === doc._id
+                            currentDoc?._id === doc._id
                                   ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
                                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
-                              }`}
-                            >
+                          }`}
+                        >
                               <FileText size={12} />
-                              <span className="truncate flex-1">{doc.title}</span>
-                              {isAdmin && editMode && (
+                          <span className="truncate flex-1">{doc.title}</span>
+                          {isAdmin && editMode && (
                                 <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleEditDoc(doc)
-                                    }}
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditDoc(doc)
+                                }}
                                     className="p-1 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 rounded"
-                                    title="编辑文档"
-                                  >
+                                title="编辑文档"
+                              >
                                     <Edit size={8} />
-                                  </button>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDeleteDoc(doc._id)
-                                    }}
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteDoc(doc._id)
+                                }}
                                     className="p-1 hover:bg-red-200/80 dark:hover:bg-red-900/80 rounded"
-                                    title="删除文档"
-                                  >
+                                title="删除文档"
+                              >
                                     <Trash2 size={8} />
-                                  </button>
-                                </div>
-                              )}
-                            </button>
-                          ))}
+                              </button>
+                            </div>
+                          )}
+                        </button>
+                    ))}
                         </div>
                       )}
                     </div>
                   )
                 })}
-              </div>
+                </div>
             </div>
           </div>
         </div>
       </div>
 
             {/* 移动端弹窗导航 - 使用Portal渲染解决层级问题 */}
-      <AnimatePresence>
-        {showMobileNav && typeof document !== 'undefined' && createPortal(
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+      {(() => {
+        console.log('弹窗渲染检查：', { 
+          showMobileNav, 
+          documentExists: typeof document !== 'undefined',
+          shouldRender: showMobileNav && typeof document !== 'undefined'
+        })
+        return showMobileNav && typeof document !== 'undefined' && createPortal(
+          <div
             className="fixed inset-0 bg-black/50 z-[99999] flex items-center justify-center p-4"
             onClick={() => setShowMobileNav(false)}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            <div
               className="w-full max-w-md max-h-[85vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/50 dark:border-gray-700/50"
               onClick={(e) => e.stopPropagation()}
             >
@@ -724,11 +723,11 @@ const DocsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>,
+            </div>
+          </div>,
           document.body
-        )}
-      </AnimatePresence>
+        )
+      })()}
 
       {/* 主内容区域 */}
       <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-4 lg:py-8">
@@ -737,7 +736,10 @@ const DocsPage: React.FC = () => {
             <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 lg:p-8 relative">
               {/* 移动端搜索按钮 - 位于文章内部右上角 */}
               <button
-                onClick={() => setShowMobileNav(true)}
+                onClick={() => {
+                  console.log('点击搜索按钮，当前状态：', showMobileNav)
+                  setShowMobileNav(true)
+                }}
                 className="lg:hidden absolute top-4 right-4 z-30 p-3 bg-blue-50/80 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-md hover:bg-blue-100/80 dark:hover:bg-blue-900/70 transition-all duration-200 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
               >
                 <Search size={18} />
@@ -769,7 +771,10 @@ const DocsPage: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 lg:p-12 text-center relative">
               {/* 移动端搜索按钮 - 欢迎页面也显示 */}
               <button
-                onClick={() => setShowMobileNav(true)}
+                onClick={() => {
+                  console.log('点击欢迎页搜索按钮，当前状态：', showMobileNav)
+                  setShowMobileNav(true)
+                }}
                 className="lg:hidden absolute top-4 right-4 z-30 p-3 bg-blue-50/80 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-md hover:bg-blue-100/80 dark:hover:bg-blue-900/70 transition-all duration-200 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
               >
                 <Search size={18} />
