@@ -103,10 +103,113 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
     return markdownIt
   }, [])
 
+  // 模拟Vue数据环境
+  const createVueDataContext = () => {
+    return {
+      // 模拟enchants数据
+      enchants: [
+        { name: '力量', description: '增加攻击力', items: ['剑', '斧头'] },
+        { name: '敏捷', description: '增加移动速度', items: ['靴子', '护腿'] },
+        { name: '智慧', description: '增加魔法值', items: ['法杖', '水晶'] }
+      ],
+      selectedQualities: ['epic', 'legendary'],
+      quality: { label: '史诗' },
+      // 工具函数
+      getQualityLabel: (q: any) => q?.label || '未知',
+      filteredEnchants: [] as any[]
+    }
+  }
+
+  // 处理Vue语法执行
+  const executeVueTemplate = (html: string): string => {
+    const context = createVueDataContext()
+    context.filteredEnchants = context.enchants // 模拟过滤结果
+    
+    let result = html
+    
+    // 处理 v-for 指令
+    result = result.replace(
+      /<([^>]+)\s+v-for="([^"]+)"\s*([^>]*)>(.*?)<\/\1>/gs,
+      (match, tag, forExpression, attrs, content) => {
+        // 解析 v-for 表达式 "enchant in filteredEnchants"
+        const forMatch = forExpression.match(/(\w+)\s+in\s+(\w+)/)
+        if (!forMatch) return match
+
+        const [, itemName, arrayName] = forMatch
+        const array = (context as any)[arrayName] || []
+        
+        return array.map((item: any) => {
+          let itemContent = content
+                     // 替换插值表达式
+           itemContent = itemContent.replace(
+             new RegExp(`{{\\s*${itemName}\\.(\\w+)\\s*}}`, 'g'),
+             (_: string, prop: string) => item[prop] || ''
+           )
+           // 处理嵌套的方法调用
+           itemContent = itemContent.replace(
+             new RegExp(`{{\\s*getQualityLabel\\(${itemName}\\)\\s*}}`, 'g'),
+             () => context.getQualityLabel(item)
+           )
+           // 处理数组连接
+           itemContent = itemContent.replace(
+             new RegExp(`{{\\s*${itemName}\\.(\\w+)\\.join\\('([^']*)'\\)\\s*}}`, 'g'),
+             (_: string, prop: string, separator: string) => {
+               const arr = item[prop]
+               return Array.isArray(arr) ? arr.join(separator) : ''
+             }
+           )
+          
+          return `<${tag} ${attrs}>${itemContent}</${tag}>`
+        }).join('')
+      }
+    )
+    
+    // 处理简单插值表达式
+    result = result.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, expression) => {
+      try {
+        // 处理简单的属性访问
+        if (expression.includes('.length')) {
+          const prop = expression.replace('.length', '')
+          const value = (context as any)[prop]
+          return Array.isArray(value) ? value.length.toString() : '0'
+        }
+        
+        // 处理对象属性访问
+        const parts = expression.split('.')
+        let value: any = context
+        for (const part of parts) {
+          value = value?.[part]
+        }
+        return value?.toString() || expression
+      } catch (e) {
+        return `<span class="vue-interpolation">${expression}</span>`
+      }
+    })
+    
+    // 处理 v-if 指令（简单实现）
+    result = result.replace(
+      /<([^>]+)\s+v-if="([^"]+)"\s*([^>]*)>(.*?)<\/\1>/gs,
+      (match, tag, condition, attrs, content) => {
+        // 简单的条件判断
+        try {
+          const shouldShow = eval(condition.replace(/\w+\./g, 'context.'))
+          return shouldShow ? `<${tag} ${attrs}>${content}</${tag}>` : ''
+        } catch (e) {
+          return match // 如果条件解析失败，保持原样
+        }
+      }
+    )
+
+    return result
+  }
+
   // 处理Vue组件语法
   const processVueComponents = (html: string) => {
-    // 处理Vue指令和插值语法
-    return html
+    // 首先执行Vue模板语法
+    let processedHtml = executeVueTemplate(html)
+    
+    // 然后处理剩余的Vue指令（转换为data属性用于样式）
+    processedHtml = processedHtml
       .replace(/v-for="([^"]+)"/g, (match, content) => {
         return `data-v-for="${content}"`
       })
@@ -119,15 +222,14 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
       .replace(/@click="([^"]+)"/g, (match, content) => {
         return `data-click="${content}"`
       })
-      .replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, content) => {
-        return `<span class="vue-interpolation" data-content="${content.trim()}">${content.trim()}</span>`
-      })
       .replace(/:class="([^"]+)"/g, (match, content) => {
         return `data-dynamic-class="${content}"`
       })
       .replace(/:key="([^"]+)"/g, (match, content) => {
         return `data-key="${content}"`
       })
+
+    return processedHtml
   }
 
   // 渲染HTML
