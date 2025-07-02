@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Save, Eye, Code, FileText, Tag, Globe, Lock, Upload, Plus, Trash2, Folder, FolderOpen } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -237,13 +238,15 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
 
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+  // 使用 React Portal 渲染到 body，确保不受父容器影响
+  const modalContent = (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -521,6 +524,13 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
       </motion.div>
     </div>
   )
+
+  // 使用 React Portal 渲染到 body
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  return createPortal(modalContent, document.body)
 }
 
 export default DocEditor 
