@@ -11,9 +11,12 @@ interface VueComponentData {
   id: string
   template: string
   script?: string
+  scriptSetup?: string
   style?: string
   data?: any
   methods?: any
+  reactiveData?: any
+  computed?: any
   mounted?: boolean
 }
 
@@ -137,11 +140,13 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
   const renderVueComponent = (vueCode: string, componentId: string) => {
     // 解析Vue组件
     const templateMatch = vueCode.match(/<template>([\s\S]*?)<\/template>/)
-    const scriptMatch = vueCode.match(/<script>([\s\S]*?)<\/script>/)
+    const scriptMatch = vueCode.match(/<script(?!\s+setup)(?:[^>]*)>([\s\S]*?)<\/script>/)
+    const scriptSetupMatch = vueCode.match(/<script\s+setup(?:[^>]*)>([\s\S]*?)<\/script>/)
     const styleMatch = vueCode.match(/<style[^>]*>([\s\S]*?)<\/style>/)
 
     const template = templateMatch ? templateMatch[1].trim() : vueCode
     const script = scriptMatch ? scriptMatch[1].trim() : ''
+    const scriptSetup = scriptSetupMatch ? scriptSetupMatch[1].trim() : ''
     const style = styleMatch ? styleMatch[1].trim() : ''
 
     // 创建Vue组件数据
@@ -149,36 +154,31 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
       id: componentId,
       template,
       script,
+      scriptSetup,
       style,
       data: {},
       methods: {},
+      reactiveData: {},
+      computed: {},
       mounted: false
     }
 
-    // 执行Vue脚本
+    // 处理Vue 3 script setup语法
+    if (scriptSetup) {
+      try {
+        // 解析script setup中的响应式数据
+        parseScriptSetup(scriptSetup, componentData)
+      } catch (e) {
+        console.warn('Failed to parse script setup:', e)
+      }
+    }
+
+    // 处理传统Vue 2语法
     if (script) {
       try {
-        // 创建一个安全的执行环境
-        const dataMatch = script.match(/data\s*\(\s*\)\s*\{[\s\S]*?return\s*(\{[\s\S]*?\})/s)
-        const methodsMatch = script.match(/methods\s*:\s*(\{[\s\S]*?\})/s)
-
-        if (dataMatch) {
-          try {
-            componentData.data = new Function('return ' + dataMatch[1])()
-          } catch (e) {
-            console.warn('Failed to parse Vue data:', e)
-          }
-        }
-
-        if (methodsMatch) {
-          try {
-            componentData.methods = new Function('return ' + methodsMatch[1])()
-          } catch (e) {
-            console.warn('Failed to parse Vue methods:', e)
-          }
-        }
+        parseTraditionalScript(script, componentData)
       } catch (e) {
-        console.warn('Failed to execute Vue script:', e)
+        console.warn('Failed to parse traditional script:', e)
       }
     }
 
@@ -189,18 +189,22 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
     return `<div class="vue-component-container" data-component-id="${componentId}">
       <div class="vue-component-preview">
         <div class="vue-preview-header">
-          <span class="vue-preview-title">🚀 Vue组件预览</span>
+          <span class="vue-preview-title">🚀 Vue ${scriptSetup ? '3 Composition' : '2 Options'} API</span>
           <button class="vue-run-button" onclick="runVueComponent('${componentId}')">
             ▶️ 运行组件
           </button>
         </div>
         <div class="vue-preview-content" id="vue-preview-${componentId}">
-          <div class="vue-placeholder">👆 点击"运行组件"按钮查看Vue组件效果</div>
+          <div class="vue-placeholder">
+            👆 点击"运行组件"按钮查看Vue组件效果
+            <br/>
+            <small>支持${scriptSetup ? 'Composition API、响应式数据和计算属性' : '传统Options API和数据绑定'}</small>
+          </div>
         </div>
       </div>
       <div class="vue-component-code">
         <div class="code-block-header">
-          <span class="code-lang">vue</span>
+          <span class="code-lang">vue ${scriptSetup ? '(setup)' : '(options)'}</span>
           <button class="copy-button" onclick="copyCode('${componentId}')">
             <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
@@ -213,7 +217,118 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
     </div>`
   }
 
-  // 运行Vue组件
+  // 解析Vue 3 script setup语法
+  const parseScriptSetup = (scriptSetup: string, componentData: VueComponentData) => {
+    // 解析ref定义
+    const refMatches = scriptSetup.match(/const\s+(\w+)\s*=\s*ref\s*\(\s*([^)]+)\s*\)/g)
+    if (refMatches) {
+      refMatches.forEach(match => {
+        const refMatch = match.match(/const\s+(\w+)\s*=\s*ref\s*\(\s*([^)]+)\s*\)/)
+        if (refMatch) {
+          const [, varName, value] = refMatch
+          try {
+            componentData.reactiveData[varName] = JSON.parse(value.trim())
+          } catch {
+            // 如果不是JSON，尝试作为字符串或表达式处理
+            const cleanValue = value.trim().replace(/^['"`]|['"`]$/g, '')
+            componentData.reactiveData[varName] = cleanValue
+          }
+        }
+      })
+    }
+
+    // 解析reactive定义
+    const reactiveMatches = scriptSetup.match(/const\s+(\w+)\s*=\s*reactive\s*\(\s*(\{[\s\S]*?\})\s*\)/g)
+    if (reactiveMatches) {
+      reactiveMatches.forEach(match => {
+        const reactiveMatch = match.match(/const\s+(\w+)\s*=\s*reactive\s*\(\s*(\{[\s\S]*?\})\s*\)/)
+        if (reactiveMatch) {
+          const [, varName, value] = reactiveMatch
+          try {
+            componentData.reactiveData[varName] = new Function('return ' + value)()
+          } catch (e) {
+            console.warn('Failed to parse reactive data:', e)
+          }
+        }
+      })
+    }
+
+    // 解析computed属性
+    const computedMatches = scriptSetup.match(/const\s+(\w+)\s*=\s*computed\s*\(\s*\(\s*\)\s*=>\s*([\s\S]*?)\s*\)/g)
+    if (computedMatches) {
+      computedMatches.forEach(match => {
+        const computedMatch = match.match(/const\s+(\w+)\s*=\s*computed\s*\(\s*\(\s*\)\s*=>\s*([\s\S]*?)\s*\)/)
+        if (computedMatch) {
+          const [, varName, computation] = computedMatch
+          componentData.computed[varName] = computation.trim()
+        }
+      })
+    }
+
+    // 解析函数定义
+    const functionMatches = scriptSetup.match(/const\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*\{([^}]*)\}/g)
+    if (functionMatches) {
+      functionMatches.forEach(match => {
+        const funcMatch = match.match(/const\s+(\w+)\s*=\s*\([^)]*\)\s*=>\s*\{([^}]*)\}/)
+        if (funcMatch) {
+          const [, funcName, funcBody] = funcMatch
+          componentData.methods[funcName] = new Function(funcBody.trim())
+        }
+      })
+    }
+
+    // 解析数组数据（从大段落中提取）
+    const arrayMatches = scriptSetup.match(/const\s+(\w+)\s*=\s*(\[[\s\S]*?\])/g)
+    if (arrayMatches) {
+      arrayMatches.forEach(match => {
+        const arrayMatch = match.match(/const\s+(\w+)\s*=\s*(\[[\s\S]*?\])/)
+        if (arrayMatch) {
+          const [, varName, arrayValue] = arrayMatch
+          try {
+            // 尝试解析数组
+            componentData.reactiveData[varName] = new Function('return ' + arrayValue)()
+          } catch (e) {
+            console.warn('Failed to parse array data:', e)
+          }
+        }
+      })
+    }
+  }
+
+  // 解析传统Vue 2语法
+  const parseTraditionalScript = (script: string, componentData: VueComponentData) => {
+    // 解析data函数
+    const dataMatch = script.match(/data\s*\(\s*\)\s*\{[\s\S]*?return\s*(\{[\s\S]*?\})/s)
+    if (dataMatch) {
+      try {
+        componentData.data = new Function('return ' + dataMatch[1])()
+      } catch (e) {
+        console.warn('Failed to parse Vue data:', e)
+      }
+    }
+
+    // 解析methods
+    const methodsMatch = script.match(/methods\s*:\s*(\{[\s\S]*?\})/s)
+    if (methodsMatch) {
+      try {
+        componentData.methods = new Function('return ' + methodsMatch[1])()
+      } catch (e) {
+        console.warn('Failed to parse Vue methods:', e)
+      }
+    }
+
+    // 解析computed
+    const computedMatch = script.match(/computed\s*:\s*(\{[\s\S]*?\})/s)
+    if (computedMatch) {
+      try {
+        componentData.computed = new Function('return ' + computedMatch[1])()
+      } catch (e) {
+        console.warn('Failed to parse Vue computed:', e)
+      }
+    }
+  }
+
+  // 运行Vue组件（增强版支持Vue 3）
   const runVueComponent = (componentId: string) => {
     const component = vueComponents.find(c => c.id === componentId)
     if (!component) return
@@ -222,30 +337,73 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
     if (!previewElement) return
 
     try {
+      // 合并所有数据源
+      const allData = {
+        ...component.data,
+        ...component.reactiveData
+      }
+
       // 处理Vue模板
       let processedTemplate = component.template
 
-      // 处理Vue指令和插值
-      Object.entries(component.data || {}).forEach(([key, value]) => {
+      // 计算computed属性
+      Object.entries(component.computed || {}).forEach(([key, computation]) => {
+        try {
+          const computeFunc = new Function(...Object.keys(allData), `return ${computation}`)
+          allData[key] = computeFunc(...Object.values(allData))
+        } catch (e) {
+          console.warn(`Failed to compute ${key}:`, e)
+        }
+      })
+
+      // 处理插值语法
+      Object.entries(allData).forEach(([key, value]) => {
         const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g')
         processedTemplate = processedTemplate.replace(regex, String(value))
       })
 
-      // 处理v-for指令
-      processedTemplate = processedTemplate.replace(
-        /(<[^>]+)v-for="([^"]+)"([^>]*>)/g,
-        (match, start, forExpr, end) => {
-          const [item, array] = forExpr.split(' in ').map((s: string) => s.trim())
-          const arrayData = component.data?.[array] || []
+      // 处理复杂插值（如对象属性访问）
+      processedTemplate = processedTemplate.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, expression) => {
+        try {
+          // 移除可能的函数调用，只处理属性访问
+          if (expression.includes('(') && expression.includes(')')) {
+            return match // 保持原样，不处理函数调用
+          }
           
-          if (Array.isArray(arrayData)) {
-            return arrayData.map((itemData: any, index: number) => {
-              let itemHtml = start + end
-              itemHtml = itemHtml.replace(new RegExp(`\\{\\{\\s*${item}\\s*\\}\\}`, 'g'), String(itemData))
-              itemHtml = itemHtml.replace(new RegExp(`\\{\\{\\s*${item}\\.([^}]+)\\s*\\}\\}`, 'g'), 
-                (_m: string, prop: string) => String((itemData as any)[prop] || ''))
-              return itemHtml
-            }).join('')
+          const func = new Function(...Object.keys(allData), `return ${expression}`)
+          return String(func(...Object.values(allData)))
+        } catch (e) {
+          return match // 如果解析失败，保持原样
+        }
+      })
+
+      // 处理v-for指令（增强版）
+      processedTemplate = processedTemplate.replace(
+        /(<[^>]+)v-for="([^"]+)"([^>]*>[\s\S]*?<\/[^>]+>)/g,
+        (match, start, forExpr, rest) => {
+          try {
+            const [item, array] = forExpr.split(' in ').map((s: string) => s.trim())
+            const arrayData = allData[array] || []
+            
+            if (Array.isArray(arrayData)) {
+              return arrayData.map((itemData: any, index: number) => {
+                let itemHtml = start + rest
+                // 移除v-for属性
+                itemHtml = itemHtml.replace(/v-for="[^"]*"/, '')
+                
+                // 替换item引用
+                itemHtml = itemHtml.replace(new RegExp(`\\{\\{\\s*${item}\\s*\\}\\}`, 'g'), String(itemData))
+                itemHtml = itemHtml.replace(new RegExp(`\\{\\{\\s*${item}\\.([^}]+)\\s*\\}\\}`, 'g'), 
+                  (_m: string, prop: string) => String((itemData as any)[prop] || ''))
+                
+                // 处理:key属性
+                itemHtml = itemHtml.replace(/:key="[^"]*"/, `data-key="${index}"`)
+                
+                return itemHtml
+              }).join('')
+            }
+          } catch (e) {
+            console.warn('Failed to process v-for:', e)
           }
           return match
         }
@@ -256,8 +414,8 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
         /(<[^>]+)v-if="([^"]+)"([^>]*>[\s\S]*?<\/[^>]+>)/g,
         (match, start, condition, rest) => {
           try {
-            const evalCondition = new Function(...Object.keys(component.data || {}), `return ${condition}`)
-            const result = evalCondition(...Object.values(component.data || {}))
+            const evalCondition = new Function(...Object.keys(allData), `return ${condition}`)
+            const result = evalCondition(...Object.values(allData))
             return result ? match.replace(`v-if="${condition}"`, '') : ''
           } catch (e) {
             console.warn('Failed to evaluate v-if condition:', e)
@@ -266,7 +424,13 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
         }
       )
 
-      // 处理点击事件
+      // 处理v-model（简化版）
+      processedTemplate = processedTemplate.replace(/v-model="([^"]+)"/g, (match, modelVar) => {
+        const value = allData[modelVar] || ''
+        return `value="${value}" oninput="updateVueData('${componentId}', '${modelVar}', this.value)"`
+      })
+
+      // 处理事件绑定
       processedTemplate = processedTemplate.replace(
         /@click="([^"]+)"/g,
         (match, methodName) => {
@@ -277,7 +441,7 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
             ;(window as any)[methodId] = () => {
               try {
                 method.call({ 
-                  ...component.data,
+                  ...allData,
                   $set: (obj: any, key: string, value: any) => {
                     obj[key] = value
                     // 重新运行组件以更新UI
@@ -294,6 +458,26 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
         }
       )
 
+      // 处理动态class绑定
+      processedTemplate = processedTemplate.replace(/:class="([^"]+)"/g, (match, classExpr) => {
+        try {
+          const classFunc = new Function(...Object.keys(allData), `return ${classExpr}`)
+          const classResult = classFunc(...Object.values(allData))
+          
+          if (typeof classResult === 'object') {
+            const classes = Object.entries(classResult)
+              .filter(([, value]) => value)
+              .map(([key]) => key)
+              .join(' ')
+            return `class="${classes}"`
+          }
+          return `class="${classResult}"`
+        } catch (e) {
+          console.warn('Failed to process :class:', e)
+          return match
+        }
+      })
+
       // 应用样式
       if (component.style) {
         const styleId = `vue-style-${componentId}`
@@ -309,8 +493,8 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
 
       // 渲染到预览区域
       previewElement.innerHTML = `<div class="vue-runtime-component">
-        <div class="vue-success-message">✅ Vue组件运行成功！</div>
-        ${processedTemplate}
+        <div class="vue-success-message">✅ Vue组件运行成功！${component.scriptSetup ? ' (Composition API)' : ' (Options API)'}</div>
+        <div class="vue-component-wrapper">${processedTemplate}</div>
       </div>`
       
       // 标记为已挂载
@@ -321,6 +505,23 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
       console.error('Failed to run Vue component:', e)
       previewElement.innerHTML = `<div class="vue-error">❌ 运行错误: ${(e as Error).message}</div>`
     }
+  }
+
+  // 更新Vue数据的辅助函数
+  const updateVueData = (componentId: string, key: string, value: string) => {
+    setVueComponents(prev => prev.map(component => {
+      if (component.id === componentId) {
+        const updatedComponent = {
+          ...component,
+          reactiveData: { ...component.reactiveData, [key]: value },
+          data: { ...component.data, [key]: value }
+        }
+        // 重新运行组件以更新UI
+        setTimeout(() => runVueComponent(componentId), 0)
+        return updatedComponent
+      }
+      return component
+    }))
   }
 
   // 渲染HTML
@@ -357,16 +558,18 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
   useEffect(() => {
     ;(window as any).copyCode = copyCode
     ;(window as any).runVueComponent = runVueComponent
+    ;(window as any).updateVueData = updateVueData
     
     return () => {
       delete (window as any).copyCode
       delete (window as any).runVueComponent
+      delete (window as any).updateVueData
     }
   }, [vueComponents])
 
   return (
     <>
-      {/* 完整的VitePress + Vue执行样式 */}
+      {/* 完整的VitePress + Vue 3执行样式 */}
       <style>{`
         .vue-markdown-content {
           line-height: 1.7;
@@ -539,18 +742,19 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
           color: inherit;
         }
 
-        /* Vue组件容器 - 重点样式 */
+        /* Vue组件容器 - 重点增强样式 */
         .vue-component-container {
           margin: 2rem 0;
-          border: 2px solid ${isDark ? '#059669' : '#10b981'};
+          border: 3px solid ${isDark ? '#059669' : '#10b981'};
           border-radius: 12px;
           overflow: hidden;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
+          background: ${isDark ? '#0f172a' : '#ffffff'};
         }
 
         .vue-component-preview {
           background: ${isDark ? '#0f172a' : '#f0fdf4'};
-          border-bottom: 2px solid ${isDark ? '#059669' : '#10b981'};
+          border-bottom: 3px solid ${isDark ? '#059669' : '#10b981'};
         }
 
         .vue-preview-header {
@@ -558,7 +762,7 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
           justify-content: space-between;
           align-items: center;
           padding: 1rem 1.5rem;
-          background: ${isDark ? '#059669' : '#10b981'};
+          background: linear-gradient(135deg, ${isDark ? '#059669' : '#10b981'}, ${isDark ? '#047857' : '#065f46'});
           color: white;
         }
 
@@ -579,20 +783,23 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
           cursor: pointer;
           font-weight: 600;
           font-size: 0.95rem;
-          transition: all 0.2s;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
 
         .vue-run-button:hover {
-          background: ${isDark ? '#f9fafb' : '#f9fafb'};
-          transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+          background: ${isDark ? '#f3f4f6' : '#f9fafb'};
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
         }
 
         .vue-preview-content {
           padding: 1.5rem;
-          min-height: 120px;
+          min-height: 150px;
           background: ${isDark ? '#1e293b' : '#ffffff'};
+          position: relative;
         }
 
         .vue-placeholder {
@@ -604,21 +811,37 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
           border: 2px dashed ${isDark ? '#475569' : '#cbd5e1'};
           border-radius: 8px;
           background: ${isDark ? '#334155' : '#f8fafc'};
+          line-height: 1.6;
+        }
+
+        .vue-placeholder small {
+          display: block;
+          margin-top: 0.5rem;
+          font-size: 0.9rem;
+          opacity: 0.8;
         }
 
         .vue-runtime-component {
           font-family: inherit;
-          animation: fadeIn 0.3s ease-out;
+          animation: fadeInUp 0.4s ease-out;
         }
 
         .vue-success-message {
-          background: ${isDark ? '#064e3b' : '#d1fae5'};
-          color: ${isDark ? '#10b981' : '#047857'};
-          padding: 0.75rem 1rem;
+          background: linear-gradient(135deg, ${isDark ? '#064e3b' : '#d1fae5'}, ${isDark ? '#065f46' : '#a7f3d0'});
+          color: ${isDark ? '#34d399' : '#047857'};
+          padding: 1rem 1.5rem;
           border-radius: 8px;
-          margin-bottom: 1rem;
+          margin-bottom: 1.5rem;
           font-weight: 600;
-          border: 1px solid ${isDark ? '#10b981' : '#047857'};
+          border: 2px solid ${isDark ? '#10b981' : '#059669'};
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+
+        .vue-component-wrapper {
+          background: ${isDark ? '#1e293b' : '#ffffff'};
+          border-radius: 8px;
+          padding: 1rem;
+          border: 1px solid ${isDark ? '#334155' : '#e2e8f0'};
         }
 
         .vue-error {
@@ -626,13 +849,20 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
           background: ${isDark ? '#451a1a' : '#fef2f2'};
           padding: 1rem;
           border-radius: 8px;
-          border: 1px solid #ef4444;
+          border: 2px solid #ef4444;
           font-weight: 600;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
         }
 
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes fadeInUp {
+          from { 
+            opacity: 0; 
+            transform: translateY(20px); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0); 
+          }
         }
 
         /* 自定义容器样式 */
