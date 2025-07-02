@@ -126,6 +126,7 @@ module.exports = async function handler(req, res) {
     const follows = db.collection('follows')
     const titles = db.collection('user_titles')
     const userTitles = db.collection('user_title_assignments')
+    const docs = db.collection('docs') // 添加文档集合
 
     // 验证用户身份
     console.log('🔍 开始验证用户身份...')
@@ -187,7 +188,105 @@ module.exports = async function handler(req, res) {
 
     // GET: 获取内容
     if (req.method === 'GET') {
-      const { action, type = 'feed', page = 1, limit = 10, postId, commentId } = req.query
+      const { action, type = 'feed', page = 1, limit = 10, postId, commentId, docId, slug, category } = req.query
+
+      // 获取文档列表
+      if (action === 'get-docs') {
+        let query = {}
+        
+        // 非管理员只能看到公开文档
+        if (currentUser.role !== 'admin') {
+          query.isPublic = true
+        }
+        
+        // 按分类过滤
+        if (category) {
+          query.category = category
+        }
+
+        const docsList = await docs.find(query)
+          .sort({ createdAt: -1 })
+          .toArray()
+
+        return res.status(200).json({
+          success: true,
+          docs: docsList
+        })
+      }
+
+      // 获取单个文档
+      if (action === 'get-doc') {
+        let query = {}
+        
+        if (docId) {
+          query._id = new ObjectId(docId)
+        } else if (slug) {
+          query.slug = slug
+        } else {
+          return res.status(400).json({ 
+            success: false, 
+            message: '文档ID或URL不能为空' 
+          })
+        }
+
+        // 非管理员只能看到公开文档
+        if (currentUser.role !== 'admin') {
+          query.isPublic = true
+        }
+
+        const doc = await docs.findOne(query)
+        
+        if (!doc) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '文档不存在或无权访问' 
+          })
+        }
+
+        return res.status(200).json({
+          success: true,
+          doc: doc
+        })
+      }
+
+      // 获取文档分类
+      if (action === 'get-categories') {
+        let query = {}
+        
+        // 非管理员只能看到公开文档的分类
+        if (currentUser.role !== 'admin') {
+          query.isPublic = true
+        }
+
+        const categories = await docs.aggregate([
+          { $match: query },
+          { 
+            $group: { 
+              _id: '$category', 
+              count: { $sum: 1 },
+              docs: { 
+                $push: { 
+                  _id: '$_id',
+                  title: '$title',
+                  slug: '$slug',
+                  path: '$path',
+                  updatedAt: '$updatedAt'
+                } 
+              }
+            } 
+          },
+          { $sort: { _id: 1 } }
+        ]).toArray()
+
+        return res.status(200).json({
+          success: true,
+          categories: categories.map(cat => ({
+            name: cat._id,
+            count: cat.count,
+            docs: cat.docs
+          }))
+        })
+      }
 
       // 获取帖子列表
       if (action === 'posts' || !action) {
@@ -728,7 +827,170 @@ module.exports = async function handler(req, res) {
         }
       }
       
-      const { action, postId, commentId, content, images, parentId, replyTo } = body
+      const { action, postId, commentId, content, images, parentId, replyTo, title, slug, category, tags, isPublic, docId } = body
+
+      // 文档管理功能
+      // 创建文档
+      if (action === 'create-doc') {
+        // 检查管理员权限
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '只有管理员可以创建文档' 
+          })
+        }
+
+        if (!title || !content) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '标题和内容不能为空' 
+          })
+        }
+
+        // 生成slug
+        const docSlug = slug || title.toLowerCase()
+          .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+
+        // 检查slug是否已存在
+        const existingDoc = await docs.findOne({ slug: docSlug })
+        if (existingDoc) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '文档URL已存在，请使用不同的标题或自定义URL' 
+          })
+        }
+
+        const newDoc = {
+          title: title.trim(),
+          slug: docSlug,
+          content: content.trim(),
+          category: category || 'guide',
+          path: `/${category || 'guide'}/${docSlug}`,
+          isPublic: isPublic !== false, // 默认公开
+          author: currentUser.username,
+          authorId: new ObjectId(decoded.userId),
+          tags: tags || [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+
+        const result = await docs.insertOne(newDoc)
+
+        return res.status(201).json({
+          success: true,
+          message: '文档创建成功',
+          data: {
+            id: result.insertedId,
+            ...newDoc
+          }
+        })
+      }
+
+      // 更新文档
+      if (action === 'update-doc') {
+        // 检查管理员权限
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '只有管理员可以编辑文档' 
+          })
+        }
+
+        if (!docId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '文档ID不能为空' 
+          })
+        }
+
+        const updateData = {
+          updatedAt: new Date()
+        }
+
+        if (title) updateData.title = title.trim()
+        if (content) updateData.content = content.trim()
+        if (category) updateData.category = category
+        if (tags) updateData.tags = tags
+        if (typeof isPublic === 'boolean') updateData.isPublic = isPublic
+
+        // 如果更新了标题或slug，重新生成路径
+        if (title || slug) {
+          const newSlug = slug || title.toLowerCase()
+            .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+          
+          // 检查新slug是否与其他文档冲突
+          const existingDoc = await docs.findOne({ 
+            slug: newSlug, 
+            _id: { $ne: new ObjectId(docId) } 
+          })
+          
+          if (existingDoc) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '文档URL已存在，请使用不同的标题或自定义URL' 
+            })
+          }
+
+          updateData.slug = newSlug
+          updateData.path = `/${updateData.category || 'guide'}/${newSlug}`
+        }
+
+        const result = await docs.updateOne(
+          { _id: new ObjectId(docId) },
+          { $set: updateData }
+        )
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '文档不存在' 
+          })
+        }
+
+        const updatedDoc = await docs.findOne({ _id: new ObjectId(docId) })
+
+        return res.status(200).json({
+          success: true,
+          message: '文档更新成功',
+          data: updatedDoc
+        })
+      }
+
+      // 删除文档
+      if (action === 'delete-doc') {
+        // 检查管理员权限
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '只有管理员可以删除文档' 
+          })
+        }
+
+        if (!docId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '文档ID不能为空' 
+          })
+        }
+
+        const result = await docs.deleteOne({ _id: new ObjectId(docId) })
+
+        if (result.deletedCount === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '文档不存在' 
+          })
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: '文档删除成功'
+        })
+      }
 
       // 创建帖子
       if (action === 'create-post') {

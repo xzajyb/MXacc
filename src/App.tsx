@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import SecurityPage from './pages/SecurityPage'
 import AdminPage from './pages/AdminPage'
+import DocsPage from './pages/DocsPage'
 import PrivacyPage from './pages/PrivacyPage'
 import TermsPage from './pages/TermsPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -75,6 +76,11 @@ function App() {
           <Route path="/security" element={
             <ProtectedRoute>
               <SecurityPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/docs" element={
+            <ProtectedRoute>
+              <DocsPage />
             </ProtectedRoute>
           } />
           
