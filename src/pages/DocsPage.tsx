@@ -399,61 +399,7 @@ const DocsPage: React.FC = () => {
       )}
 
       <div className="flex">
-        {/* VitePress 风格的侧边栏 */}
-        <aside className={`${sidebarOpen ? 'w-80' : 'w-0'} lg:w-80 transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen sticky top-0 z-40 lg:z-auto`}>
-          <div className="p-6 h-full overflow-y-auto">
-            <nav className="space-y-6">
-              {filteredCategories.map((category) => (
-                <div key={category.path}>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">
-                    {category.name}
-                  </h3>
-                  <ul className="space-y-2">
-                    {category.docs.map((doc) => (
-                      <li key={doc._id}>
-                        <button
-                          onClick={() => fetchDoc(doc._id)}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
-                            currentDoc?._id === doc._id
-                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-400 border-l-2 border-blue-600'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          <FileText size={16} />
-                          <span className="truncate">{doc.title}</span>
-                          {isAdmin && editMode && (
-                            <div className="ml-auto flex space-x-1">
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditDoc(doc)
-                                }}
-                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                                title="编辑文档"
-                              >
-                                <Edit size={12} />
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDeleteDoc(doc._id)
-                                }}
-                                className="p-1 hover:bg-red-200 dark:hover:bg-red-900 rounded"
-                                title="删除文档"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </nav>
-          </div>
-        </aside>
+      
 
         {/* 主内容区域 */}
         <main className="flex-1 min-h-screen">

@@ -7,6 +7,13 @@ import { Copy, Check, ExternalLink, AlertTriangle, Info, Lightbulb } from 'lucid
 interface MarkdownRendererProps {
   content: string
   className?: string
+  onTocGenerated?: (toc: TocItem[]) => void
+}
+
+interface TocItem {
+  id: string
+  text: string
+  level: number
 }
 
 interface CodeBlockProps {
