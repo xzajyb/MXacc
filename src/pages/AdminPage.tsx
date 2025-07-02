@@ -2134,7 +2134,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                           placeholder="例如：系统维护通知、新功能上线公告"
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                      </div>
+          </div>
 
                       {/* 消息内容 */}
                       <div>
@@ -2148,7 +2148,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                           rows={6}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                      </div>
+        </div>
 
                       {/* 消息范围选择 */}
                       <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-200 dark:border-indigo-700">
@@ -4213,7 +4213,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                       <Shield className="w-6 h-6" />
-                    </div>
+      </div>
                     <div>
                       <h2 className="text-xl font-bold">解除封禁</h2>
                       <p className="text-green-100 text-sm">管理员操作确认</p>
@@ -4394,8 +4394,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
           </div>, 
           document.body
         )}
-      </>
-    )
-  }
+    </>
+  )
+}
 
-  export default AdminPage 
+export default AdminPage 
