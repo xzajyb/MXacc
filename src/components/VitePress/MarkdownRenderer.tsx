@@ -128,6 +128,8 @@ const CalloutBox: React.FC<{ type: 'tip' | 'warning' | 'danger' | 'info', childr
 }
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
+  const [inlineStyles, setInlineStyles] = React.useState<string>('')
+
   const parseMarkdown = (text: string) => {
     const lines = text.split('\n')
     const elements: React.ReactNode[] = []
@@ -135,6 +137,21 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
 
     while (i < lines.length) {
       const line = lines[i]
+
+      // 处理 <style> 标签
+      if (line.trim().startsWith('<style>')) {
+        const styleLines = []
+        i++ // 跳过 <style> 行
+        while (i < lines.length && !lines[i].trim().startsWith('</style>')) {
+          styleLines.push(lines[i])
+          i++
+        }
+        i++ // 跳过 </style> 行
+        
+        const styleContent = styleLines.join('\n')
+        setInlineStyles(prev => prev + '\n' + styleContent)
+        continue
+      }
 
       // 代码块
       if (line.startsWith('```')) {
@@ -335,6 +352,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
         return parts
       }
 
+      // HTML 标签
+      const htmlTag = processHtmlTags(line)
+      if (htmlTag) {
+        elements.push(<div key={elements.length}>{htmlTag}</div>)
+        i++
+        continue
+      }
+
       // 段落
       if (line.trim() !== '') {
         elements.push(
@@ -352,8 +377,44 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
     return elements
   }
 
+  // 处理 HTML 标签（如 <div class="qq-group-container">）
+  const processHtmlTags = (text: string) => {
+    // 简单的 HTML 标签处理
+    if (text.match(/^<\w+[^>]*>/)) {
+      const tagMatch = text.match(/^<(\w+)([^>]*)>(.*)$/)
+      if (tagMatch) {
+        const [, tagName, attributes, content] = tagMatch
+        const Tag = tagName as keyof JSX.IntrinsicElements
+        
+        // 解析属性
+        const props: any = {}
+        const attrMatches = attributes.matchAll(/(\w+)=["']([^"']+)["']/g)
+        for (const match of attrMatches) {
+          const [, name, value] = match
+          if (name === 'class') {
+            props.className = value
+          } else {
+            props[name] = value
+          }
+        }
+        
+        return <Tag {...props}>{content}</Tag>
+      }
+    }
+    return null
+  }
+
+  // 清理样式，确保每次内容变化时重置
+  React.useEffect(() => {
+    setInlineStyles('')
+  }, [content])
+
   return (
     <div className={`vitepress-markdown ${className}`}>
+      {/* 注入内联样式 */}
+      {inlineStyles && (
+        <style dangerouslySetInnerHTML={{ __html: inlineStyles }} />
+      )}
       {parseMarkdown(content)}
     </div>
   )

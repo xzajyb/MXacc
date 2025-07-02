@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home } from 'lucide-react'
+import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronLeft, ChevronRight } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
 import MarkdownRenderer from '@/components/VitePress/MarkdownRenderer'
@@ -41,6 +41,8 @@ const DocsPage: React.FC = () => {
   const [editMode, setEditMode] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingDoc, setEditingDoc] = useState<DocContent | null>(null)
+  const [showFloatingNav, setShowFloatingNav] = useState(true)
+  const [showToc, setShowToc] = useState(false)
 
   // 管理员权限检查
   const isAdmin = user?.role === 'admin'
@@ -227,99 +229,93 @@ const DocsPage: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* VitePress 风格的导航栏 */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
-        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo 和标题 */}
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
-              >
-                <Menu size={20} />
-              </button>
-              <div className="flex items-center space-x-3">
-                <img src="/logo.svg" alt="MXacc" className="w-8 h-8" />
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">MXacc 文档中心</h1>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">梦锡工作室账号管理系统</p>
-                </div>
-              </div>
-            </div>
+    <div className={`min-h-screen bg-white dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
+      {/* 左侧悬浮导航栏 */}
+      <div className={`fixed left-4 top-1/2 transform -translate-y-1/2 z-50 transition-all duration-300 ${showFloatingNav ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-2 space-y-2 min-w-[280px]">
+          
+          {/* 导航切换按钮 */}
+          <div className="flex items-center justify-between px-3 py-2">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">文档导航</h3>
+            <button
+              onClick={() => setShowFloatingNav(false)}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+          </div>
 
-            {/* 导航链接 */}
-            <nav className="hidden md:flex items-center space-x-6">
-              <a href="/" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center space-x-1">
-                <Home size={16} />
-                <span>返回主站</span>
-              </a>
-            </nav>
-
-            {/* 搜索栏 */}
-            <div className="flex-1 max-w-lg mx-8">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="搜索文档..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* 操作按钮 */}
-            <div className="flex items-center space-x-3">
-              {isAdmin && (
-                <>
-                  <button
-                    onClick={() => setShowEditor(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                  >
-                    <Plus size={16} />
-                    <span>新建文档</span>
-                  </button>
-                  <button
-                    onClick={() => setEditMode(!editMode)}
-                    className={`p-2 rounded-lg transition-colors ${editMode ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                  >
-                    <Settings size={20} />
-                  </button>
-                </>
-              )}
+          {/* 搜索框 */}
+          <div className="px-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="搜索文档..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
           </div>
-        </div>
-      </header>
 
-      <div className="flex">
-        {/* VitePress 风格的侧边栏 */}
-        <aside className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-[calc(100vh-4rem)] sticky top-16`}>
-          <div className="p-6 h-full overflow-y-auto">
-            <nav className="space-y-6">
+          {/* 操作按钮 */}
+          <div className="px-3 space-y-2">
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setShowEditor(true)}
+                  className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
+                >
+                  <Plus size={16} />
+                  <span>新建文档</span>
+                </button>
+                <button
+                  onClick={() => setEditMode(!editMode)}
+                  className={`w-full px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
+                    editMode 
+                      ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <Settings size={16} />
+                  <span>{editMode ? '退出编辑' : '编辑模式'}</span>
+                </button>
+              </>
+            )}
+            
+            <button
+              onClick={() => setShowToc(!showToc)}
+              className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center space-x-2 text-sm"
+            >
+              <List size={16} />
+              <span>文章目录</span>
+            </button>
+          </div>
+
+          {/* 分类和文档列表 */}
+          <div className="max-h-96 overflow-y-auto px-3">
+            <div className="space-y-4">
               {categories.map((category) => (
                 <div key={category.path}>
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                     {category.name}
-                  </h3>
-                  <ul className="space-y-2">
+                  </h4>
+                  <ul className="space-y-1">
                     {category.docs.map((doc) => (
                       <li key={doc._id}>
                         <button
                           onClick={() => fetchDoc(doc._id)}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
                             currentDoc?._id === doc._id
-                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-400 border-l-2 border-blue-600'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                           }`}
                         >
-                          <FileText size={16} />
-                          <span className="truncate">{doc.title}</span>
+                          <FileText size={14} />
+                          <span className="truncate flex-1">{doc.title}</span>
                           {isAdmin && editMode && (
-                            <div className="ml-auto flex space-x-1">
+                            <div className="flex space-x-1">
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -328,7 +324,7 @@ const DocsPage: React.FC = () => {
                                 className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                                 title="编辑文档"
                               >
-                                <Edit size={12} />
+                                <Edit size={10} />
                               </button>
                               <button 
                                 onClick={(e) => {
@@ -338,7 +334,7 @@ const DocsPage: React.FC = () => {
                                 className="p-1 hover:bg-red-200 dark:hover:bg-red-900 rounded"
                                 title="删除文档"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={10} />
                               </button>
                             </div>
                           )}
@@ -348,81 +344,67 @@ const DocsPage: React.FC = () => {
                   </ul>
                 </div>
               ))}
-            </nav>
+            </div>
           </div>
-        </aside>
-
-        {/* 主内容区域 */}
-        <main className="flex-1 min-h-[calc(100vh-4rem)]">
-          <div className="max-w-4xl mx-auto px-6 py-8">
-            {currentDoc ? (
-              <article className="vitepress-content">
-                <header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
-                  <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                    {currentDoc.title}
-                  </h1>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span>作者: {currentDoc.author}</span>
-                    <span>•</span>
-                    <span>更新于: {new Date(currentDoc.updatedAt).toLocaleDateString('zh-CN')}</span>
-                    {currentDoc.tags.length > 0 && (
-                      <>
-                        <span>•</span>
-                        <div className="flex items-center space-x-2">
-                          <span>标签:</span>
-                          {currentDoc.tags.map((tag) => (
-                            <span key={tag} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </header>
-                
-                {/* 使用 VitePress 风格的 Markdown 渲染器 */}
-                <div className="vitepress-markdown-content">
-                  <MarkdownRenderer content={currentDoc.content} />
-                </div>
-
-                {/* 底部编辑链接（仅管理员可见） */}
-                {isAdmin && (
-                  <footer className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                      <span>在管理页面编辑此文档</span>
-                      <button
-                        onClick={() => handleEditDoc(currentDoc)}
-                        className="text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        编辑页面
-                      </button>
-                    </div>
-                  </footer>
-                )}
-              </article>
-            ) : (
-              <div className="text-center py-24">
-                <FileText size={64} className="mx-auto text-gray-400 mb-4" />
-                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-                  欢迎使用文档中心
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 mb-6">
-                  从左侧侧边栏选择一个文档开始阅读，或使用搜索功能快速查找内容
-                </p>
-                {docs.length === 0 && isAdmin && (
-                  <button
-                    onClick={() => setShowEditor(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    创建第一个文档
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </main>
+        </div>
       </div>
+
+      {/* 悬浮导航展开按钮 */}
+      {!showFloatingNav && (
+        <button
+          onClick={() => setShowFloatingNav(true)}
+          className="fixed left-4 top-1/2 transform -translate-y-1/2 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
+        >
+          <ChevronRight size={20} />
+        </button>
+      )}
+
+      {/* 主内容区域 */}
+      <main className="min-h-screen">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          {currentDoc ? (
+            <article className="vitepress-content">
+              {/* 使用 VitePress 风格的 Markdown 渲染器 */}
+              <div className="vitepress-markdown-content">
+                <MarkdownRenderer content={currentDoc.content} />
+              </div>
+
+              {/* 底部编辑链接（仅管理员可见） */}
+              {isAdmin && (
+                <footer className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                    <span>作者: {currentDoc.author} • 更新于: {new Date(currentDoc.updatedAt).toLocaleDateString('zh-CN')}</span>
+                    <button
+                      onClick={() => handleEditDoc(currentDoc)}
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      编辑页面
+                    </button>
+                  </div>
+                </footer>
+              )}
+            </article>
+          ) : (
+            <div className="text-center py-24">
+              <FileText size={64} className="mx-auto text-gray-400 mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+                欢迎使用文档中心
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
+                从左侧导航选择一个文档开始阅读，或使用搜索功能快速查找内容
+              </p>
+              {docs.length === 0 && isAdmin && (
+                <button
+                  onClick={() => setShowEditor(true)}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  创建第一个文档
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </main>
 
       {/* 文档编辑器 */}
       <DocEditor
