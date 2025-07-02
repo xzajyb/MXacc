@@ -67,25 +67,26 @@ const VitePressRenderer: React.FC<VitePressRendererProps> = ({
     return { styles, cleanedText }
   }
 
-  // 提取目录
-  const extractToc = (htmlContent: string) => {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(htmlContent, 'text/html')
-    const headings = doc.querySelectorAll('h1, h2, h3, h4, h5, h6')
-    
+  // 从Markdown源内容提取目录
+  const extractTocFromMarkdown = (markdownContent: string) => {
+    const lines = markdownContent.split('\n')
     const toc: TocItem[] = []
-    headings.forEach((heading, index) => {
-      const level = parseInt(heading.tagName.substring(1))
-      const title = heading.textContent || ''
-      const id = heading.id || `heading-${index}-${title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')}`
-      
-      if (title && level <= 4) {
+    let index = 0
+    
+    lines.forEach((line) => {
+      const headingMatch = line.match(/^(#{1,4})\s+(.+)$/)
+      if (headingMatch) {
+        const level = headingMatch[1].length
+        const title = headingMatch[2].trim()
+        const id = `heading-${index}-${title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')}`
+        
         toc.push({
           id,
           title,
           level,
           anchor: `#${id}`
         })
+        index++
       }
     })
     
@@ -103,8 +104,8 @@ const VitePressRenderer: React.FC<VitePressRendererProps> = ({
     
     const htmlContent = md.render(processedText)
     
-    // 提取目录
-    const toc = extractToc(htmlContent)
+    // 从原始Markdown内容提取目录
+    const toc = extractTocFromMarkdown(content)
     if (onTocUpdate) {
       onTocUpdate(toc)
     }

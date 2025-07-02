@@ -226,9 +226,22 @@ const DocsPage: React.FC = () => {
 
   // 目录滚动
   const scrollToHeading = (id: string) => {
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    try {
+      const element = document.getElementById(id)
+      if (element) {
+        // 添加防卡死机制，使用requestAnimationFrame
+        requestAnimationFrame(() => {
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start',
+            inline: 'nearest'
+          })
+        })
+      } else {
+        console.warn(`Element with id "${id}" not found`)
+      }
+    } catch (error) {
+      console.error('Error scrolling to heading:', error)
     }
   }
 
@@ -274,7 +287,7 @@ const DocsPage: React.FC = () => {
       return (
       <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
         {/* 移动端右上角搜索按钮 */}
-        <div className="lg:hidden fixed top-6 right-6 z-50">
+        <div className="lg:hidden fixed top-0 right-0 z-50 p-6">
           <button
             onClick={() => setShowMobileSearch(true)}
             className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 hover:bg-gray-50 dark:hover:bg-gray-700 hover:scale-110 active:scale-95 transition-all duration-200 animate-pulse"
@@ -285,7 +298,7 @@ const DocsPage: React.FC = () => {
         </div>
 
         {/* 左侧悬浮导航栏 */}
-      <div className="fixed top-6 left-6 z-50">
+      <div className="fixed top-0 left-0 z-50 p-6">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
           {/* 移动端菜单按钮 */}
           <div className="lg:hidden">
