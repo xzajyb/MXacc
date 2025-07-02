@@ -297,6 +297,108 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      // 管理分类（仅管理员）
+      if (action === 'manage-categories') {
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '只有管理员可以管理分类' 
+          })
+        }
+
+        const { categoryAction, categoryData } = req.body
+
+        // 获取自定义分类集合
+        const customCategories = client.db(process.env.MONGODB_DB).collection('doc_categories')
+
+        if (categoryAction === 'get') {
+          // 获取所有自定义分类
+          const categories = await customCategories.find({}).sort({ createdAt: 1 }).toArray()
+          return res.status(200).json({
+            success: true,
+            categories: categories
+          })
+        }
+
+        if (categoryAction === 'create') {
+          const { value, label, englishPath, parentCategory } = categoryData
+          
+          if (!value || !label || !englishPath) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '分类信息不完整' 
+            })
+          }
+
+          // 检查是否已存在
+          const existing = await customCategories.findOne({ value })
+          if (existing) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '该分类已存在' 
+            })
+          }
+
+          const newCategory = {
+            value,
+            label,
+            englishPath,
+            parentCategory: parentCategory || null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+
+          await customCategories.insertOne(newCategory)
+          
+          return res.status(201).json({
+            success: true,
+            message: '分类创建成功',
+            category: newCategory
+          })
+        }
+
+        if (categoryAction === 'delete') {
+          const { value } = categoryData
+          
+          if (!value) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '分类ID不能为空' 
+            })
+          }
+
+          // 检查是否有子分类
+          const hasChildren = await customCategories.findOne({ parentCategory: value })
+          if (hasChildren) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '该分类下有子分类，请先删除子分类' 
+            })
+          }
+
+          // 检查是否有文档使用此分类
+          const hasDocuments = await docs.findOne({ category: value })
+          if (hasDocuments) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '该分类下有文档，无法删除' 
+            })
+          }
+
+          await customCategories.deleteOne({ value })
+          
+          return res.status(200).json({
+            success: true,
+            message: '分类删除成功'
+          })
+        }
+
+        return res.status(400).json({ 
+          success: false, 
+          message: '无效的分类操作' 
+        })
+      }
+
       // 获取帖子列表
       if (action === 'posts' || !action) {
         let query = {}
