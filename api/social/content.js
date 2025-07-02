@@ -133,9 +133,28 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET' && req.query.action === 'wiki') {
       const { type = 'list', categoryId, slug } = req.query
 
-      // 获取分类列表
+      // 获取分类列表（管理员可看所有，普通用户只看可见的）
       if (type === 'categories') {
-        const categories = await wikiCategories.find({ isVisible: true }).sort({ order: 1, name: 1 }).toArray()
+        let query = {}
+        
+        // 检查是否有有效token且是管理员
+        let isAdmin = false
+        try {
+          if (req.headers.authorization) {
+            const tempDecoded = verifyToken(req.headers.authorization)
+            const tempUser = await getUserById(users, tempDecoded.userId)
+            isAdmin = tempUser?.role === 'admin'
+          }
+        } catch (error) {
+          // 非管理员或无token，只显示可见分类
+          query = { isVisible: { $ne: false } }
+        }
+        
+        if (!isAdmin) {
+          query = { isVisible: { $ne: false } }
+        }
+        
+        const categories = await wikiCategories.find(query).sort({ order: 1, name: 1 }).toArray()
         return res.status(200).json({
           success: true,
           data: categories.map(cat => ({
@@ -145,7 +164,8 @@ module.exports = async function handler(req, res) {
             description: cat.description,
             order: cat.order,
             isVisible: cat.isVisible,
-            createdAt: cat.createdAt
+            createdAt: cat.createdAt,
+            updatedAt: cat.updatedAt
           }))
         })
       }
@@ -174,8 +194,25 @@ module.exports = async function handler(req, res) {
         })
       }
 
-      // 获取文档列表
-      let query = { isPublished: true }
+      // 获取文档列表（管理员可看所有，普通用户只看已发布的）
+      let query = {}
+      
+      // 检查是否有有效token且是管理员
+      let isAdmin = false
+      try {
+        if (req.headers.authorization) {
+          const tempDecoded = verifyToken(req.headers.authorization)
+          const tempUser = await getUserById(users, tempDecoded.userId)
+          isAdmin = tempUser?.role === 'admin'
+        }
+      } catch (error) {
+        // 非管理员或无token，只显示已发布文档
+      }
+      
+      if (!isAdmin) {
+        query.isPublished = true
+      }
+      
       if (categoryId) {
         query.categoryId = new ObjectId(categoryId)
       }

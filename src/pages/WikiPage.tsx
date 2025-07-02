@@ -76,7 +76,7 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
   // 加载分类
   const loadCategories = async () => {
     try {
-      const response = await axios.get('/api/wiki/manage?action=categories', {
+      const response = await axios.get('/api/social/content?action=wiki&type=categories', {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (response.data.success) {
@@ -92,7 +92,7 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
   const loadDocuments = async () => {
     setLoading(true)
     try {
-      const response = await axios.get('/api/wiki/manage?action=documents', {
+      const response = await axios.get('/api/social/content?action=wiki&type=list', {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (response.data.success) {
@@ -110,9 +110,7 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
   const handleRebuildWiki = async () => {
     setRebuildingWiki(true)
     try {
-      const response = await axios.post('/api/wiki/manage', {
-        action: 'rebuild-wiki'
-      }, {
+      const response = await axios.post('/api/social/content?action=wiki&type=rebuild', {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (response.data.success) {
@@ -131,8 +129,9 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
     try {
       if (editingItem && 'name' in editingItem) {
         // 更新分类
-        await axios.put('/api/wiki/manage', {
-          action: 'update-category',
+        await axios.put('/api/social/content', {
+          action: 'wiki',
+          type: 'update-category',
           id: editingItem.id,
           name: formData.name,
           slug: formData.slug,
@@ -145,8 +144,9 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
         showToast('分类更新成功', 'success')
       } else {
         // 创建分类
-        await axios.post('/api/wiki/manage', {
-          action: 'create-category',
+        await axios.post('/api/social/content', {
+          action: 'wiki',
+          type: 'create-category',
           name: formData.name,
           slug: formData.slug,
           description: formData.description,
@@ -171,8 +171,9 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
     try {
       if (editingItem && 'content' in editingItem) {
         // 更新文档
-        await axios.put('/api/wiki/manage', {
-          action: 'update-document',
+        await axios.put('/api/social/content', {
+          action: 'wiki',
+          type: 'update-document',
           id: editingItem.id,
           title: formData.title,
           slug: formData.slug,
@@ -186,8 +187,9 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
         showToast('文档更新成功', 'success')
       } else {
         // 创建文档
-        await axios.post('/api/wiki/manage', {
-          action: 'create-document',
+        await axios.post('/api/social/content', {
+          action: 'wiki',
+          type: 'create-document',
           title: formData.title,
           slug: formData.slug,
           content: formData.content,
@@ -210,8 +212,10 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
 
   // 删除分类
   const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm('确定删除这个分类吗？请确保分类下没有文档。')) return
+    
     try {
-      await axios.delete(`/api/wiki/manage?id=${categoryId}&type=category`, {
+      await axios.delete(`/api/social/content?action=wiki&type=category&id=${categoryId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       showToast('分类删除成功', 'success')
@@ -224,8 +228,10 @@ const WikiPage: React.FC<WikiPageProps> = ({ embedded = false }) => {
 
   // 删除文档
   const handleDeleteDocument = async (documentId: string) => {
+    if (!confirm('确定删除这篇文档吗？')) return
+    
     try {
-      await axios.delete(`/api/wiki/manage?id=${documentId}&type=document`, {
+      await axios.delete(`/api/social/content?action=wiki&type=document&id=${documentId}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       showToast('文档删除成功', 'success')

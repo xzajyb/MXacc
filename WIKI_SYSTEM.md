@@ -49,7 +49,7 @@ MXacc Wiki系统是一个现代化的文档管理平台，**完全保留VitePres
 ├─────────────────────────────────────────────────────────────┤
 │  API层 (Node.js接口)                                       │
 │  ┌─────────────────────────────────────────────────────────┐│
-│  │  • /api/wiki/manage - 完整CRUD API                     ││
+│  │  • /api/social/content - Wiki管理API集成              ││
 │  │  • JWT权限验证                                         ││
 │  │  • MongoDB数据操作                                     ││
 │  └─────────────────────────────────────────────────────────┘│
@@ -202,6 +202,32 @@ URL标识符: quick-start
 3. **功能完整性** - 支持3D模型、数学公式、代码高亮等所有高级功能
 4. **开发友好** - 维护简单，扩展方便
 5. **性能优异** - 静态文件访问，速度快，SEO友好
+
+## 📁 API整合优化
+
+**✅ API合并完成！** Wiki管理功能已完全整合到社交API中：
+
+- **统一端点**: `/api/social/content` (使用 `action=wiki` 参数)
+- **权限控制**: 管理员专用功能，JWT验证
+- **功能完整**: 支持分类和文档的完整CRUD操作
+- **重建功能**: 一键生成VitePress静态文件
+- **代码优化**: 减少API文件数量，提高维护性
+
+### 使用方式：
+```javascript
+// 获取分类列表
+GET /api/social/content?action=wiki&type=categories
+
+// 获取文档列表  
+GET /api/social/content?action=wiki&type=list
+
+// 创建分类
+POST /api/social/content
+{ action: 'wiki', type: 'create-category', name: '...', slug: '...' }
+
+// 重建Wiki
+POST /api/social/content?action=wiki&type=rebuild
+```
 
 ---
 
