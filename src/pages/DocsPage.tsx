@@ -708,7 +708,7 @@ const DocsPage: React.FC = () => {
                                   </button>
                                 </div>
                               )}
-                            </button>
+        </button>
                         ))}
                         </div>
                       )}
