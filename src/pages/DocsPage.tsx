@@ -4,7 +4,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { Search, Menu, FileText, Plus, Edit, Trash2, Settings, Home } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
-import MarkdownRenderer from '@/components/VitePress/MarkdownRenderer'
+import MarkdownRenderer, { TocItem } from '@/components/VitePress/MarkdownRenderer'
 import DocEditor from '@/components/VitePress/DocEditor'
 
 interface DocContent {
@@ -42,6 +42,8 @@ const DocsPage: React.FC = () => {
   const [showEditor, setShowEditor] = useState(false)
   const [editingDoc, setEditingDoc] = useState<DocContent | null>(null)
   const [, setIsDesktop] = useState(false)
+  const [currentToc, setCurrentToc] = useState<TocItem[]>([])
+  const [showMobileSearch, setShowMobileSearch] = useState(false)
 
   // 管理员权限检查
   const isAdmin = user?.role === 'admin'
@@ -106,6 +108,9 @@ const DocsPage: React.FC = () => {
   // 获取单个文档内容
   const fetchDoc = async (docId: string) => {
     try {
+      // 清除当前目录
+      setCurrentToc([])
+      
       const response = await fetch(`/api/social/content?action=get-doc&docId=${docId}`, {
         method: 'GET',
         headers: {
@@ -222,6 +227,23 @@ const DocsPage: React.FC = () => {
     setShowEditor(true)
   }
 
+  // 处理目录生成
+  const handleTocGenerated = (toc: TocItem[]) => {
+    setCurrentToc(toc)
+  }
+
+  // 滚动到指定标题
+  const scrollToHeading = (id: string) => {
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      // 移动端关闭侧边栏
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false)
+      }
+    }
+  }
+
   // 检测桌面端并自动打开侧边栏
   useEffect(() => {
     const checkDesktop = () => {
@@ -258,6 +280,17 @@ const DocsPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
+      {/* 移动端搜索按钮 */}
+      <div className="lg:hidden fixed top-6 right-6 z-50">
+        <button
+          onClick={() => setShowMobileSearch(true)}
+          className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          title="搜索文档"
+        >
+          <Search size={20} className="text-gray-700 dark:text-gray-300" />
+        </button>
+      </div>
+
       {/* 左侧悬浮导航栏 */}
       <div className="fixed top-6 left-6 z-50">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
@@ -333,9 +366,12 @@ const DocsPage: React.FC = () => {
       </div>
 
       {/* 移动端搜索和操作面板 */}
-      {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)}>
-          <div className="absolute top-20 left-6 right-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 space-y-4">
+      {(sidebarOpen || showMobileSearch) && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => {
+          setSidebarOpen(false)
+          setShowMobileSearch(false)
+        }}>
+          <div className="absolute top-20 left-6 right-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             {/* 搜索 */}
             <div className="relative">
               <input
@@ -355,6 +391,7 @@ const DocsPage: React.FC = () => {
                   onClick={() => {
                     setShowEditor(true)
                     setSidebarOpen(false)
+                    setShowMobileSearch(false)
                   }}
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
                 >
@@ -365,6 +402,7 @@ const DocsPage: React.FC = () => {
                   onClick={() => {
                     setEditMode(!editMode)
                     setSidebarOpen(false)
+                    setShowMobileSearch(false)
                   }}
                   className={`w-full px-4 py-3 rounded-xl transition-colors flex items-center justify-center space-x-2 ${
                     editMode 
@@ -391,7 +429,7 @@ const DocsPage: React.FC = () => {
       )}
 
       {/* 移动端侧边栏遮罩 */}
-      {sidebarOpen && (
+      {sidebarOpen && !showMobileSearch && (
         <div 
           className="lg:hidden fixed inset-0 z-30 bg-black bg-opacity-50"
           onClick={() => setSidebarOpen(false)}
@@ -399,7 +437,86 @@ const DocsPage: React.FC = () => {
       )}
 
       <div className="flex">
-      
+        {/* VitePress 风格的侧边栏 */}
+        <aside className={`${sidebarOpen ? 'w-80' : 'w-0'} lg:w-80 transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen sticky top-0 z-40 lg:z-auto`}>
+          <div className="p-6 h-full overflow-y-auto">
+            <nav className="space-y-6">
+              {/* 文档分类 */}
+              {filteredCategories.map((category) => (
+                <div key={category.path}>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">
+                    {category.name}
+                  </h3>
+                  <ul className="space-y-2">
+                    {category.docs.map((doc) => (
+                      <li key={doc._id}>
+                        <button
+                          onClick={() => fetchDoc(doc._id)}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
+                            currentDoc?._id === doc._id
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900 dark:text-blue-400 border-l-2 border-blue-600'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <FileText size={16} />
+                          <span className="truncate">{doc.title}</span>
+                          {isAdmin && editMode && (
+                            <div className="ml-auto flex space-x-1">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditDoc(doc)
+                                }}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                                title="编辑文档"
+                              >
+                                <Edit size={12} />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteDoc(doc._id)
+                                }}
+                                className="p-1 hover:bg-red-200 dark:hover:bg-red-900 rounded"
+                                title="删除文档"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              
+              {/* 文章目录 */}
+              {currentDoc && currentToc.length > 0 && (
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">
+                    文章目录
+                  </h3>
+                  <ul className="space-y-1">
+                    {currentToc.map((item, index) => (
+                      <li key={index}>
+                        <button
+                          onClick={() => scrollToHeading(item.id)}
+                          className={`w-full text-left px-3 py-1 rounded text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 ${
+                            item.level > 2 ? 'ml-4' : ''
+                          } ${item.level > 3 ? 'ml-8' : ''}`}
+                          style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+                        >
+                          {item.text}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </nav>
+          </div>
+        </aside>
 
         {/* 主内容区域 */}
         <main className="flex-1 min-h-screen">
@@ -432,7 +549,10 @@ const DocsPage: React.FC = () => {
                 
                 {/* 使用 VitePress 风格的 Markdown 渲染器 */}
                 <div className="vitepress-markdown-content">
-                  <MarkdownRenderer content={currentDoc.content} />
+                  <MarkdownRenderer 
+                    content={currentDoc.content} 
+                    onTocGenerated={handleTocGenerated}
+                  />
                 </div>
 
                 {/* 底部编辑链接（仅管理员可见） */}

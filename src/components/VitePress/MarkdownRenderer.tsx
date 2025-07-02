@@ -134,7 +134,7 @@ const CalloutBox: React.FC<{ type: 'tip' | 'warning' | 'danger' | 'info', childr
   )
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '', onTocGenerated }) => {
   // 提取和处理 <style> 标签
   const extractStyles = (text: string) => {
     const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi
@@ -155,6 +155,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
   const parseMarkdown = (text: string) => {
     const lines = text.split('\n')
     const elements: React.ReactNode[] = []
+    const tocItems: TocItem[] = []
     let i = 0
 
     // 添加提取的样式
@@ -202,6 +203,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
         const level = line.match(/^#+/)?.[0].length || 1
         const text = line.replace(/^#+\s*/, '')
         const id = text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+        
+        // 添加到目录
+        tocItems.push({ id, text, level })
         
         const Tag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements
         const classes = {
@@ -389,9 +393,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
         elements.push(<br key={elements.length} />)
       }
       
-      i++
+            i++
     }
-
+    
+    // 触发目录生成回调
+    if (onTocGenerated && tocItems.length > 0) {
+      onTocGenerated(tocItems)
+    }
+    
     return elements
   }
 
@@ -402,4 +411,5 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
   )
 }
 
-export default MarkdownRenderer 
+export default MarkdownRenderer
+export type { TocItem } 
