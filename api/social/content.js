@@ -234,6 +234,25 @@ module.exports = async function handler(req, res) {
       })
     }
 
+    // 如果是直接访问API且没有参数，返回API说明
+    if (req.method === 'GET' && !req.query.action && Object.keys(req.query).length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'MXacc Social Content API',
+        description: '这是MXacc社交内容API端点',
+        endpoints: {
+          'GET ?action=wiki': 'Wiki文档相关操作（公开访问）',
+          'GET ?action=posts': '获取帖子列表（需要认证）',
+          'GET ?action=comments': '获取评论列表（需要认证）',
+          'POST': '创建内容（需要认证）',
+          'PUT': '更新内容（需要认证）',
+          'DELETE': '删除内容（需要认证）'
+        },
+        version: '2.0.0',
+        timestamp: new Date().toISOString()
+      })
+    }
+
     // 验证用户身份
     console.log('🔍 开始验证用户身份...')
     const decoded = verifyToken(req.headers.authorization)
@@ -297,7 +316,7 @@ module.exports = async function handler(req, res) {
       const { action, type = 'feed', page = 1, limit = 10, postId, commentId } = req.query
 
       // 获取帖子列表
-      if (action === 'posts' || !action) {
+      if (action === 'posts') {
         let query = {}
         let sort = { createdAt: -1 }
 
