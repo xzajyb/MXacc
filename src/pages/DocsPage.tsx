@@ -358,26 +358,12 @@ const DocsPage: React.FC = () => {
     )
   }
 
-    return (
+  return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* 移动端头部导航栏 */}
-      <div className="lg:hidden sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center space-x-3">
-            <img src="/logo.svg" alt="MXacc" className="w-8 h-8" />
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">文档中心</span>
-          </div>
-          <button
-            onClick={() => setShowMobileNav(true)}
-            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Menu size={20} />
-          </button>
-        </div>
-      </div>
+      
 
-      {/* 桌面端悬浮导航 */}
-      <div className="hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)]">
+      {/* 桌面端悬浮导航 - 确保移动端完全隐藏 */}
+      <div className="desktop-nav hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)]">
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 flex flex-col overflow-hidden max-h-full">
           {/* Logo区域 - 居中显示 */}
           <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50 flex justify-center">
@@ -671,7 +657,7 @@ const DocsPage: React.FC = () => {
                   
                   {expandedCategories.has(category.categoryPath) && (
                     <div className="ml-4 mt-2 space-y-1">
-                      {category.docs.map((doc) => (
+                    {category.docs.map((doc) => (
                         <button
                           key={doc._id}
                           onClick={() => {
@@ -712,7 +698,7 @@ const DocsPage: React.FC = () => {
                             </div>
                           )}
                         </button>
-                      ))}
+                    ))}
                     </div>
                   )}
                 </div>
@@ -729,6 +715,14 @@ const DocsPage: React.FC = () => {
           onClick={() => setShowMobileNav(false)}
         />
       )}
+
+      {/* 移动端搜索按钮 - 文章内右上角 */}
+      <button
+        onClick={() => setShowMobileNav(true)}
+        className="lg:hidden fixed top-4 right-4 z-40 p-3 bg-gray-200/80 dark:bg-gray-700/80 text-gray-600 dark:text-gray-400 rounded-full shadow-lg hover:bg-gray-300/80 dark:hover:bg-gray-600/80 transition-colors backdrop-blur-sm"
+      >
+        <Search size={18} />
+      </button>
 
       {/* 主内容区域 */}
       <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-4 lg:py-8">
