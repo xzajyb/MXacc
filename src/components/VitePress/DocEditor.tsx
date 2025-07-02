@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { X, Save, Eye, Code, FileText, Tag, Globe, Lock, Upload, List, Trash2, Plus } from 'lucide-react'
+import { X, Save, Eye, Code, FileText, Tag, Globe, Lock, Upload } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTheme } from '@/contexts/ThemeContext'
-import VitePressRenderer, { TocItem } from './VitePressRenderer'
+import MarkdownRenderer from './MarkdownRenderer'
 
 interface DocEditorProps {
   isOpen: boolean
@@ -22,9 +22,6 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
   const [tagInput, setTagInput] = useState('')
   const [isPublic, setIsPublic] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [customToc, setCustomToc] = useState<TocItem[]>([])
-  const [newTocTitle, setNewTocTitle] = useState('')
-  const [newTocLevel, setNewTocLevel] = useState(1)
 
   const categories = [
     { value: 'guide', label: '指南' },
@@ -72,34 +69,6 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
     }
   }
 
-  // 添加目录项
-  const handleAddTocItem = () => {
-    if (newTocTitle.trim()) {
-      const newTocItem: TocItem = {
-        id: `toc-${Date.now()}`,
-        title: newTocTitle.trim(),
-        level: newTocLevel,
-        anchor: `#${newTocTitle.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')}`
-      }
-      setCustomToc([...customToc, newTocItem])
-      setNewTocTitle('')
-      setNewTocLevel(1)
-    }
-  }
-
-  // 移除目录项
-  const handleRemoveTocItem = (index: number) => {
-    setCustomToc(customToc.filter((_, i) => i !== index))
-  }
-
-  // 处理目录输入键盘事件
-  const handleTocKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddTocItem()
-    }
-  }
-
   // 保存文档
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
@@ -116,7 +85,6 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
         category,
         tags,
         isPublic,
-        toc: customToc,
         ...(initialDoc?._id && { docId: initialDoc._id })
       }
       
@@ -138,7 +106,6 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
       setCategory(initialDoc.category || 'guide')
       setTags(initialDoc.tags || [])
       setIsPublic(initialDoc.isPublic !== false)
-      setCustomToc(initialDoc.toc || [])
     } else {
       // 重置表单
       setTitle('')
@@ -147,14 +114,13 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
       setCategory('guide')
       setTags([])
       setIsPublic(true)
-      setCustomToc([])
     }
   }, [initialDoc, isOpen])
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -331,73 +297,6 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                   </label>
                 </div>
               </div>
-
-              {/* 预设目录 */}
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <List size={16} className="mr-2" />
-                  预设目录（优先显示）
-                </label>
-                
-                {/* 目录列表 */}
-                <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
-                  {customToc.map((item, index) => (
-                    <div key={item.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-700 rounded border">
-                      <div className="flex-1 min-w-0">
-                        <div className={`text-sm truncate ${
-                          item.level === 1 ? 'font-semibold' : 
-                          item.level === 2 ? 'font-medium pl-4' : 
-                          'font-normal pl-8'
-                        }`}>
-                          {item.title}
-                        </div>
-                        <div className="text-xs text-gray-500">H{item.level}</div>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveTocItem(index)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                        title="删除目录项"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 添加目录项 */}
-                <div className="space-y-2">
-                  <div className="flex space-x-2">
-                    <select
-                      value={newTocLevel}
-                      onChange={(e) => setNewTocLevel(parseInt(e.target.value))}
-                      className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                    >
-                      <option value={1}>H1</option>
-                      <option value={2}>H2</option>
-                      <option value={3}>H3</option>
-                      <option value={4}>H4</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={newTocTitle}
-                      onChange={(e) => setNewTocTitle(e.target.value)}
-                      onKeyDown={handleTocKeyPress}
-                      placeholder="目录标题"
-                      className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-1 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={handleAddTocItem}
-                      className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                      title="添加目录项"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    预设目录将覆盖自动提取的标题目录
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -418,7 +317,7 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
                     {title || '文档标题'}
                   </h1>
-                                      <VitePressRenderer content={content || '在左侧编辑区域输入 Markdown 内容...'} />
+                  <MarkdownRenderer content={content || '在左侧编辑区域输入 Markdown 内容...'} />
                 </div>
               </div>
             )}

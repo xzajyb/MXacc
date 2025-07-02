@@ -872,7 +872,6 @@ module.exports = async function handler(req, res) {
           author: currentUser.username,
           authorId: new ObjectId(decoded.userId),
           tags: tags || [],
-          toc: body.toc || [], // 预设目录
           createdAt: new Date(),
           updatedAt: new Date()
         }
@@ -914,7 +913,6 @@ module.exports = async function handler(req, res) {
         if (content) updateData.content = content.trim()
         if (category) updateData.category = category
         if (tags) updateData.tags = tags
-        if (body.toc) updateData.toc = body.toc // 更新预设目录
         if (typeof isPublic === 'boolean') updateData.isPublic = isPublic
 
         // 如果更新了标题或slug，重新生成路径
