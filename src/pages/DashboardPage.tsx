@@ -23,7 +23,8 @@ import {
   Monitor,
   MessageCircle,
   Globe,
-  Book
+  Book,
+  ExternalLink
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PartnerLogos from '../components/PartnerLogos'
@@ -36,9 +37,8 @@ import AdminPage from './AdminPage'
 import VerifyEmailPage from './VerifyEmailPage'
 import SocialPage from './SocialPage'
 import SystemNotifications from '../components/SystemNotifications'
-import WikiPage from './WikiPage'
 
-type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social' | 'wiki-admin'
+type ActiveView = 'home' | 'profile' | 'settings' | 'security' | 'admin' | 'verify-email' | 'social' | 'docs'
 
 const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth()
@@ -71,17 +71,12 @@ const DashboardPage: React.FC = () => {
       description: '与朋友分享动态，发现有趣内容'
     },
     {
-      id: 'wiki',
+      id: 'docs',
       label: '文档中心',
       icon: Book,
       description: '查看系统文档和使用指南（VitePress原生界面）'
     },
-    ...(user?.role === 'admin' ? [{
-      id: 'wiki-admin',
-      label: 'Wiki管理',
-      icon: Settings,
-      description: '管理Wiki文档内容（管理员专用）'
-    }] : []),
+
     {
       id: 'profile',
       label: t.navigation.profile,
@@ -118,20 +113,13 @@ const DashboardPage: React.FC = () => {
     logout()
   }
 
-  const handleNavClick = (viewId: ActiveView | 'wiki') => {
-    // 文档中心直接打开新窗口
-    if (viewId === 'wiki') {
-      window.open('/docs/', '_blank')
-      setSidebarOpen(false)
-      return
-    }
-    
-    // 如果邮箱未验证，除了验证邮箱、个人资料、社交功能和Wiki管理，其他功能都禁用
-    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social' && viewId !== 'wiki-admin') {
+  const handleNavClick = (viewId: ActiveView) => {
+    // 如果邮箱未验证，除了验证邮箱、个人资料、社交功能和文档中心，其他功能都禁用
+    if (!user?.isEmailVerified && viewId !== 'verify-email' && viewId !== 'profile' && viewId !== 'home' && viewId !== 'social' && viewId !== 'docs') {
       showWarning('请先验证邮箱后再使用此功能')
       return
     }
-    setActiveView(viewId as ActiveView)
+    setActiveView(viewId)
     setSidebarOpen(false) // 移动端点击后关闭侧边栏
   }
 
@@ -199,8 +187,37 @@ const DashboardPage: React.FC = () => {
       switch (activeView) {
         case 'social':
           return <SocialPage embedded={true} onUnreadCountChange={setSocialUnreadCount} />
-        case 'wiki-admin':
-          return <WikiPage embedded={true} />
+        case 'docs':
+          return (
+            <div className="h-full flex flex-col">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Book className="w-6 h-6 text-blue-600" />
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">文档中心</h2>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">系统文档和使用指南（VitePress原生界面）</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => window.open('/docs/', '_blank')}
+                    className="inline-flex items-center px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    新窗口打开
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <iframe
+                  src="/docs/"
+                  className="w-full h-full border-0"
+                  title="MXacc 文档中心"
+                  style={{ minHeight: '600px' }}
+                />
+              </div>
+            </div>
+          )
         case 'profile':
           return <ProfilePage embedded={true} />
         case 'settings':
