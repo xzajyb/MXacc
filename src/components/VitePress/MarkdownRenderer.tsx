@@ -352,11 +352,11 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
         return parts
       }
 
-      // HTML 标签
-      const htmlTag = processHtmlTags(line)
-      if (htmlTag) {
-        elements.push(<div key={elements.length}>{htmlTag}</div>)
-        i++
+      // HTML 标签块
+      const htmlResult = processHtmlBlock(lines, i)
+      if (htmlResult.element) {
+        elements.push(htmlResult.element)
+        i = htmlResult.endIndex
         continue
       }
 
@@ -377,31 +377,74 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
     return elements
   }
 
-  // 处理 HTML 标签（如 <div class="qq-group-container">）
-  const processHtmlTags = (text: string) => {
-    // 简单的 HTML 标签处理
-    if (text.match(/^<\w+[^>]*>/)) {
-      const tagMatch = text.match(/^<(\w+)([^>]*)>(.*)$/)
-      if (tagMatch) {
-        const [, tagName, attributes, content] = tagMatch
-        const Tag = tagName as keyof JSX.IntrinsicElements
-        
-        // 解析属性
-        const props: any = {}
-        const attrMatches = attributes.matchAll(/(\w+)=["']([^"']+)["']/g)
-        for (const match of attrMatches) {
-          const [, name, value] = match
-          if (name === 'class') {
-            props.className = value
-          } else {
-            props[name] = value
-          }
+  // 处理 HTML 标签和块级结构
+  const processHtmlBlock = (lines: string[], startIndex: number): { element: React.ReactNode | null, endIndex: number } => {
+    const line = lines[startIndex]
+    
+    // 检测开始标签
+    const openTagMatch = line.match(/^<(\w+)([^>]*)>\s*$/)
+    if (openTagMatch) {
+      const [, tagName, attributes] = openTagMatch
+      const Tag = tagName as keyof JSX.IntrinsicElements
+      
+      // 解析属性
+      const props: any = {}
+      const attrMatches = attributes.matchAll(/(\w+)=["']([^"']+)["']/g)
+      for (const match of attrMatches) {
+        const [, name, value] = match
+        if (name === 'class') {
+          props.className = value
+        } else {
+          props[name] = value
         }
-        
-        return <Tag {...props}>{content}</Tag>
+      }
+      
+      // 查找结束标签
+      const closeTag = `</${tagName}>`
+      let currentIndex = startIndex + 1
+      const contentLines = []
+      
+      while (currentIndex < lines.length) {
+        if (lines[currentIndex].trim() === closeTag) {
+          break
+        }
+        contentLines.push(lines[currentIndex])
+        currentIndex++
+      }
+      
+      // 递归处理内容
+      const innerContent = parseMarkdown(contentLines.join('\n'))
+      
+      return {
+        element: <Tag key={startIndex} {...props}>{innerContent}</Tag>,
+        endIndex: currentIndex + 1
       }
     }
-    return null
+    
+    // 单行HTML标签
+    const singleTagMatch = line.match(/^<(\w+)([^>]*)>(.+)<\/\w+>\s*$/)
+    if (singleTagMatch) {
+      const [, tagName, attributes, content] = singleTagMatch
+      const Tag = tagName as keyof JSX.IntrinsicElements
+      
+      const props: any = {}
+      const attrMatches = attributes.matchAll(/(\w+)=["']([^"']+)["']/g)
+      for (const match of attrMatches) {
+        const [, name, value] = match
+        if (name === 'class') {
+          props.className = value
+        } else {
+          props[name] = value
+        }
+      }
+      
+      return {
+        element: <Tag key={startIndex} {...props}>{content}</Tag>,
+        endIndex: startIndex + 1
+      }
+    }
+    
+    return { element: null, endIndex: startIndex }
   }
 
   // 清理样式，确保每次内容变化时重置

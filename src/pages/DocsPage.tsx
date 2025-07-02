@@ -231,8 +231,8 @@ const DocsPage: React.FC = () => {
   return (
     <div className={`min-h-screen bg-white dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
       {/* 左侧悬浮导航栏 */}
-      <div className={`fixed left-4 top-1/2 transform -translate-y-1/2 z-50 transition-all duration-300 ${showFloatingNav ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-2 space-y-2 min-w-[280px]">
+      <div className={`fixed left-2 sm:left-4 top-1/2 transform -translate-y-1/2 z-50 transition-all duration-300 ${showFloatingNav ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-2 space-y-2 min-w-[280px] max-w-[90vw] max-h-[80vh] overflow-hidden">
           
           {/* 导航切换按钮 */}
           <div className="flex items-center justify-between px-3 py-2">
@@ -294,7 +294,7 @@ const DocsPage: React.FC = () => {
           </div>
 
           {/* 分类和文档列表 */}
-          <div className="max-h-96 overflow-y-auto px-3">
+          <div className="max-h-72 sm:max-h-96 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
             <div className="space-y-4">
               {categories.map((category) => (
                 <div key={category.path}>
@@ -353,7 +353,7 @@ const DocsPage: React.FC = () => {
       {!showFloatingNav && (
         <button
           onClick={() => setShowFloatingNav(true)}
-          className="fixed left-4 top-1/2 transform -translate-y-1/2 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
+          className="fixed left-2 sm:left-4 top-1/2 transform -translate-y-1/2 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
         >
           <ChevronRight size={20} />
         </button>
