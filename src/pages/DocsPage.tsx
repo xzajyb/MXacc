@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronUp, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react'
@@ -539,24 +541,29 @@ const DocsPage: React.FC = () => {
         </div>
       </div>
 
-            {/* 移动端弹窗导航 - 修复层级问题 */}
-      {showMobileNav && (
-        <>
-          {/* 移动端遮罩层 */}
-          <div
-            className="fixed inset-0 bg-black/50 z-[9998] lg:hidden transition-opacity duration-300 ease-in-out"
+            {/* 移动端弹窗导航 - 使用Portal渲染解决层级问题 */}
+      <AnimatePresence>
+        {showMobileNav && typeof document !== 'undefined' && createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-[99999] flex items-center justify-center p-4"
             onClick={() => setShowMobileNav(false)}
-          />
-          
-          {/* 弹窗容器 */}
-          <div className="lg:hidden fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
-            {/* 弹窗内容 */}
-            <div className={`w-full max-w-md max-h-[85vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl transform transition-all duration-300 ease-out pointer-events-auto ${
-              showMobileNav ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-4'
-            } flex flex-col overflow-hidden`}>
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-md max-h-[85vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/50 dark:border-gray-700/50"
+              onClick={(e) => e.stopPropagation()}
+            >
               {/* 弹窗头部 */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">文档搜索</h2>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                  <Search size={20} className="mr-2" />
+                  文档导航
+                </h2>
                 <button
                   onClick={() => setShowMobileNav(false)}
                   className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -575,7 +582,6 @@ const DocsPage: React.FC = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    autoFocus
                   />
                 </div>
               </div>
@@ -718,24 +724,25 @@ const DocsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </>
-      )}
+            </motion.div>
+          </motion.div>,
+          document.body
+        )}
+      </AnimatePresence>
 
-      {/* 主内容区域 - 调整移动端间距避免与按钮重叠 */}
-      <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-8 lg:py-8 relative">
-        {/* 移动端搜索按钮 - 文章右上角 */}
-        <button
-          onClick={() => setShowMobileNav(true)}
-          className="lg:hidden absolute top-0 right-4 z-30 p-3 bg-white/90 dark:bg-gray-800/90 text-gray-600 dark:text-gray-400 rounded-xl shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50"
-        >
-          <Search size={18} />
-        </button>
-
+      {/* 主内容区域 */}
+      <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-4 lg:py-8">
         <div className="max-w-4xl mx-auto">
           {currentDoc ? (
-            <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 lg:p-8 pt-16 lg:pt-8">
+            <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 lg:p-8 relative">
+              {/* 移动端搜索按钮 - 位于文章内部右上角 */}
+              <button
+                onClick={() => setShowMobileNav(true)}
+                className="lg:hidden absolute top-4 right-4 z-30 p-3 bg-blue-50/80 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-md hover:bg-blue-100/80 dark:hover:bg-blue-900/70 transition-all duration-200 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
+              >
+                <Search size={18} />
+              </button>
+
               {/* 使用 VitePress 风格的 Markdown 渲染器 */}
               <div className="vitepress-markdown-content">
                 <MarkdownRenderer content={currentDoc.content} />
@@ -759,7 +766,15 @@ const DocsPage: React.FC = () => {
               )}
             </article>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 lg:p-12 text-center pt-16 lg:pt-12">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 lg:p-12 text-center relative">
+              {/* 移动端搜索按钮 - 欢迎页面也显示 */}
+              <button
+                onClick={() => setShowMobileNav(true)}
+                className="lg:hidden absolute top-4 right-4 z-30 p-3 bg-blue-50/80 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-md hover:bg-blue-100/80 dark:hover:bg-blue-900/70 transition-all duration-200 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
+              >
+                <Search size={18} />
+              </button>
+
               <FileText size={64} className="mx-auto text-gray-400 mb-4" />
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
                 欢迎使用文档中心
