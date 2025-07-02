@@ -111,6 +111,21 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
     return category.englishPath
   }
 
+  // 构建分类显示名称（父-父-子格式）
+  const buildCategoryDisplayName = (categoryValue: string, categories: Category[]): string => {
+    const category = categories.find(c => c.value === categoryValue)
+    if (!category) return categoryValue
+    
+    if (category.parentCategory) {
+      const parentCategory = categories.find(c => c.value === category.parentCategory)
+      if (parentCategory) {
+        return `${parentCategory.label}-${category.label}`
+      }
+    }
+    
+    return category.label
+  }
+
   // 处理标题变化
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle)
@@ -389,15 +404,11 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                       if (aDepth !== bDepth) return aDepth - bDepth
                       return a.label.localeCompare(b.label)
                     })
-                    .map((cat) => {
-                      const indent = cat.parentCategory ? '　　' : '' // 全角空格缩进
-                      const prefix = cat.parentCategory ? '└─ ' : ''
-                      return (
-                        <option key={cat.value} value={cat.value}>
-                          {indent}{prefix}{cat.label}
-                        </option>
-                      )
-                    })}
+                    .map((cat) => (
+                      <option key={cat.value} value={cat.value}>
+                        {buildCategoryDisplayName(cat.value, categories)}
+                      </option>
+                    ))}
                 </select>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">

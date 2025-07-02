@@ -358,15 +358,23 @@ const DocsPage: React.FC = () => {
     )
   }
 
-  return (
+    return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-            {/* 移动端搜索按钮 - 左上角悬浮，避免遮挡关闭按钮 */}
-      <button
-        onClick={() => setShowMobileNav(true)}
-        className="lg:hidden fixed top-4 left-4 z-40 p-3 bg-blue-600/90 text-white rounded-full shadow-lg hover:bg-blue-700/90 transition-colors backdrop-blur-sm"
-      >
-        <Search size={20} />
-      </button>
+      {/* 移动端头部导航栏 */}
+      <div className="lg:hidden sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <img src="/logo.svg" alt="MXacc" className="w-8 h-8" />
+            <span className="text-lg font-semibold text-gray-900 dark:text-white">文档中心</span>
+          </div>
+          <button
+            onClick={() => setShowMobileNav(true)}
+            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
+      </div>
 
       {/* 桌面端悬浮导航 */}
       <div className="hidden lg:block fixed left-4 top-4 w-80 z-30 max-h-[calc(100vh-2rem)]">
@@ -545,202 +553,170 @@ const DocsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 移动端悬浮导航 */}
-      <div className={`lg:hidden fixed inset-0 z-50 transform transition-transform duration-300 ${
+            {/* 移动端抽屉导航 */}
+      <div className={`lg:hidden fixed inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ${
         showMobileNav ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl flex flex-col overflow-hidden">
-          {/* 移动端头部 */}
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <img 
-                src="/logo.svg" 
-                alt="MXacc" 
-                className="w-8 h-8 filter blur-[0.5px]" 
-              />
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">文档中心</h1>
-            </div>
+        {/* 抽屉头部 */}
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">导航菜单</h2>
+          <button
+            onClick={() => setShowMobileNav(false)}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* 搜索框 */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder="搜索文档..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+          </div>
+        </div>
+
+        {/* 操作按钮 */}
+        {isAdmin && (
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
             <button
-              onClick={() => setShowMobileNav(false)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              onClick={() => {
+                setShowEditor(true)
+                setShowMobileNav(false)
+              }}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
             >
-              <X size={20} />
+              <Plus size={16} />
+              <span>新建文档</span>
+            </button>
+            <button
+              onClick={() => setEditMode(!editMode)}
+              className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
+                editMode 
+                  ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' 
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <Settings size={16} />
+              <span>{editMode ? '退出编辑' : '编辑模式'}</span>
             </button>
           </div>
+        )}
 
-          {/* 搜索框 */}
-          <div className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-              <input
-                type="text"
-                placeholder="搜索文档..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300/50 dark:border-gray-600/50 rounded-xl bg-white/70 dark:bg-gray-800/70 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
-              />
-            </div>
-          </div>
-
-          {/* 操作按钮 */}
-          {isAdmin && (
-            <div className="px-4 pb-4 space-y-2">
-              <button
-                onClick={() => {
-                  setShowEditor(true)
-                  setShowMobileNav(false)
-                }}
-                className="w-full px-3 py-2 bg-blue-600/90 text-white rounded-xl hover:bg-blue-700/90 transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm"
-              >
-                <Plus size={16} />
-                <span>新建文档</span>
-              </button>
-              <button
-                onClick={() => setEditMode(!editMode)}
-                className={`w-full px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
-                  editMode 
-                    ? 'bg-green-100/90 text-green-600 dark:bg-green-900/50 dark:text-green-400' 
-                    : 'bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200/90 dark:hover:bg-gray-600/90'
-                }`}
-              >
-                <Settings size={16} />
-                <span>{editMode ? '退出编辑' : '编辑模式'}</span>
-              </button>
+        {/* 导航内容 */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* 当前文档目录 */}
+          {currentDoc && toc.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                <List size={16} className="mr-2" />
+                页面目录
+              </h3>
+              <div className="space-y-1">
+                {toc.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      scrollToHeading(item.id)
+                      setShowMobileNav(false)
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                      item.level === 1 ? 'font-medium text-gray-900 dark:text-white' :
+                      item.level === 2 ? 'ml-4 text-gray-700 dark:text-gray-300' :
+                      item.level === 3 ? 'ml-8 text-gray-600 dark:text-gray-400' :
+                      'ml-12 text-gray-500 dark:text-gray-500'
+                    }`}
+                  >
+                    {item.text}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* 文档目录 */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            {/* 返回顶部按钮 */}
-            <div className="mb-4">
-              <button
-                onClick={() => {
-                  scrollToTop()
-                  setShowMobileNav(false)
-                }}
-                className="w-full px-3 py-2 bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200/90 dark:hover:bg-gray-600/90 transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm"
-              >
-                <ChevronUp size={16} />
-                <span>返回顶部</span>
-              </button>
-            </div>
-
-            {/* 当前文档目录 */}
-            {currentDoc && toc.length > 0 && (
-              <div className="mb-6">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                  页面目录
-                </h4>
-                <div className="space-y-1">
-                  {toc.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        scrollToHeading(item.id)
-                        setShowMobileNav(false)
-                      }}
-                      className={`w-full text-left px-3 py-1 rounded-lg text-sm transition-colors hover:bg-gray-100/80 dark:hover:bg-gray-700/80 backdrop-blur-sm ${
-                        item.level === 1 ? 'font-semibold text-gray-900 dark:text-white' :
-                        item.level === 2 ? 'ml-3 text-gray-700 dark:text-gray-300' :
-                        item.level === 3 ? 'ml-6 text-gray-600 dark:text-gray-400' :
-                        'ml-9 text-gray-500 dark:text-gray-500'
-                      }`}
-                    >
-                      {item.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-                        {/* 文档分类和列表 */}
-            <div>
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                文档导航
-                  </h4>
-              <div className="space-y-1">
-                {filteredCategories.map((category) => {
-                  const depth = category.categoryPath.split('/').length - 1
-                  const isSubCategory = depth > 0
-                  const indentClass = isSubCategory ? `ml-${Math.min(depth * 4, 8)}` : ''
+          {/* 文档分类列表 */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+              <Folder size={16} className="mr-2" />
+              文档分类
+            </h3>
+            <div className="space-y-2">
+              {filteredCategories.map((category) => (
+                <div key={category.categoryPath}>
+                  <button
+                    onClick={() => toggleCategory(category.categoryPath)}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Folder size={14} />
+                      <span>{category.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                        {category.docs.length}
+                      </span>
+                      {expandedCategories.has(category.categoryPath) ? (
+                        <ChevronDown size={14} />
+                      ) : (
+                        <ChevronRight size={14} />
+                      )}
+                    </div>
+                  </button>
                   
-                  return (
-                    <div key={category.categoryPath} className={indentClass}>
-                      <button
-                        onClick={() => toggleCategory(category.categoryPath)}
-                        className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 transition-colors backdrop-blur-sm ${
-                          isSubCategory ? 'text-xs' : ''
-                        }`}
-                      >
-                        {expandedCategories.has(category.categoryPath) ? (
-                          <ChevronDown size={12} />
-                        ) : (
-                          <ChevronRight size={12} />
-                        )}
-                        {isSubCategory ? (
-                          <FolderOpen size={12} />
-                        ) : (
-                          <Folder size={12} />
-                        )}
-                        <span className="truncate flex-1 text-left">
-                          {isSubCategory ? 
-                            category.categoryPath.split('/').pop() : 
-                            category.name
-                          }
-                        </span>
-                        <span className="text-xs text-gray-400">({category.docs.length})</span>
-                      </button>
-                      
-                      {expandedCategories.has(category.categoryPath) && (
-                        <div className="ml-4 mt-1 space-y-1">
-                    {category.docs.map((doc) => (
+                  {expandedCategories.has(category.categoryPath) && (
+                    <div className="ml-4 mt-2 space-y-1">
+                      {category.docs.map((doc) => (
                         <button
-                              key={doc._id}
-                              onClick={() => {
-                                fetchDoc(doc._id)
-                                setShowMobileNav(false) // 移动端点击文档后关闭导航
-                              }}
-                              className={`w-full text-left px-2 py-1.5 rounded-lg transition-colors flex items-center space-x-2 text-xs backdrop-blur-sm ${
+                          key={doc._id}
+                          onClick={() => {
+                            fetchDoc(doc._id)
+                            setShowMobileNav(false)
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
                             currentDoc?._id === doc._id
-                                  ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
-                                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
+                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                           }`}
                         >
-                              <FileText size={12} />
+                          <FileText size={14} />
                           <span className="truncate flex-1">{doc.title}</span>
                           {isAdmin && editMode && (
-                                <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleEditDoc(doc)
-                                      setShowMobileNav(false)
+                                  setShowMobileNav(false)
                                 }}
-                                    className="p-1 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 rounded"
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                                 title="编辑文档"
                               >
-                                    <Edit size={8} />
+                                <Edit size={12} />
                               </button>
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleDeleteDoc(doc._id)
                                 }}
-                                    className="p-1 hover:bg-red-200/80 dark:hover:bg-red-900/80 rounded"
+                                className="p-1 hover:bg-red-200 dark:hover:bg-red-900 rounded text-red-600 dark:text-red-400"
                                 title="删除文档"
                               >
-                                    <Trash2 size={8} />
+                                <Trash2 size={12} />
                               </button>
                             </div>
                           )}
                         </button>
-                          ))}
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  )
-                })}
+                  )}
                 </div>
+              ))}
             </div>
           </div>
         </div>
@@ -755,7 +731,7 @@ const DocsPage: React.FC = () => {
       )}
 
       {/* 主内容区域 */}
-      <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-8">
+      <main className="lg:ml-[20rem] min-h-screen px-4 lg:px-8 py-4 lg:py-8">
         <div className="max-w-4xl mx-auto">
           {currentDoc ? (
             <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
