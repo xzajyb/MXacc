@@ -2,7 +2,7 @@ import React from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Copy, Check, ExternalLink, AlertTriangle, Info, CheckCircle, Lightbulb } from 'lucide-react'
+import { Copy, Check, ExternalLink, AlertTriangle, Info, Lightbulb } from 'lucide-react'
 
 interface MarkdownRendererProps {
   content: string
@@ -128,10 +128,36 @@ const CalloutBox: React.FC<{ type: 'tip' | 'warning' | 'danger' | 'info', childr
 }
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className = '' }) => {
+  // 提取和处理 <style> 标签
+  const extractStyles = (text: string) => {
+    const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi
+    const styles: string[] = []
+    let cleanedText = text
+    let match
+
+    while ((match = styleRegex.exec(text)) !== null) {
+      styles.push(match[1])
+      cleanedText = cleanedText.replace(match[0], '')
+    }
+
+    return { styles, cleanedText }
+  }
+
+  const { styles, cleanedText } = extractStyles(content)
+
   const parseMarkdown = (text: string) => {
     const lines = text.split('\n')
     const elements: React.ReactNode[] = []
     let i = 0
+
+    // 添加提取的样式
+    if (styles.length > 0) {
+      styles.forEach((style, index) => {
+        elements.push(
+          <style key={`style-${index}`} dangerouslySetInnerHTML={{ __html: style }} />
+        )
+      })
+    }
 
     while (i < lines.length) {
       const line = lines[i]
@@ -335,6 +361,16 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
         return parts
       }
 
+      // HTML 标签处理
+      if (line.trim().startsWith('<') && line.trim().endsWith('>') && !line.includes('style')) {
+        // 简单的 HTML 标签支持（除了已处理的 style 标签）
+        elements.push(
+          <div key={elements.length} dangerouslySetInnerHTML={{ __html: line }} />
+        )
+        i++
+        continue
+      }
+
       // 段落
       if (line.trim() !== '') {
         elements.push(
@@ -354,7 +390,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, className 
 
   return (
     <div className={`vitepress-markdown ${className}`}>
-      {parseMarkdown(content)}
+      {parseMarkdown(cleanedText)}
     </div>
   )
 }
