@@ -471,7 +471,8 @@ const DocsPage: React.FC = () => {
         {/* VitePress 风格的侧边栏 */}
         <aside className={`${sidebarOpen ? 'w-80' : 'w-0'} lg:w-80 transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen sticky top-0 z-[40] lg:z-auto`}>
           <div className="p-6 h-full overflow-y-auto">
-            <nav className="space-y-6">
+                        <nav className="space-y-6">
+              {/* 文档分类 */}
               {filteredCategories.map((category) => (
                 <div key={category.path}>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">
