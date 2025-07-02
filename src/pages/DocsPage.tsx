@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Search, Menu, FileText, Plus, Edit, Trash2, Settings, Home } from 'lucide-react'
+import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
-import MarkdownRenderer, { TocItem } from '@/components/VitePress/MarkdownRenderer'
+import MarkdownRenderer from '@/components/VitePress/MarkdownRenderer'
 import DocEditor from '@/components/VitePress/DocEditor'
 
 interface DocContent {
@@ -35,15 +35,12 @@ const DocsPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([])
   const [currentDoc, setCurrentDoc] = useState<DocContent | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingDoc, setEditingDoc] = useState<DocContent | null>(null)
-  const [, setIsDesktop] = useState(false)
-  const [currentToc, setCurrentToc] = useState<TocItem[]>([])
-  const [showMobileSearch, setShowMobileSearch] = useState(false)
 
   // 管理员权限检查
   const isAdmin = user?.role === 'admin'
@@ -108,9 +105,6 @@ const DocsPage: React.FC = () => {
   // 获取单个文档内容
   const fetchDoc = async (docId: string) => {
     try {
-      // 清除当前目录
-      setCurrentToc([])
-      
       const response = await fetch(`/api/social/content?action=get-doc&docId=${docId}`, {
         method: 'GET',
         headers: {
@@ -139,20 +133,6 @@ const DocsPage: React.FC = () => {
       doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   }, [docs, searchQuery])
-
-  // 获取搜索后的分类
-  const filteredCategories = useMemo(() => {
-    if (!searchQuery) return categories
-    
-    return categories.map(category => ({
-      ...category,
-      docs: category.docs.filter(doc =>
-        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doc.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    })).filter(category => category.docs.length > 0)
-  }, [categories, searchQuery])
 
   // 保存文档
   const handleSaveDoc = async (docData: any) => {
@@ -227,38 +207,6 @@ const DocsPage: React.FC = () => {
     setShowEditor(true)
   }
 
-  // 处理目录生成
-  const handleTocGenerated = (toc: TocItem[]) => {
-    setCurrentToc(toc)
-  }
-
-  // 滚动到指定标题
-  const scrollToHeading = (id: string) => {
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      // 移动端关闭侧边栏
-      if (window.innerWidth < 1024) {
-        setSidebarOpen(false)
-      }
-    }
-  }
-
-  // 检测桌面端并自动打开侧边栏
-  useEffect(() => {
-    const checkDesktop = () => {
-      const isDesktopSize = window.innerWidth >= 1024
-      setIsDesktop(isDesktopSize)
-      if (isDesktopSize) {
-        setSidebarOpen(true)
-      }
-    }
-    
-    checkDesktop()
-    window.addEventListener('resize', checkDesktop)
-    return () => window.removeEventListener('resize', checkDesktop)
-  }, [])
-
   useEffect(() => {
     fetchDocs()
   }, [])
@@ -280,169 +228,79 @@ const DocsPage: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* 移动端搜索按钮 */}
-      <div className="lg:hidden fixed top-6 right-6 z-50">
-        <button
-          onClick={() => setShowMobileSearch(true)}
-          className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          title="搜索文档"
-        >
-          <Search size={20} className="text-gray-700 dark:text-gray-300" />
-        </button>
-      </div>
-
-      {/* 左侧悬浮导航栏 */}
-      <div className="fixed top-6 left-6 z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-          {/* 移动端菜单按钮 */}
-          <div className="lg:hidden">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-4 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full"
-              title="切换菜单"
-            >
-              <Menu size={20} className="text-gray-700 dark:text-gray-300" />
-            </button>
-          </div>
-
-          {/* 桌面端导航按钮组 */}
-          <div className="hidden lg:flex flex-col p-2 space-y-2">
-            {/* Logo */}
-            <div className="p-3 text-center border-b border-gray-200 dark:border-gray-700">
-              <img src="/logo.svg" alt="MXacc" className="w-8 h-8 mx-auto" />
-            </div>
-
-            {/* 搜索 */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="搜索文档..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-            </div>
-
-            {/* 管理员操作 */}
-            {isAdmin && (
-              <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={() => setShowEditor(true)}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 text-sm font-medium"
-                  title="新建文档"
-                >
-                  <Plus size={16} />
-                  <span>新建文档</span>
-                </button>
-                <button
-                  onClick={() => setEditMode(!editMode)}
-                  className={`w-full px-4 py-3 rounded-xl transition-colors flex items-center justify-center space-x-2 text-sm font-medium ${
-                    editMode 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  }`}
-                  title={editMode ? '退出编辑模式' : '编辑模式'}
-                >
-                  <Settings size={16} />
-                  <span>{editMode ? '退出编辑' : '编辑模式'}</span>
-                </button>
-              </div>
-            )}
-
-            {/* 返回主站 */}
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-              <a
-                href="/"
-                className="w-full px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2 text-sm rounded-xl"
-                title="返回主站"
+      {/* VitePress 风格的导航栏 */}
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo 和标题 */}
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
               >
+                <Menu size={20} />
+              </button>
+              <div className="flex items-center space-x-3">
+                <img src="/logo.svg" alt="MXacc" className="w-8 h-8" />
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">MXacc 文档中心</h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">梦锡工作室账号管理系统</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 导航链接 */}
+            <nav className="hidden md:flex items-center space-x-6">
+              <a href="/" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center space-x-1">
                 <Home size={16} />
                 <span>返回主站</span>
               </a>
-            </div>
-          </div>
-        </div>
-      </div>
+            </nav>
 
-      {/* 移动端搜索和操作面板 */}
-      {(sidebarOpen || showMobileSearch) && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => {
-          setSidebarOpen(false)
-          setShowMobileSearch(false)
-        }}>
-          <div className="absolute top-20 left-6 right-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
-            {/* 搜索 */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="搜索文档..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-            </div>
-
-            {/* 管理员操作 */}
-            {isAdmin && (
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    setShowEditor(true)
-                    setSidebarOpen(false)
-                    setShowMobileSearch(false)
-                  }}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-                >
-                  <Plus size={16} />
-                  <span>新建文档</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setEditMode(!editMode)
-                    setSidebarOpen(false)
-                    setShowMobileSearch(false)
-                  }}
-                  className={`w-full px-4 py-3 rounded-xl transition-colors flex items-center justify-center space-x-2 ${
-                    editMode 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  <Settings size={16} />
-                  <span>{editMode ? '退出编辑' : '编辑模式'}</span>
-                </button>
+            {/* 搜索栏 */}
+            <div className="flex-1 max-w-lg mx-8">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="搜索文档..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
-            )}
+            </div>
 
-            {/* 返回主站 */}
-            <a
-              href="/"
-              className="w-full px-4 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2 rounded-xl"
-            >
-              <Home size={16} />
-              <span>返回主站</span>
-            </a>
+            {/* 操作按钮 */}
+            <div className="flex items-center space-x-3">
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setShowEditor(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                  >
+                    <Plus size={16} />
+                    <span>新建文档</span>
+                  </button>
+                  <button
+                    onClick={() => setEditMode(!editMode)}
+                    className={`p-2 rounded-lg transition-colors ${editMode ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    <Settings size={20} />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      )}
-
-      {/* 移动端侧边栏遮罩 */}
-      {sidebarOpen && !showMobileSearch && (
-        <div 
-          className="lg:hidden fixed inset-0 z-30 bg-black bg-opacity-50"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      </header>
 
       <div className="flex">
         {/* VitePress 风格的侧边栏 */}
-        <aside className={`${sidebarOpen ? 'w-80' : 'w-0'} lg:w-80 transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen sticky top-0 z-40 lg:z-auto`}>
+        <aside className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 overflow-hidden bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-[calc(100vh-4rem)] sticky top-16`}>
           <div className="p-6 h-full overflow-y-auto">
             <nav className="space-y-6">
-              {/* 文档分类 */}
-              {filteredCategories.map((category) => (
+              {categories.map((category) => (
                 <div key={category.path}>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">
                     {category.name}
@@ -490,37 +348,13 @@ const DocsPage: React.FC = () => {
                   </ul>
                 </div>
               ))}
-              
-              {/* 文章目录 */}
-              {currentDoc && currentToc.length > 0 && (
-                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">
-                    文章目录
-                  </h3>
-                  <ul className="space-y-1">
-                    {currentToc.map((item, index) => (
-                      <li key={index}>
-                        <button
-                          onClick={() => scrollToHeading(item.id)}
-                          className={`w-full text-left px-3 py-1 rounded text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 ${
-                            item.level > 2 ? 'ml-4' : ''
-                          } ${item.level > 3 ? 'ml-8' : ''}`}
-                          style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
-                        >
-                          {item.text}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </nav>
           </div>
         </aside>
 
         {/* 主内容区域 */}
-        <main className="flex-1 min-h-screen">
-          <div className="max-w-4xl mx-auto px-6 py-8 lg:pl-8">
+        <main className="flex-1 min-h-[calc(100vh-4rem)]">
+          <div className="max-w-4xl mx-auto px-6 py-8">
             {currentDoc ? (
               <article className="vitepress-content">
                 <header className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
@@ -549,10 +383,7 @@ const DocsPage: React.FC = () => {
                 
                 {/* 使用 VitePress 风格的 Markdown 渲染器 */}
                 <div className="vitepress-markdown-content">
-                  <MarkdownRenderer 
-                    content={currentDoc.content} 
-                    onTocGenerated={handleTocGenerated}
-                  />
+                  <MarkdownRenderer content={currentDoc.content} />
                 </div>
 
                 {/* 底部编辑链接（仅管理员可见） */}
