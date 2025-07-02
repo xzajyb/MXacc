@@ -205,7 +205,11 @@ module.exports = async function handler(req, res) {
         }
 
         const docsList = await docs.find(query)
-          .sort({ createdAt: -1 })
+          .sort({ 
+            categoryPath: 1,  // 首先按分类路径排序
+            category: 1,      // 然后按分类排序
+            createdAt: -1     // 最后按创建时间倒序
+          })
           .toArray()
 
         return res.status(200).json({
@@ -262,7 +266,10 @@ module.exports = async function handler(req, res) {
           { $match: query },
           { 
             $group: { 
-              _id: '$category', 
+              _id: {
+                category: '$category',
+                categoryPath: '$categoryPath'
+              },
               count: { $sum: 1 },
               docs: { 
                 $push: { 
@@ -270,20 +277,36 @@ module.exports = async function handler(req, res) {
                   title: '$title',
                   slug: '$slug',
                   path: '$path',
+                  categoryPath: '$categoryPath',
                   updatedAt: '$updatedAt'
                 } 
               }
             } 
           },
-          { $sort: { _id: 1 } }
+          { $sort: { '_id.categoryPath': 1, '_id.category': 1 } }
         ]).toArray()
+
+        // 根据分类名称映射
+        const categoryNameMap = {
+          'guide': '指南',
+          'api': 'API 文档',
+          'tutorial': '教程',
+          'faq': '常见问题',
+          'development': '开发',
+          'deployment': '部署',
+          'configuration': '配置',
+          'security': '安全',
+          'best-practices': '最佳实践',
+          'troubleshooting': '故障排除'
+        }
 
         return res.status(200).json({
           success: true,
           categories: categories.map(cat => ({
-            name: cat._id,
+            name: categoryNameMap[cat._id.category] || cat._id.category,
+            path: cat._id.categoryPath || `/${cat._id.category}`,
             count: cat.count,
-            docs: cat.docs
+            docs: cat.docs.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
           }))
         })
       }
@@ -867,7 +890,8 @@ module.exports = async function handler(req, res) {
           slug: docSlug,
           content: content.trim(),
           category: category || 'guide',
-          path: `/${category || 'guide'}/${docSlug}`,
+          categoryPath: categoryPath || `/${category || 'guide'}`,
+          path: `${categoryPath || `/${category || 'guide'}`}/${docSlug}`,
           isPublic: isPublic !== false, // 默认公开
           author: currentUser.username,
           authorId: new ObjectId(decoded.userId),
@@ -912,11 +936,12 @@ module.exports = async function handler(req, res) {
         if (title) updateData.title = title.trim()
         if (content) updateData.content = content.trim()
         if (category) updateData.category = category
+        if (categoryPath) updateData.categoryPath = categoryPath
         if (tags) updateData.tags = tags
         if (typeof isPublic === 'boolean') updateData.isPublic = isPublic
 
-        // 如果更新了标题或slug，重新生成路径
-        if (title || slug) {
+        // 如果更新了标题、slug、分类或分类路径，重新生成路径
+        if (title || slug || category || categoryPath) {
           const newSlug = slug || title.toLowerCase()
             .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
             .replace(/-+/g, '-')
@@ -936,7 +961,8 @@ module.exports = async function handler(req, res) {
           }
 
           updateData.slug = newSlug
-          updateData.path = `/${updateData.category || 'guide'}/${newSlug}`
+          const finalCategoryPath = updateData.categoryPath || `/${updateData.category || 'guide'}`
+          updateData.path = `${finalCategoryPath}/${newSlug}`
         }
 
         const result = await docs.updateOne(

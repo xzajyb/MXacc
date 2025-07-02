@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronLeft, ChevronRight, ArrowUp } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
 import MarkdownRenderer from '@/components/VitePress/MarkdownRenderer'
@@ -41,8 +41,62 @@ const DocsPage: React.FC = () => {
   const [editMode, setEditMode] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingDoc, setEditingDoc] = useState<DocContent | null>(null)
-  const [showFloatingNav, setShowFloatingNav] = useState(true)
-  const [showToc, setShowToc] = useState(false)
+  const [showFloatingNav, setShowFloatingNav] = useState(window.innerWidth >= 1024) // 桌面端默认显示，移动端默认隐藏
+  const [showMobileSearch, setShowMobileSearch] = useState(false) // 移动端搜索按钮状态
+  
+  // 文章目录相关
+  interface TocItem {
+    id: string
+    title: string
+    level: number
+  }
+  
+  const [toc, setToc] = useState<TocItem[]>([])
+
+  // 提取文章目录
+  const extractToc = (content: string): TocItem[] => {
+    const lines = content.split('\n')
+    const tocItems: TocItem[] = []
+    
+    lines.forEach((line, index) => {
+      const match = line.match(/^(#{1,4})\s+(.+)$/)
+      if (match) {
+        const level = match[1].length
+        const title = match[2].trim()
+        const id = title
+          .toLowerCase()
+          .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+        
+        tocItems.push({
+          id: id || `heading-${index}`,
+          title,
+          level
+        })
+      }
+    })
+    
+    return tocItems
+  }
+
+  // 滚动到指定标题
+  const scrollToHeading = (id: string) => {
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      // 移动端点击后关闭导航
+      if (window.innerWidth < 1024) {
+        setShowFloatingNav(false)
+        setShowMobileSearch(false)
+      }
+    }
+  }
+
+  // 返回顶部
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // 管理员权限检查
   const isAdmin = user?.role === 'admin'
@@ -228,25 +282,69 @@ const DocsPage: React.FC = () => {
     )
   }
 
+  // 监听文档变化，提取目录
+  useEffect(() => {
+    if (currentDoc) {
+      const tocItems = extractToc(currentDoc.content)
+      setToc(tocItems)
+    } else {
+      setToc([])
+    }
+  }, [currentDoc])
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setShowFloatingNav(true)
+        setShowMobileSearch(false)
+      } else {
+        setShowFloatingNav(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   return (
     <div className={`min-h-screen bg-white dark:bg-gray-900 ${isDark ? 'dark' : ''}`}>
-      {/* 左侧悬浮导航栏 */}
-      <div className={`fixed left-2 sm:left-4 top-1/2 transform -translate-y-1/2 z-50 transition-all duration-300 ${showFloatingNav ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-2 space-y-2 min-w-[280px] max-w-[90vw] max-h-[80vh] overflow-hidden">
+      {/* 移动端搜索按钮 */}
+      <button
+        onClick={() => setShowMobileSearch(true)}
+        className="fixed top-4 right-4 lg:hidden z-40 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
+      >
+        <Search size={20} />
+      </button>
+
+      {/* 左侧文档导航 (桌面端固定，移动端弹出) */}
+      <div className={`fixed left-0 top-0 h-full z-30 transition-all duration-300 lg:translate-x-0 ${
+        showFloatingNav || showMobileSearch ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="h-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 w-80 flex flex-col">
           
-          {/* 导航切换按钮 */}
-          <div className="flex items-center justify-between px-3 py-2">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">文档导航</h3>
+          {/* 顶部Logo区域 */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+            <div className="flex items-center space-x-3">
+              <img src="/logo.svg" alt="MXacc" className="w-8 h-8" />
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-white">文档中心</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">MXacc Documentation</p>
+              </div>
+            </div>
             <button
-              onClick={() => setShowFloatingNav(false)}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              onClick={() => {
+                setShowFloatingNav(false)
+                setShowMobileSearch(false)
+              }}
+              className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <ChevronLeft size={16} />
+              <X size={18} />
             </button>
           </div>
 
           {/* 搜索框 */}
-          <div className="px-3">
+          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
               <input
@@ -260,41 +358,65 @@ const DocsPage: React.FC = () => {
           </div>
 
           {/* 操作按钮 */}
-          <div className="px-3 space-y-2">
-            {isAdmin && (
-              <>
-                <button
-                  onClick={() => setShowEditor(true)}
-                  className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
-                >
-                  <Plus size={16} />
-                  <span>新建文档</span>
-                </button>
-                <button
-                  onClick={() => setEditMode(!editMode)}
-                  className={`w-full px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
-                    editMode 
-                      ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' 
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  <Settings size={16} />
-                  <span>{editMode ? '退出编辑' : '编辑模式'}</span>
-                </button>
-              </>
-            )}
-            
-            <button
-              onClick={() => setShowToc(!showToc)}
-              className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center space-x-2 text-sm"
-            >
-              <List size={16} />
-              <span>文章目录</span>
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50 space-y-2">
+              <button
+                onClick={() => setShowEditor(true)}
+                className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
+              >
+                <Plus size={16} />
+                <span>新建文档</span>
+              </button>
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className={`w-full px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
+                  editMode 
+                    ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' 
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Settings size={16} />
+                <span>{editMode ? '退出编辑' : '编辑模式'}</span>
+              </button>
+            </div>
+          )}
 
-          {/* 分类和文档列表 */}
-          <div className="max-h-72 sm:max-h-96 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+          {/* 文章目录 (仅在有当前文档时显示) */}
+          {currentDoc && toc.length > 0 && (
+            <div className="px-4 py-3 border-b border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">文章目录</h3>
+                <button
+                  onClick={scrollToTop}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center space-x-1"
+                  title="返回顶部"
+                >
+                  <ArrowUp size={12} />
+                  <span>顶部</span>
+                </button>
+              </div>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {toc.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => scrollToHeading(item.id)}
+                    className={`block w-full text-left px-2 py-1 text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors ${
+                      item.level === 1 ? 'font-semibold text-gray-900 dark:text-white' :
+                      item.level === 2 ? 'text-gray-700 dark:text-gray-300 pl-3' :
+                      item.level === 3 ? 'text-gray-600 dark:text-gray-400 pl-5' :
+                      'text-gray-500 dark:text-gray-500 pl-7'
+                    }`}
+                    title={item.title}
+                  >
+                    <span className="truncate block">{item.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 文档分类和列表 */}
+          <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
               {categories.map((category) => (
                 <div key={category.path}>
@@ -308,8 +430,8 @@ const DocsPage: React.FC = () => {
                           onClick={() => fetchDoc(doc._id)}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
                             currentDoc?._id === doc._id
-                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30'
                           }`}
                         >
                           <FileText size={14} />
@@ -349,19 +471,20 @@ const DocsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 悬浮导航展开按钮 */}
-      {!showFloatingNav && (
-        <button
-          onClick={() => setShowFloatingNav(true)}
-          className="fixed left-2 sm:left-4 top-1/2 transform -translate-y-1/2 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-full p-3 shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:bg-white dark:hover:bg-gray-800 transition-all"
-        >
-          <ChevronRight size={20} />
-        </button>
+      {/* 移动端遮罩 */}
+      {(showFloatingNav || showMobileSearch) && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-20 lg:hidden"
+          onClick={() => {
+            setShowFloatingNav(false)
+            setShowMobileSearch(false)
+          }}
+        />
       )}
 
       {/* 主内容区域 */}
-      <main className="min-h-screen">
-        <div className="max-w-4xl mx-auto px-6 py-8">
+      <main className="min-h-screen lg:ml-80 transition-all duration-300">
+        <div className="max-w-4xl mx-auto px-6 py-8 lg:px-8">
           {currentDoc ? (
             <article className="vitepress-content">
               {/* 使用 VitePress 风格的 Markdown 渲染器 */}
