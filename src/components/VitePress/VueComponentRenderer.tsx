@@ -65,46 +65,64 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
     // 移除import语句
     const cleanScript = script.replace(/import\s+.*?from\s+['"].*?['"][\s\S]*?$/gm, '')
     
-    // 提取所有变量和函数声明
-    const declarations: string[] = []
-    const lines = cleanScript.split('\n')
-    
-    lines.forEach(line => {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('const ') || trimmed.startsWith('let ') || trimmed.startsWith('var ')) {
-        const match = trimmed.match(/(?:const|let|var)\s+(\w+)/)
-        if (match) {
-          declarations.push(match[1])
-        }
-      }
-    })
+    console.log('Processing script:', cleanScript)
 
     return function(Vue: any) {
       try {
-        // 将Vue API添加到全局作用域中
-        const globalThis = window as any
-        globalThis.ref = Vue.ref
-        globalThis.reactive = Vue.reactive
-        globalThis.computed = Vue.computed
-        globalThis.watch = Vue.watch
-        globalThis.onMounted = Vue.onMounted
-        globalThis.onUnmounted = Vue.onUnmounted
-        globalThis.nextTick = Vue.nextTick
+        // 创建一个新的执行环境
+        const setupScope: any = {}
         
-        // 执行setup代码
-        eval(cleanScript)
+        // 添加Vue API到执行环境
+        setupScope.ref = Vue.ref
+        setupScope.reactive = Vue.reactive
+        setupScope.computed = Vue.computed
+        setupScope.watch = Vue.watch
+        setupScope.onMounted = Vue.onMounted
+        setupScope.onUnmounted = Vue.onUnmounted
+        setupScope.nextTick = Vue.nextTick
         
-        // 返回所有声明的变量
-        const result: any = {}
-        declarations.forEach(name => {
-          try {
-            result[name] = eval(name)
-          } catch (e) {
-            // 变量可能在作用域中不可用
-          }
-        })
+                 // 提取变量名
+         const variableNames: string[] = []
+         
+         // 匹配const/let/var声明
+         const varMatches = cleanScript.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g)
+         if (varMatches) {
+           varMatches.forEach(match => {
+             const varName = match.split(/\s+/)[1]
+             if (varName && !variableNames.includes(varName)) {
+               variableNames.push(varName)
+             }
+           })
+         }
+         
+         console.log('Detected variables:', variableNames)
+         
+         // 创建setup函数
+         const setupFunction = new Function(
+           'ref', 'reactive', 'computed', 'watch', 'onMounted', 'onUnmounted', 'nextTick',
+           `
+           ${cleanScript}
+           
+           // 返回所有声明的变量
+           return {
+             ${variableNames.map(name => `${name}: typeof ${name} !== 'undefined' ? ${name} : undefined`).join(',\n             ')}
+           };
+           `
+         )
         
+        const result = setupFunction(
+          setupScope.ref,
+          setupScope.reactive, 
+          setupScope.computed,
+          setupScope.watch,
+          setupScope.onMounted,
+          setupScope.onUnmounted,
+          setupScope.nextTick
+        )
+        
+        console.log('Setup function result:', result)
         return result
+        
       } catch (e) {
         console.error('Setup execution error:', e)
         return {}
