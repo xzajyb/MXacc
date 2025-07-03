@@ -1,4 +1,5 @@
-import React, { useMemo, useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState, useRef } from 'react'
+import { createRoot } from 'react-dom/client'
 import MarkdownIt from 'markdown-it'
 import { useTheme } from '@/contexts/ThemeContext'
 import VueComponentRenderer from './VueComponentRenderer'
@@ -17,6 +18,8 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
   const { isDark } = useTheme()
   const [copiedBlocks, setCopiedBlocks] = useState<Set<string>>(new Set())
   const [vueComponents, setVueComponents] = useState<VueComponentInfo[]>([])
+  const contentRef = useRef<HTMLDivElement>(null)
+  const vueRootsRef = useRef<Map<string, any>>(new Map())
 
   // 创建markdown-it实例
   const md = useMemo(() => {
@@ -96,10 +99,14 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
         const componentId = `vue-component-${Math.random().toString(36).substr(2, 9)}`
         
         // 添加到Vue组件列表
-        setVueComponents(prev => [...prev, { id: componentId, code: token.content }])
+        setVueComponents(prev => {
+          const newComponents = [...prev, { id: componentId, code: token.content }]
+          console.log('Updated Vue components:', newComponents)
+          return newComponents
+        })
         
-        // 返回Vue组件占位符
-        return `<div class="vue-component-placeholder" data-component-id="${componentId}"></div>`
+        // 直接返回VueComponentRenderer作为字符串
+        return `<div id="vue-placeholder-${componentId}" class="vue-component-inline"></div>`
       }
       
       return `<div class="custom-code-block" data-lang="${lang}" data-block-id="${blockId}">
@@ -170,22 +177,51 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
     }
   }, [])
 
-  // 处理Vue组件占位符
-  const processVueComponents = (html: string) => {
-    let processedHtml = html
-    
+  // 渲染Vue组件到DOM
+  useEffect(() => {
+    if (!contentRef.current || vueComponents.length === 0) return
+
+    console.log('Rendering Vue components:', vueComponents)
+
     vueComponents.forEach(component => {
-      const placeholder = `<div class="vue-component-placeholder" data-component-id="${component.id}"></div>`
-      if (processedHtml.includes(placeholder)) {
-        processedHtml = processedHtml.replace(
-          placeholder, 
-          `<div id="vue-component-${component.id}"></div>`
+      const placeholder = contentRef.current!.querySelector(`#vue-placeholder-${component.id}`)
+      console.log(`Looking for placeholder: vue-placeholder-${component.id}`, placeholder)
+      
+      if (placeholder) {
+        // 清理之前的根
+        const existingRoot = vueRootsRef.current.get(component.id)
+        if (existingRoot) {
+          existingRoot.unmount()
+        }
+
+        // 创建新的React根并渲染Vue组件
+        const root = createRoot(placeholder)
+        root.render(
+          <VueComponentRenderer 
+            vueCode={component.code} 
+            componentId={component.id} 
+          />
         )
+        vueRootsRef.current.set(component.id, root)
+        
+        console.log(`Vue component ${component.id} rendered successfully`)
+      } else {
+        console.warn(`Placeholder not found for component ${component.id}`)
       }
     })
-    
-    return processedHtml
-  }
+
+    // 清理函数
+    return () => {
+      vueRootsRef.current.forEach(root => {
+        try {
+          root.unmount()
+        } catch (e) {
+          console.warn('Failed to unmount Vue component root:', e)
+        }
+      })
+      vueRootsRef.current.clear()
+    }
+  }, [vueComponents, renderedHtml])
 
   return (
     <>
@@ -416,32 +452,9 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
         }
       `}</style>
 
-      <div className={`vue-markdown-content ${className}`}>
-        {/* 渲染处理后的HTML */}
-        <div dangerouslySetInnerHTML={{ __html: processVueComponents(renderedHtml) }} />
-        
-        {/* 渲染Vue组件 */}
-        {vueComponents.map(component => (
-          <div key={component.id}>
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  document.addEventListener('DOMContentLoaded', function() {
-                    const container = document.getElementById('vue-component-${component.id}');
-                    if (container) {
-                      // 这里会被React组件替换
-                    }
-                  });
-                `
-              }}
-            />
-            <VueComponentRenderer 
-              key={component.id}
-              vueCode={component.code} 
-              componentId={component.id} 
-            />
-          </div>
-        ))}
+      <div ref={contentRef} className={`vue-markdown-content ${className}`}>
+        {/* 渲染处理后的HTML，Vue组件会通过useEffect动态插入 */}
+        <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
       </div>
     </>
   )
