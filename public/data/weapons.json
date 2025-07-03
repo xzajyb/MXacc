@@ -1,0 +1,166 @@
+{
+  "weapons": [
+    {
+      "id": "ak47",
+      "name": "AK-47",
+      "type": "突击步枪",
+      "image": "/logo.svg",
+      "ammo": "762_rifle",
+      "stats": {
+        "damage": "34",
+        "range": "150m",
+        "accuracy": "75%",
+        "fireRate": "600发/分",
+        "capacity": "30发",
+        "reload": "2.3秒"
+      },
+      "statsLabels": {
+        "damage": "伤害",
+        "range": "射程",
+        "accuracy": "精度",
+        "fireRate": "射速",
+        "capacity": "弹容量",
+        "reload": "换弹时间"
+      },
+      "acquisition": "在军事基地和警察局可以找到，也可以通过击败敌对玩家获得。"
+    },
+    {
+      "id": "m4a1",
+      "name": "M4A1",
+      "type": "突击步枪",
+      "image": "/logo.svg",
+      "ammo": "556_rifle",
+      "stats": {
+        "damage": "31",
+        "range": "140m",
+        "accuracy": "80%",
+        "fireRate": "650发/分",
+        "capacity": "30发",
+        "reload": "2.1秒"
+      },
+      "statsLabels": {
+        "damage": "伤害",
+        "range": "射程",
+        "accuracy": "精度",
+        "fireRate": "射速",
+        "capacity": "弹容量",
+        "reload": "换弹时间"
+      },
+      "acquisition": "在军事前哨站和特殊军械库中可以找到。"
+    },
+    {
+      "id": "awp",
+      "name": "AWP",
+      "type": "狙击步枪",
+      "image": "/logo.svg",
+      "ammo": "338_sniper",
+      "stats": {
+        "damage": "115",
+        "range": "800m",
+        "accuracy": "95%",
+        "fireRate": "41发/分",
+        "capacity": "10发",
+        "reload": "3.7秒"
+      },
+      "statsLabels": {
+        "damage": "伤害",
+        "range": "射程",
+        "accuracy": "精度",
+        "fireRate": "射速",
+        "capacity": "弹容量",
+        "reload": "换弹时间"
+      },
+      "acquisition": "只能在高级军事区域找到，或者通过完成特殊任务获得。"
+    },
+    {
+      "id": "mp5",
+      "name": "MP5",
+      "type": "冲锋枪",
+      "image": "/logo.svg",
+      "ammo": "9mm_pistol",
+      "stats": {
+        "damage": "26",
+        "range": "80m",
+        "accuracy": "70%",
+        "fireRate": "800发/分",
+        "capacity": "30发",
+        "reload": "1.8秒"
+      },
+      "statsLabels": {
+        "damage": "伤害",
+        "range": "射程",
+        "accuracy": "精度",
+        "fireRate": "射速",
+        "capacity": "弹容量",
+        "reload": "换弹时间"
+      },
+      "acquisition": "在城市区域的警察局和安全检查点经常出现。"
+    },
+    {
+      "id": "shotgun",
+      "name": "霰弹枪",
+      "type": "霰弹枪",
+      "image": "/logo.svg",
+      "ammo": "12_gauge",
+      "stats": {
+        "damage": "90",
+        "range": "25m",
+        "accuracy": "60%",
+        "fireRate": "120发/分",
+        "capacity": "8发",
+        "reload": "4.2秒"
+      },
+      "statsLabels": {
+        "damage": "伤害",
+        "range": "射程",
+        "accuracy": "精度",
+        "fireRate": "射速",
+        "capacity": "弹容量",
+        "reload": "换弹时间"
+      },
+      "acquisition": "在农场、狩猎小屋和民用建筑中可以找到。"
+    }
+  ],
+  "ammo": [
+    {
+      "id": "762_rifle",
+      "name": "7.62mm步枪弹",
+      "description": "高威力步枪弹药，适用于远距离作战",
+      "image": "/logo.svg",
+      "compatibleWeapons": ["ak47"],
+      "acquisition": "在军事基地和弹药箱中可以找到。"
+    },
+    {
+      "id": "556_rifle",
+      "name": "5.56mm步枪弹",
+      "description": "标准北约步枪弹药，平衡的性能表现",
+      "image": "/logo.svg",
+      "compatibleWeapons": ["m4a1"],
+      "acquisition": "在军事前哨站和警察局中常见。"
+    },
+    {
+      "id": "338_sniper",
+      "name": ".338拉普阿弹",
+      "description": "专业狙击弹药，极高威力和射程",
+      "image": "/logo.svg",
+      "compatibleWeapons": ["awp"],
+      "acquisition": "只能在高级军事区域找到，非常稀有。"
+    },
+    {
+      "id": "9mm_pistol",
+      "name": "9mm手枪弹",
+      "description": "通用小口径弹药，射速快但威力相对较低",
+      "image": "/logo.svg",
+      "compatibleWeapons": ["mp5"],
+      "acquisition": "在各种地点都有分布，是最常见的弹药类型。"
+    },
+    {
+      "id": "12_gauge",
+      "name": "12号霰弹",
+      "description": "近距离高杀伤力弹药，适合室内作战",
+      "image": "/logo.svg",
+      "compatibleWeapons": ["shotgun"],
+      "acquisition": "在民用建筑、农场和狩猎相关地点可以找到。"
+    }
+  ]
+} 

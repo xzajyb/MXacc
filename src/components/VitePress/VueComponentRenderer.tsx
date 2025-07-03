@@ -81,33 +81,57 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
         setupScope.onUnmounted = Vue.onUnmounted
         setupScope.nextTick = Vue.nextTick
         
-                 // 提取变量名
-         const variableNames: string[] = []
-         
-         // 匹配const/let/var声明
-         const varMatches = cleanScript.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g)
-         if (varMatches) {
-           varMatches.forEach(match => {
-             const varName = match.split(/\s+/)[1]
-             if (varName && !variableNames.includes(varName)) {
-               variableNames.push(varName)
+                 // 更强大的变量提取逻辑
+         const extractVariables = (code: string) => {
+           const variables: string[] = []
+           
+           // 匹配 const/let/var 声明
+           const patterns = [
+             /(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=/g,
+             // 匹配函数声明
+             /(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/g,
+             // 匹配解构赋值
+             /(?:const|let|var)\s*\{\s*([^}]+)\s*\}/g
+           ]
+           
+           patterns.forEach(pattern => {
+             let match
+             while ((match = pattern.exec(code)) !== null) {
+               if (pattern.source.includes('{')) {
+                 // 处理解构赋值
+                 const destructured = match[1].split(',').map(v => v.trim().split(':')[0].trim())
+                 variables.push(...destructured)
+               } else {
+                 variables.push(match[1])
+               }
              }
            })
+           
+           // 去重
+           return [...new Set(variables)].filter(v => v && !v.includes(' '))
          }
          
+         const variableNames = extractVariables(cleanScript)
          console.log('Detected variables:', variableNames)
          
-         // 创建setup函数
-         const setupFunction = new Function(
-           'ref', 'reactive', 'computed', 'watch', 'onMounted', 'onUnmounted', 'nextTick',
-           `
+         // 创建setup函数 - 使用更安全的方式
+         const setupCode = `
            ${cleanScript}
            
-           // 返回所有声明的变量
-           return {
-             ${variableNames.map(name => `${name}: typeof ${name} !== 'undefined' ? ${name} : undefined`).join(',\n             ')}
-           };
-           `
+           // 收集所有可能的变量
+           const setupResult = {};
+           ${variableNames.map(name => 
+             `try { if (typeof ${name} !== 'undefined') setupResult.${name} = ${name}; } catch(e) {}`
+           ).join('\n           ')}
+           
+           return setupResult;
+         `
+         
+         console.log('Setup code:', setupCode)
+         
+         const setupFunction = new Function(
+           'ref', 'reactive', 'computed', 'watch', 'onMounted', 'onUnmounted', 'nextTick',
+           setupCode
          )
         
         const result = setupFunction(
