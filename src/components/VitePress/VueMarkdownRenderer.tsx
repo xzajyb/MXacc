@@ -220,7 +220,8 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
             root.render(
               <VueComponentRenderer 
                 vueCode={component.code} 
-                componentId={component.id} 
+                componentId={component.id}
+                isDark={isDark}
               />
             )
             vueRootsRef.current.set(component.id, root)

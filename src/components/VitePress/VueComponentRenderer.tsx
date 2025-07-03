@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useTheme } from '@/contexts/ThemeContext'
 
 interface VueComponentRendererProps {
   vueCode: string
   componentId: string
+  isDark?: boolean
 }
 
 declare global {
@@ -12,8 +12,7 @@ declare global {
   }
 }
 
-const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, componentId }) => {
-  const { isDark } = useTheme()
+const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, componentId, isDark = false }) => {
   const vueContainerRef = useRef<HTMLDivElement>(null)
   const vueAppRef = useRef<any>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -81,9 +80,17 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
     })
 
     return function(Vue: any) {
-      const { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } = Vue
-      
       try {
+        // 将Vue API添加到全局作用域中
+        const globalThis = window as any
+        globalThis.ref = Vue.ref
+        globalThis.reactive = Vue.reactive
+        globalThis.computed = Vue.computed
+        globalThis.watch = Vue.watch
+        globalThis.onMounted = Vue.onMounted
+        globalThis.onUnmounted = Vue.onUnmounted
+        globalThis.nextTick = Vue.nextTick
+        
         // 执行setup代码
         eval(cleanScript)
         
