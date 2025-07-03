@@ -131,9 +131,15 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
   // 解析Vue 3 script setup
   const parseScriptSetup = useCallback((scriptSetup: string, reactiveState: VueReactiveState) => {
     try {
+      console.log('Starting script setup parsing...')
+      
       // 解析import语句（跳过）
       const cleanScript = scriptSetup.replace(/import\s+.*?from\s+['"].*?['"][\s\S]*?$/gm, '')
+      
+      console.log('Clean script:', cleanScript)
 
+      // 第一阶段：解析所有数据（ref, reactive, 数组）
+      
       // 解析ref定义
       const refRegex = /const\s+(\w+)\s*=\s*ref\s*\(\s*([^)]+)\s*\)/g
       let match
@@ -155,21 +161,55 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
             parsedValue = value.trim()
           }
           reactiveState.setReactive(varName, parsedValue)
+          console.log(`Parsed ref ${varName}:`, parsedValue)
         } catch (e) {
           console.warn(`Failed to parse ref ${varName}:`, e)
         }
       }
 
-      // 解析reactive定义
-      const reactiveRegex = /const\s+(\w+)\s*=\s*reactive\s*\(\s*(\{[\s\S]*?\})\s*\)/g
+      // 解析reactive定义（支持对象和数组）
+      const reactiveRegex = /const\s+(\w+)\s*=\s*reactive\s*\(\s*([^)]+(?:\([^)]*\)[^)]*)*)\s*\)/g
       while ((match = reactiveRegex.exec(cleanScript)) !== null) {
         const [, varName, value] = match
         try {
-          const parsedValue = new Function('return ' + value)()
-          Object.keys(parsedValue).forEach(key => {
-            reactiveState.setReactive(`${varName}.${key}`, parsedValue[key])
-          })
-          reactiveState.setReactive(varName, parsedValue)
+          // 处理多行的reactive定义
+          let reactiveContent = value.trim()
+          
+          // 如果内容包含换行，需要更仔细地解析
+          if (reactiveContent.includes('\n')) {
+            // 找到完整的对象或数组定义
+            let bracketCount = 0
+            let startChar = reactiveContent.charAt(0)
+            let endChar = startChar === '[' ? ']' : '}'
+            let endIndex = 0
+            
+            for (let i = 0; i < reactiveContent.length; i++) {
+              if (reactiveContent[i] === startChar) bracketCount++
+              if (reactiveContent[i] === endChar) bracketCount--
+              if (bracketCount === 0) {
+                endIndex = i
+                break
+              }
+            }
+            
+            reactiveContent = reactiveContent.substring(0, endIndex + 1)
+          }
+          
+          console.log(`Parsing reactive ${varName}:`, reactiveContent)
+          const parsedValue = new Function('return ' + reactiveContent)()
+          
+          if (Array.isArray(parsedValue)) {
+            reactiveState.setReactive(varName, parsedValue)
+          } else if (typeof parsedValue === 'object') {
+            Object.keys(parsedValue).forEach(key => {
+              reactiveState.setReactive(`${varName}.${key}`, parsedValue[key])
+            })
+            reactiveState.setReactive(varName, parsedValue)
+          } else {
+            reactiveState.setReactive(varName, parsedValue)
+          }
+          
+          console.log(`Successfully parsed reactive ${varName}:`, parsedValue)
         } catch (e) {
           console.warn(`Failed to parse reactive ${varName}:`, e)
         }
@@ -187,17 +227,57 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
         }
       }
 
-      // 解析computed属性
-      const computedRegex = /const\s+(\w+)\s*=\s*computed\s*\(\s*\(\s*\)\s*=>\s*([\s\S]*?)\s*\)/g
+      // 第二阶段：解析computed属性（在所有数据解析完成后）
+      console.log('Current state before computed:', reactiveState.getAllState())
+      
+      // 解析computed属性（支持多行函数体）
+      const computedRegex = /const\s+(\w+)\s*=\s*computed\s*\(\s*\(\s*\)\s*=>\s*\{([\s\S]*?)\}\s*\)/g
       while ((match = computedRegex.exec(cleanScript)) !== null) {
         const [, varName, computation] = match
-        const computeFn = new Function(`
-          const state = this.getAllState();
-          with(state) {
-            return ${computation.trim()};
-          }
-        `)
+        console.log(`Parsing computed ${varName}:`, computation.trim())
+        
+        // 创建一个函数，在执行时获取最新状态
+        const computeFn = function(this: VueReactiveState) {
+          const state = this.getAllState()
+          console.log(`Executing computed ${varName} with state:`, state)
+          
+          // 创建一个新的Function，包含所有状态变量
+          const executor = new Function(
+            ...Object.keys(state),
+            computation.trim()
+          )
+          
+          const result = executor.apply(this, Object.values(state))
+          console.log(`Computed ${varName} result:`, result)
+          return result
+        }
+        
         reactiveState.setComputed(varName, computeFn)
+        console.log(`Successfully parsed computed ${varName}`)
+      }
+
+      // 也支持单行computed（无大括号）
+      const singleLineComputedRegex = /const\s+(\w+)\s*=\s*computed\s*\(\s*\(\s*\)\s*=>\s*([^}][^)]*)\s*\)/g
+      while ((match = singleLineComputedRegex.exec(cleanScript)) !== null) {
+        const [, varName, computation] = match
+        console.log(`Parsing single-line computed ${varName}:`, computation.trim())
+        
+        const computeFn = function(this: VueReactiveState) {
+          const state = this.getAllState()
+          console.log(`Executing single-line computed ${varName} with state:`, state)
+          
+          const executor = new Function(
+            ...Object.keys(state),
+            `return ${computation.trim()};`
+          )
+          
+          const result = executor.apply(this, Object.values(state))
+          console.log(`Single-line computed ${varName} result:`, result)
+          return result
+        }
+        
+        reactiveState.setComputed(varName, computeFn)
+        console.log(`Successfully parsed single-line computed ${varName}`)
       }
 
       // 解析函数定义
@@ -341,6 +421,72 @@ const VueComponentRenderer: React.FC<VueComponentRendererProps> = ({ vueCode, co
     const parsedComponent = parseVueComponent(vueCode)
     setComponent(parsedComponent)
   }, [vueCode, parseVueComponent])
+
+  // 自动运行组件
+  useEffect(() => {
+    if (component) {
+      console.log('Auto-running Vue component:', componentId)
+      // 延迟运行确保DOM已加载
+      setTimeout(() => {
+        if (component?.template) {
+          setIsRunning(true)
+          
+          try {
+            // 创建新的响应式状态
+            const reactiveState = new VueReactiveState()
+            reactiveStateRef.current = reactiveState
+
+            // 解析script setup
+            if (component.scriptSetup) {
+              parseScriptSetup(component.scriptSetup, reactiveState)
+            }
+
+            // 注册v-model更新函数
+            ;(window as any)[`updateVueData_${componentId}`] = (key: string, value: any) => {
+              console.log(`Updating ${key} to:`, value)
+              reactiveState.setReactive(key, value)
+            }
+
+            // 注册全局方法
+            const state = reactiveState.getAllState()
+            Object.keys(state).forEach(key => {
+              if (typeof state[key] === 'function') {
+                ;(window as any)[`vueMethod_${componentId}_${key}`] = state[key]
+              }
+            })
+
+            // 添加响应式监听器
+            const updateTemplate = () => {
+              const html = renderTemplate(component.template, reactiveState)
+              setRenderedHtml(html)
+            }
+
+            reactiveState.addListener(updateTemplate)
+
+            // 初始渲染
+            updateTemplate()
+
+            // 应用样式
+            if (component.style) {
+              const styleId = `vue-style-${componentId}`
+              let existingStyle = document.getElementById(styleId)
+              if (existingStyle) {
+                existingStyle.remove()
+              }
+              const styleElement = document.createElement('style')
+              styleElement.id = styleId
+              styleElement.textContent = component.style
+              document.head.appendChild(styleElement)
+            }
+
+          } catch (e) {
+            console.error('Failed to run Vue component:', e)
+            setRenderedHtml(`<div class="vue-error">❌ 运行错误: ${(e as Error).message}</div>`)
+          }
+        }
+      }, 100)
+    }
+  }, [component, componentId, parseScriptSetup, renderTemplate])
 
   // 运行Vue组件
   const runComponent = useCallback(() => {
