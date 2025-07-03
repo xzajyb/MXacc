@@ -98,6 +98,8 @@ const VueMarkdownRenderer: React.FC<VueMarkdownRendererProps> = ({ content, clas
       if (lang === 'vue' || (lang === 'html' && token.content.includes('<script>'))) {
         const componentId = `vue-component-${Math.random().toString(36).substr(2, 9)}`
         
+        console.log('Vue component detected:', { lang, componentId })
+        
         // 添加到Vue组件列表
         setVueComponents(prev => {
           const newComponents = [...prev, { id: componentId, code: token.content }]
