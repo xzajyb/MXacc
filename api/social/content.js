@@ -197,24 +197,40 @@ module.exports = async function handler(req, res) {
         // 非管理员只能看到公开文档
         if (currentUser.role !== 'admin') {
           query.isPublic = true
-          query.status = 'approved' // 普通用户只能看到已批准的文档
+          // 普通用户只能看到已批准的文档或没有status字段的旧文档（视为已批准）
+          query.$or = [
+            { status: 'approved' },
+            { status: { $exists: false } } // 兼容旧文档
+          ]
+          } else {
+          // 管理员可以通过history参数查看历史提交记录
+          if (req.query.history === 'true') {
+            // 获取所有已处理的文档（已批准或已拒绝）
+            if (req.query.status) {
+              query.status = req.query.status;
+            } else {
+              query.status = { $in: ['approved', 'rejected'] };
+            }
+            // 可以按提交者过滤
+            if (req.query.submittedBy) {
+              query.submittedBy = req.query.submittedBy;
+            }
+          } else if (req.query.status) {
+            // 管理员按状态过滤
+            query.status = req.query.status;
+          }
         }
         
         // 按分类过滤
         if (category) {
           query.category = category
         }
-        
-        // 按状态过滤（仅管理员可用）
-        if (req.query.status && currentUser.role === 'admin') {
-          query.status = req.query.status
-        }
 
         const docsList = await docs.find(query)
           .sort({ 
-            categoryPath: 1,  // 首先按分类路径排序
-            category: 1,      // 然后按分类排序
-            createdAt: -1     // 最后按创建时间倒序
+            updatedAt: -1,      // 首先按更新时间倒序
+            categoryPath: 1,     // 然后按分类路径排序
+            category: 1          // 最后按分类排序
           })
           .toArray()
 
@@ -1064,6 +1080,93 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           success: true,
           message: body.status === 'approved' ? '文档已批准' : '文档已拒绝'
+        })
+      }
+      
+      // 撤销文档审核
+      if (action === 'revert-doc') {
+        // 仅管理员可以撤销文档审核
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '只有管理员可以撤销文档审核' 
+          })
+        }
+
+        if (!docId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '文档ID不能为空' 
+          })
+        }
+
+        // 检查文档是否存在
+        const docToRevert = await docs.findOne({ _id: new ObjectId(docId) });
+        if (!docToRevert) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '文档不存在' 
+          })
+        }
+
+        // 如果不是已批准或已拒绝状态，则不能撤销
+        if (docToRevert.status !== 'approved' && docToRevert.status !== 'rejected') {
+          return res.status(400).json({ 
+            success: false, 
+            message: '只能撤销已批准或已拒绝的文档' 
+          })
+        }
+
+        // 将文档状态设置为待审核
+        const result = await docs.updateOne(
+          { _id: new ObjectId(docId) },
+          { 
+            $set: { 
+              status: 'pending',
+              revertedBy: currentUser.username,
+              revertedAt: new Date(),
+              updatedAt: new Date(),
+              // 记录之前的状态，方便日志跟踪
+              previousStatus: docToRevert.status
+            }
+          }
+        )
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '文档不存在' 
+          })
+        }
+
+        // 发送通知给文档作者
+        try {
+          if (docToRevert.authorId) {
+            const systemMessages = db.collection('system_messages')
+            
+            const notificationData = {
+              title: '文档审核已撤销',
+              content: `您的文档 "${docToRevert.title}" 的审核结果已被管理员撤销，文档已重新进入待审核状态。`,
+              type: 'info',
+              priority: 'normal',
+              autoRead: false,
+              targetUserId: docToRevert.authorId,
+              authorId: new ObjectId(decoded.userId),
+              authorName: '系统通知',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+
+            await systemMessages.insertOne(notificationData)
+          }
+        } catch (notificationError) {
+          console.error('发送撤销通知失败:', notificationError)
+          // 不阻断主流程
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: '文档审核已撤销，状态已重置为待审核'
         })
       }
 

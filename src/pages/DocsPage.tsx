@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronUp, FolderOpen, ChevronDown, ChevronRight, PenLine, Clock } from 'lucide-react'
+import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronUp, FolderOpen, ChevronDown, ChevronRight, PenLine, Clock, History, RefreshCw } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
 import VueMarkdownRenderer from '@/components/VitePress/VueMarkdownRenderer'
@@ -58,6 +58,9 @@ const DocsPage: React.FC = () => {
   const [toc, setToc] = useState<TocItem[]>([])
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [pendingDocs, setPendingDocs] = useState<DocContent[]>([])
+  const [historyDocs, setHistoryDocs] = useState<DocContent[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'approved' | 'rejected'>('all')
 
   // 管理员权限检查
   const isAdmin = user?.role === 'admin'
@@ -270,6 +273,67 @@ const DocsPage: React.FC = () => {
     }
   }
 
+  // 获取历史提交记录
+  const fetchHistoryDocs = async () => {
+    if (!isAdmin) return
+    
+    try {
+      let url = '/api/social/content?action=get-docs&history=true'
+      if (historyFilter !== 'all') {
+        url += `&status=${historyFilter}`
+      }
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        setHistoryDocs(data.docs || [])
+      }
+    } catch (error) {
+      console.error('获取历史文档错误:', error)
+    }
+  }
+
+  // 撤销文档审核
+  const handleRevertDoc = async (docId: string) => {
+    if (!confirm('确定要撤销此文档的审核吗？将重置为待审核状态')) {
+      return
+    }
+    
+    try {
+      const response = await fetch('/api/social/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          action: 'revert-doc',
+          docId
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // 刷新文档列表
+        await fetchDocs()
+        await fetchPendingDocs()
+        await fetchHistoryDocs()
+        setError('')
+      } else {
+        setError(data.message || '撤销文档审核失败')
+      }
+    } catch (error) {
+      console.error('撤销文档审核错误:', error)
+      setError('撤销文档审核失败')
+    }
+  }
+
   // 保存文档
   const handleSaveDoc = async (docData: any) => {
     try {
@@ -417,11 +481,14 @@ const DocsPage: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    // 如果是管理员，获取待审核文档
+    // 如果是管理员，获取待审核文档和历史记录
     if (isAdmin) {
       fetchPendingDocs()
+      if (showHistory) {
+        fetchHistoryDocs()
+      }
     }
-  }, [isAdmin])
+  }, [isAdmin, showHistory, historyFilter])
 
   useEffect(() => {
     // 默认加载第一个文档
@@ -482,17 +549,31 @@ const DocsPage: React.FC = () => {
             )}
             
             {isAdmin && (
-              <button
-                onClick={() => setEditMode(!editMode)}
-              className={`w-full px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
-                  editMode 
-                  ? 'bg-green-100/90 text-green-600 dark:bg-green-900/50 dark:text-green-400' 
-                  : 'bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200/90 dark:hover:bg-gray-600/90'
-                }`}
-              >
-                <Settings size={16} />
-                <span>{editMode ? '退出编辑' : '编辑模式'}</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setEditMode(!editMode)}
+                  className={`w-full px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
+                    editMode 
+                    ? 'bg-green-100/90 text-green-600 dark:bg-green-900/50 dark:text-green-400' 
+                    : 'bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200/90 dark:hover:bg-gray-600/90'
+                  }`}
+                >
+                  <Settings size={16} />
+                  <span>{editMode ? '退出编辑' : '编辑模式'}</span>
+                </button>
+                
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className={`w-full px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
+                    showHistory 
+                    ? 'bg-purple-100/90 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400' 
+                    : 'bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200/90 dark:hover:bg-gray-600/90'
+                  }`}
+                >
+                  <History size={16} />
+                  <span>{showHistory ? '隐藏历史记录' : '查看历史提交'}</span>
+                </button>
+              </>
             )}
           </div>
             
@@ -509,49 +590,148 @@ const DocsPage: React.FC = () => {
             </button>
           </div>
 
-          {/* 待审核文档区域 - 仅管理员可见 */}
-          {isAdmin && pendingDocs.length > 0 && (
+          {/* 历史提交记录 - 仅管理员可见 */}
+          {isAdmin && showHistory && (
             <div className="mb-6">
-              <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3 flex items-center">
-                <Clock size={14} className="mr-1" />
-                待审核文档 ({pendingDocs.length})
-              </h4>
-              <div className="space-y-1 bg-amber-50/50 dark:bg-amber-900/20 rounded-lg p-2">
-                {pendingDocs.map((doc) => (
-                  <div 
-                    key={doc._id} 
-                    className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-amber-200/50 dark:border-amber-700/30"
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center">
+                  <History size={14} className="mr-1" />
+                  历史提交记录
+                </h4>
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => setHistoryFilter('all')}
+                    className={`px-2 py-1 text-xs rounded ${
+                      historyFilter === 'all' 
+                        ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' 
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}
                   >
-                    <div className="text-sm font-medium mb-1 line-clamp-1">{doc.title}</div>
-                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                      <span>由 {doc.submittedBy || '未知用户'} 提交</span>
+                    全部
+                  </button>
+                  <button
+                    onClick={() => setHistoryFilter('approved')}
+                    className={`px-2 py-1 text-xs rounded ${
+                      historyFilter === 'approved' 
+                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' 
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    已批准
+                  </button>
+                  <button
+                    onClick={() => setHistoryFilter('rejected')}
+                    className={`px-2 py-1 text-xs rounded ${
+                      historyFilter === 'rejected' 
+                        ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' 
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    已拒绝
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg p-2 mb-4">
+                {historyDocs.length > 0 ? (
+                  historyDocs.map((doc) => (
+                    <div 
+                      key={doc._id} 
+                      className={`p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg border ${
+                        doc.status === 'approved' 
+                          ? 'border-green-200/50 dark:border-green-700/30' 
+                          : 'border-red-200/50 dark:border-red-700/30'
+                      }`}
+                    >
+                      <div className="text-sm font-medium mb-1 line-clamp-1 flex items-center justify-between">
+                        <span>{doc.title}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          doc.status === 'approved'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                        }`}>
+                          {doc.status === 'approved' ? '已批准' : '已拒绝'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        <span>由 {doc.submittedBy || '未知用户'} 提交</span>
+                        <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <button 
+                          onClick={() => fetchDoc(doc._id)}
+                          className="flex-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                        >
+                          查看
+                        </button>
+                        <button 
+                          onClick={() => handleEditDoc(doc)}
+                          className="flex-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          <PenLine size={12} className="inline mr-1" />
+                          编辑
+                        </button>
+                        <button 
+                          onClick={() => handleRevertDoc(doc._id)}
+                          className="flex-1 px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800/50 transition-colors"
+                        >
+                          <RefreshCw size={12} className="inline mr-1" />
+                          撤销
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between mt-2 space-x-1">
-                      <button 
-                        onClick={() => handleEditDoc(doc)}
-                        className="flex-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
-                      >
-                        <PenLine size={12} className="inline mr-1" />
-                        编辑
-                      </button>
-                      <button 
-                        onClick={() => handleReviewDoc(doc._id, true)}
-                        className="flex-1 px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors"
-                      >
-                        批准
-                      </button>
-                      <button 
-                        onClick={() => handleReviewDoc(doc._id, false)}
-                        className="flex-1 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
-                      >
-                        拒绝
-                      </button>
-                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 text-center text-xs text-gray-500 dark:text-gray-400">
+                    无历史审核记录
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
+
+            {/* 待审核文档区域 - 仅管理员可见 */}
+            {isAdmin && pendingDocs.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3 flex items-center">
+                  <Clock size={14} className="mr-1" />
+                  待审核文档 ({pendingDocs.length})
+                </h4>
+                <div className="space-y-1 bg-amber-50/50 dark:bg-amber-900/20 rounded-lg p-2">
+                  {pendingDocs.map((doc) => (
+                    <div 
+                      key={doc._id} 
+                      className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-amber-200/50 dark:border-amber-700/30"
+                    >
+                      <div className="text-sm font-medium mb-1 line-clamp-1">{doc.title}</div>
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>由 {doc.submittedBy || '未知用户'} 提交</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 space-x-1">
+                        <button 
+                          onClick={() => handleEditDoc(doc)}
+                          className="flex-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                        >
+                          <PenLine size={12} className="inline mr-1" />
+                          编辑
+                        </button>
+                        <button 
+                          onClick={() => handleReviewDoc(doc._id, true)}
+                          className="flex-1 px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors"
+                        >
+                          批准
+                        </button>
+                        <button 
+                          onClick={() => handleReviewDoc(doc._id, false)}
+                          className="flex-1 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
+                        >
+                          拒绝
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 当前文档目录 */}
             {currentDoc && toc.length > 0 && (
@@ -744,50 +924,174 @@ const DocsPage: React.FC = () => {
 
             {/* 导航内容 - 可滚动区域 */}
             <div className="flex-1 overflow-y-auto p-4 min-h-0">
-              {/* 待审核文档区域 - 仅管理员可见 */}
-              {isAdmin && pendingDocs.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-3 flex items-center">
-                    <Clock size={16} className="mr-2" />
-                    待审核文档 ({pendingDocs.length})
-                  </h3>
-                  <div className="space-y-2 bg-amber-50/50 dark:bg-amber-900/20 rounded-lg p-3 mb-4">
-                    {pendingDocs.map((doc) => (
-                      <div 
-                        key={doc._id} 
-                        className="p-3 bg-white/90 dark:bg-gray-800/90 rounded-lg border border-amber-200/50 dark:border-amber-700/30"
-                      >
-                        <div className="font-medium mb-1">{doc.title}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          由 {doc.submittedBy || '未知用户'} 提交
-                        </div>
-                        <div className="grid grid-cols-3 gap-1">
-                          <button 
-                            onClick={() => {
-                              handleEditDoc(doc)
-                              setShowMobileNav(false)
-                            }}
-                            className="py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded"
-                          >
-                            编辑
-                          </button>
-                          <button 
-                            onClick={() => handleReviewDoc(doc._id, true)}
-                            className="py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
-                          >
-                            批准
-                          </button>
-                          <button 
-                            onClick={() => handleReviewDoc(doc._id, false)}
-                            className="py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded"
-                          >
-                            拒绝
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+              {/* 管理员操作区域 - 历史提交记录和待审核文档 */}
+              {isAdmin && (
+                <>
+                  {/* 历史记录按钮 */}
+                  <div className="mb-4">
+                    <button
+                      onClick={() => setShowHistory(!showHistory)}
+                      className={`w-full px-3 py-2 flex items-center justify-center space-x-2 rounded-lg ${
+                        showHistory 
+                        ? 'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-400' 
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <History size={16} />
+                      <span>{showHistory ? '隐藏历史记录' : '查看历史提交'}</span>
+                    </button>
                   </div>
-                </div>
+                  
+                  {/* 历史提交记录 */}
+                  {showHistory && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-3 flex items-center">
+                        <History size={16} className="mr-2" />
+                        历史提交记录
+                      </h3>
+                      
+                      {/* 筛选按钮 */}
+                      <div className="flex space-x-2 mb-3">
+                        <button
+                          onClick={() => setHistoryFilter('all')}
+                          className={`flex-1 py-2 text-xs rounded ${
+                            historyFilter === 'all' 
+                              ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' 
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          全部
+                        </button>
+                        <button
+                          onClick={() => setHistoryFilter('approved')}
+                          className={`flex-1 py-2 text-xs rounded ${
+                            historyFilter === 'approved' 
+                              ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' 
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          已批准
+                        </button>
+                        <button
+                          onClick={() => setHistoryFilter('rejected')}
+                          className={`flex-1 py-2 text-xs rounded ${
+                            historyFilter === 'rejected' 
+                              ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' 
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          已拒绝
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-2 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg p-3 mb-4">
+                        {historyDocs.length > 0 ? (
+                          historyDocs.map((doc) => (
+                            <div 
+                              key={doc._id} 
+                              className={`p-3 bg-white/90 dark:bg-gray-800/90 rounded-lg border ${
+                                doc.status === 'approved' 
+                                  ? 'border-green-200/50 dark:border-green-700/30' 
+                                  : 'border-red-200/50 dark:border-red-700/30'
+                              }`}
+                            >
+                              <div className="font-medium mb-1 flex items-center justify-between">
+                                <span className="truncate mr-2">{doc.title}</span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
+                                  doc.status === 'approved'
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                }`}>
+                                  {doc.status === 'approved' ? '已批准' : '已拒绝'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex justify-between">
+                                <span>由 {doc.submittedBy || '未知用户'} 提交</span>
+                                <span>{new Date(doc.updatedAt).toLocaleDateString()}</span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-1">
+                                <button 
+                                  onClick={() => {
+                                    fetchDoc(doc._id)
+                                    setShowMobileNav(false)
+                                  }}
+                                  className="py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded"
+                                >
+                                  查看
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    handleEditDoc(doc)
+                                    setShowMobileNav(false)
+                                  }}
+                                  className="py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                                >
+                                  编辑
+                                </button>
+                                <button 
+                                  onClick={() => handleRevertDoc(doc._id)}
+                                  className="py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded"
+                                >
+                                  撤销
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                            无历史审核记录
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 待审核文档 */}
+                  {pendingDocs.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-3 flex items-center">
+                        <Clock size={16} className="mr-2" />
+                        待审核文档 ({pendingDocs.length})
+                      </h3>
+                      <div className="space-y-2 bg-amber-50/50 dark:bg-amber-900/20 rounded-lg p-3 mb-4">
+                        {pendingDocs.map((doc) => (
+                          <div 
+                            key={doc._id} 
+                            className="p-3 bg-white/90 dark:bg-gray-800/90 rounded-lg border border-amber-200/50 dark:border-amber-700/30"
+                          >
+                            <div className="font-medium mb-1">{doc.title}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                              由 {doc.submittedBy || '未知用户'} 提交
+                            </div>
+                            <div className="grid grid-cols-3 gap-1">
+                              <button 
+                                onClick={() => {
+                                  handleEditDoc(doc)
+                                  setShowMobileNav(false)
+                                }}
+                                className="py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded"
+                              >
+                                编辑
+                              </button>
+                              <button 
+                                onClick={() => handleReviewDoc(doc._id, true)}
+                                className="py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
+                              >
+                                批准
+                              </button>
+                              <button 
+                                onClick={() => handleReviewDoc(doc._id, false)}
+                                className="py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded"
+                              >
+                                拒绝
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             
               {/* 当前文档目录 */}
