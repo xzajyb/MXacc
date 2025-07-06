@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronUp, FolderOpen, ChevronDown, ChevronRight } from 'lucide-react'
+import { Search, Menu, X, FileText, Folder, Plus, Edit, Trash2, Settings, Home, List, ChevronUp, FolderOpen, ChevronDown, ChevronRight, PenLine, Clock } from 'lucide-react'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Toast from '@/components/Toast'
 import VueMarkdownRenderer from '@/components/VitePress/VueMarkdownRenderer'
@@ -19,6 +19,9 @@ interface DocContent {
   path: string
   isPublic: boolean
   author: string
+  submittedBy?: string
+  status?: 'approved' | 'pending' | 'rejected'
+  authorId?: string
   createdAt: string
   updatedAt: string
   tags: string[]
@@ -49,10 +52,12 @@ const DocsPage: React.FC = () => {
   const [error, setError] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
+  const [isUserSubmission, setIsUserSubmission] = useState(false)
   const [editingDoc, setEditingDoc] = useState<DocContent | null>(null)
   const [showMobileNav, setShowMobileNav] = useState(false)
   const [toc, setToc] = useState<TocItem[]>([])
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const [pendingDocs, setPendingDocs] = useState<DocContent[]>([])
 
   // 管理员权限检查
   const isAdmin = user?.role === 'admin'
@@ -244,6 +249,27 @@ const DocsPage: React.FC = () => {
     })).filter(category => category.docs.length > 0)
   }, [categories, searchQuery])
 
+  // 获取待审核文档
+  const fetchPendingDocs = async () => {
+    if (!isAdmin) return
+    
+    try {
+      const response = await fetch('/api/social/content?action=get-docs&status=pending', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        setPendingDocs(data.docs || [])
+      }
+    } catch (error) {
+      console.error('获取待审核文档错误:', error)
+    }
+  }
+
   // 保存文档
   const handleSaveDoc = async (docData: any) => {
     try {
@@ -264,13 +290,50 @@ const DocsPage: React.FC = () => {
       if (data.success) {
         // 刷新文档列表
         await fetchDocs()
+        if (isAdmin) await fetchPendingDocs()
         setError('')
+        
+        // 如果是用户提交，显示成功提示
+        if (!isAdmin && !editingDoc) {
+          alert('文档已提交成功，将在审核后发布')
+        }
       } else {
         setError(data.message || '保存文档失败')
       }
     } catch (error) {
       console.error('保存文档错误:', error)
       setError('保存文档失败')
+    }
+  }
+  
+  // 审核文档
+  const handleReviewDoc = async (docId: string, approved: boolean) => {
+    try {
+      const response = await fetch('/api/social/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          action: 'review-doc',
+          docId,
+          status: approved ? 'approved' : 'rejected'
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        // 刷新文档列表
+        await fetchDocs()
+        await fetchPendingDocs()
+        setError('')
+      } else {
+        setError(data.message || '审核文档失败')
+      }
+    } catch (error) {
+      console.error('审核文档错误:', error)
+      setError('审核文档失败')
     }
   }
 
@@ -315,6 +378,14 @@ const DocsPage: React.FC = () => {
   // 编辑文档
   const handleEditDoc = (doc: DocContent) => {
     setEditingDoc(doc)
+    setIsUserSubmission(false)
+    setShowEditor(true)
+  }
+
+  // 用户提交文档
+  const handleUserSubmitDoc = () => {
+    setEditingDoc(null)
+    setIsUserSubmission(true)
     setShowEditor(true)
   }
 
@@ -344,6 +415,13 @@ const DocsPage: React.FC = () => {
   useEffect(() => {
     fetchDocs()
   }, [])
+
+  useEffect(() => {
+    // 如果是管理员，获取待审核文档
+    if (isAdmin) {
+      fetchPendingDocs()
+    }
+  }, [isAdmin])
 
   useEffect(() => {
     // 默认加载第一个文档
@@ -391,28 +469,32 @@ const DocsPage: React.FC = () => {
           </div>
 
           {/* 操作按钮 */}
-            {isAdmin && (
-            <div className="px-4 pb-4 space-y-2">
-                <button
-                  onClick={() => setShowEditor(true)}
+          <div className="px-4 pb-4 space-y-2">
+            {/* 普通用户提交文档按钮 */}
+            {user && (
+              <button
+                onClick={isAdmin ? () => setShowEditor(true) : handleUserSubmitDoc}
                 className="w-full px-3 py-2 bg-blue-600/90 text-white rounded-xl hover:bg-blue-700/90 transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm"
-                >
-                  <Plus size={16} />
-                  <span>新建文档</span>
-                </button>
-                <button
-                  onClick={() => setEditMode(!editMode)}
-                className={`w-full px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
-                    editMode 
-                    ? 'bg-green-100/90 text-green-600 dark:bg-green-900/50 dark:text-green-400' 
-                    : 'bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200/90 dark:hover:bg-gray-600/90'
-                  }`}
-                >
-                  <Settings size={16} />
-                  <span>{editMode ? '退出编辑' : '编辑模式'}</span>
-                </button>
-            </div>
+              >
+                <Plus size={16} />
+                <span>{isAdmin ? '新建文档' : '提交文档'}</span>
+              </button>
             )}
+            
+            {isAdmin && (
+              <button
+                onClick={() => setEditMode(!editMode)}
+              className={`w-full px-3 py-2 rounded-xl transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm ${
+                  editMode 
+                  ? 'bg-green-100/90 text-green-600 dark:bg-green-900/50 dark:text-green-400' 
+                  : 'bg-gray-100/90 dark:bg-gray-700/90 text-gray-700 dark:text-gray-300 hover:bg-gray-200/90 dark:hover:bg-gray-600/90'
+                }`}
+              >
+                <Settings size={16} />
+                <span>{editMode ? '退出编辑' : '编辑模式'}</span>
+              </button>
+            )}
+          </div>
             
           {/* 文档目录 */}
           <div className="flex-1 overflow-y-auto px-4 pb-4 min-h-0">
@@ -426,6 +508,50 @@ const DocsPage: React.FC = () => {
                 <span>返回顶部</span>
             </button>
           </div>
+
+          {/* 待审核文档区域 - 仅管理员可见 */}
+          {isAdmin && pendingDocs.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3 flex items-center">
+                <Clock size={14} className="mr-1" />
+                待审核文档 ({pendingDocs.length})
+              </h4>
+              <div className="space-y-1 bg-amber-50/50 dark:bg-amber-900/20 rounded-lg p-2">
+                {pendingDocs.map((doc) => (
+                  <div 
+                    key={doc._id} 
+                    className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-amber-200/50 dark:border-amber-700/30"
+                  >
+                    <div className="text-sm font-medium mb-1 line-clamp-1">{doc.title}</div>
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <span>由 {doc.submittedBy || '未知用户'} 提交</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2 space-x-1">
+                      <button 
+                        onClick={() => handleEditDoc(doc)}
+                        className="flex-1 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors"
+                      >
+                        <PenLine size={12} className="inline mr-1" />
+                        编辑
+                      </button>
+                      <button 
+                        onClick={() => handleReviewDoc(doc._id, true)}
+                        className="flex-1 px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors"
+                      >
+                        批准
+                      </button>
+                      <button 
+                        onClick={() => handleReviewDoc(doc._id, false)}
+                        className="flex-1 px-2 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
+                      >
+                        拒绝
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
             {/* 当前文档目录 */}
             {currentDoc && toc.length > 0 && (
@@ -498,7 +624,7 @@ const DocsPage: React.FC = () => {
                           onClick={() => fetchDoc(doc._id)}
                               className={`w-full text-left px-2 py-1.5 rounded-lg transition-colors flex items-center space-x-2 text-xs backdrop-blur-sm ${
                             currentDoc?._id === doc._id
-                                  ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400'
+                                  ? 'bg-blue-50/90 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' 
                                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/90 dark:hover:bg-gray-700/80'
                           }`}
                         >
@@ -580,18 +706,28 @@ const DocsPage: React.FC = () => {
             </div>
 
             {/* 操作按钮 */}
-            {isAdmin && (
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
+              {/* 文档创建/提交按钮 */}
+              {user && (
                 <button
                   onClick={() => {
-                    setShowEditor(true)
+                    if (isAdmin) {
+                      setShowEditor(true)
+                    } else {
+                      setIsUserSubmission(true)
+                      setShowEditor(true)
+                    }
                     setShowMobileNav(false)
                   }}
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
                 >
                   <Plus size={16} />
-                  <span>新建文档</span>
+                  <span>{isAdmin ? '新建文档' : '提交文档'}</span>
                 </button>
+              )}
+              
+              {/* 管理员编辑模式切换 */}
+              {isAdmin && (
                 <button
                   onClick={() => setEditMode(!editMode)}
                   className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
@@ -603,11 +739,57 @@ const DocsPage: React.FC = () => {
                   <Settings size={16} />
                   <span>{editMode ? '退出编辑' : '编辑模式'}</span>
                 </button>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* 导航内容 - 可滚动区域 */}
             <div className="flex-1 overflow-y-auto p-4 min-h-0">
+              {/* 待审核文档区域 - 仅管理员可见 */}
+              {isAdmin && pendingDocs.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-3 flex items-center">
+                    <Clock size={16} className="mr-2" />
+                    待审核文档 ({pendingDocs.length})
+                  </h3>
+                  <div className="space-y-2 bg-amber-50/50 dark:bg-amber-900/20 rounded-lg p-3 mb-4">
+                    {pendingDocs.map((doc) => (
+                      <div 
+                        key={doc._id} 
+                        className="p-3 bg-white/90 dark:bg-gray-800/90 rounded-lg border border-amber-200/50 dark:border-amber-700/30"
+                      >
+                        <div className="font-medium mb-1">{doc.title}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          由 {doc.submittedBy || '未知用户'} 提交
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <button 
+                            onClick={() => {
+                              handleEditDoc(doc)
+                              setShowMobileNav(false)
+                            }}
+                            className="py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded"
+                          >
+                            编辑
+                          </button>
+                          <button 
+                            onClick={() => handleReviewDoc(doc._id, true)}
+                            className="py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded"
+                          >
+                            批准
+                          </button>
+                          <button 
+                            onClick={() => handleReviewDoc(doc._id, false)}
+                            className="py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded"
+                          >
+                            拒绝
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            
               {/* 当前文档目录 */}
               {currentDoc && toc.length > 0 && (
                 <div className="mb-6">
@@ -793,9 +975,11 @@ const DocsPage: React.FC = () => {
         onClose={() => {
           setShowEditor(false)
           setEditingDoc(null)
+          setIsUserSubmission(false)
         }}
         onSave={handleSaveDoc}
         initialDoc={editingDoc}
+        isUserSubmission={isUserSubmission}
       />
 
       {/* 错误提示 */}

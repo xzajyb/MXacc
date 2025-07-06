@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Save, Eye, Code, FileText, Tag, Globe, Lock, Upload, Plus, Trash2, Folder, FolderOpen } from 'lucide-react'
+import { X, Save, Eye, Code, FileText, Tag, Globe, Lock, Upload, Plus, Trash2, Folder, FolderOpen, AlertCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useTheme } from '@/contexts/ThemeContext'
 import MarkdownRenderer from './MarkdownRenderer'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface DocEditorProps {
   isOpen: boolean
   onClose: () => void
   onSave: (docData: any) => void
   initialDoc?: any
+  isUserSubmission?: boolean
 }
 
 interface Category {
@@ -19,8 +21,10 @@ interface Category {
   parentCategory?: string
 }
 
-const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialDoc }) => {
+const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialDoc, isUserSubmission = false }) => {
   const { isDark } = useTheme()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
@@ -53,7 +57,7 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
       { value: 'tutorial', label: '教程', englishPath: 'tutorial' },
       { value: 'faq', label: '常见问题', englishPath: 'faq' },
       { value: 'development', label: '开发', englishPath: 'development' }
-    ]
+  ]
   })
 
   // 预设的中英文映射
@@ -229,6 +233,8 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
         categoryPath: categoryPath || buildCategoryPath(category, categories),
         tags,
         isPublic,
+        status: isAdmin ? 'approved' : 'pending', // 管理员直接发布，用户提交需审核
+        submittedBy: user?.username || 'unknown user',
         ...(initialDoc?._id && { docId: initialDoc._id })
       }
       
@@ -290,7 +296,7 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
           <div className="flex items-center space-x-4">
             <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {initialDoc ? '编辑文档' : '创建新文档'}
+              {initialDoc ? '编辑文档' : isAdmin ? '创建新文档' : '提交文档'}
             </h2>
           </div>
           
@@ -327,8 +333,8 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
               disabled={saving}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center space-x-2"
             >
-              <Save size={16} />
-              <span>{saving ? '保存中...' : '保存'}</span>
+              {isAdmin ? <Save size={16} /> : <Upload size={16} />}
+              <span>{saving ? '保存中...' : isAdmin ? '保存' : '提交审核'}</span>
             </button>
             
             {/* 关闭按钮 */}
@@ -360,6 +366,18 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                 />
               </div>
 
+              {/* 用户提交提示 */}
+              {!isAdmin && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start">
+                    <AlertCircle size={18} className="mr-2 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      您提交的文档将由管理员审核后发布。审核可能需要1-2个工作日，请耐心等待。
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* URL Slug */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -381,14 +399,16 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    文档分类
-                  </label>
-                  <button
-                    onClick={() => setShowCategoryManager(!showCategoryManager)}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    管理分类
-                  </button>
+                  文档分类
+                </label>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowCategoryManager(!showCategoryManager)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      管理分类
+                    </button>
+                  )}
                 </div>
                 
                 <select
@@ -405,18 +425,18 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                       return a.label.localeCompare(b.label)
                     })
                     .map((cat) => (
-                      <option key={cat.value} value={cat.value}>
+                    <option key={cat.value} value={cat.value}>
                         {buildCategoryDisplayName(cat.value, categories)}
-                      </option>
-                    ))}
+                    </option>
+                  ))}
                 </select>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   分类路径: /{categoryPath}
                 </p>
 
-                {/* 分类管理面板 */}
-                {showCategoryManager && (
+                {/* 分类管理面板 - 仅管理员可见 */}
+                {isAdmin && showCategoryManager && (
                   <div className="mt-4 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
                     <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">分类管理</h4>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mb-3 bg-amber-50 dark:bg-amber-900/20 p-2 rounded">
@@ -515,34 +535,36 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
                 />
               </div>
 
-              {/* 可见性 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  可见性
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      checked={isPublic}
-                      onChange={() => setIsPublic(true)}
-                      className="mr-2"
-                    />
-                    <Globe size={16} className="mr-2 text-green-600" />
-                    <span className="text-sm">公开 - 所有用户可见</span>
+              {/* 可见性 - 仅管理员可设置 */}
+              {isAdmin && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    可见性
                   </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      checked={!isPublic}
-                      onChange={() => setIsPublic(false)}
-                      className="mr-2"
-                    />
-                    <Lock size={16} className="mr-2 text-orange-600" />
-                    <span className="text-sm">私有 - 仅管理员可见</span>
-                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        checked={isPublic}
+                        onChange={() => setIsPublic(true)}
+                        className="mr-2"
+                      />
+                      <Globe size={16} className="mr-2 text-green-600" />
+                      <span className="text-sm">公开 - 所有用户可见</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        checked={!isPublic}
+                        onChange={() => setIsPublic(false)}
+                        className="mr-2"
+                      />
+                      <Lock size={16} className="mr-2 text-orange-600" />
+                      <span className="text-sm">私有 - 仅管理员可见</span>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 

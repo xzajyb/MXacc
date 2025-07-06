@@ -197,11 +197,17 @@ module.exports = async function handler(req, res) {
         // 非管理员只能看到公开文档
         if (currentUser.role !== 'admin') {
           query.isPublic = true
+          query.status = 'approved' // 普通用户只能看到已批准的文档
         }
         
         // 按分类过滤
         if (category) {
           query.category = category
+        }
+        
+        // 按状态过滤（仅管理员可用）
+        if (req.query.status && currentUser.role === 'admin') {
+          query.status = req.query.status
         }
 
         const docsList = await docs.find(query)
@@ -842,11 +848,9 @@ module.exports = async function handler(req, res) {
       // 创建文档
       if (action === 'create-doc') {
         // 检查管理员权限
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ 
-            success: false, 
-            message: '只有管理员可以创建文档' 
-          })
+        if (currentUser.role !== 'admin' && !body.status) {
+          // 普通用户可以提交文档，但状态为待审核
+          body.status = 'pending'
         }
 
         if (!title || !content) {
@@ -878,9 +882,11 @@ module.exports = async function handler(req, res) {
           category: category || 'guide',
           categoryPath: categoryPath || (category || 'guide'),
           path: `/${categoryPath || (category || 'guide')}/${docSlug}`,
-          isPublic: isPublic !== false, // 默认公开
+          isPublic: currentUser.role === 'admin' ? (isPublic !== false) : true, // 默认公开，普通用户提交的必须公开
           author: currentUser.username,
           authorId: new ObjectId(decoded.userId),
+          submittedBy: body.submittedBy || currentUser.username,
+          status: body.status || (currentUser.role === 'admin' ? 'approved' : 'pending'), // 管理员默认审核通过，普通用户待审核
           tags: tags || [],
           createdAt: new Date(),
           updatedAt: new Date()
@@ -890,7 +896,7 @@ module.exports = async function handler(req, res) {
 
         return res.status(201).json({
           success: true,
-          message: '文档创建成功',
+          message: currentUser.role === 'admin' ? '文档创建成功' : '文档提交成功，等待审核',
           data: {
             id: result.insertedId,
             ...newDoc
@@ -900,18 +906,22 @@ module.exports = async function handler(req, res) {
 
       // 更新文档
       if (action === 'update-doc') {
-        // 检查管理员权限
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ 
+        // 获取文档
+        const existingDoc = await docs.findOne({ _id: new ObjectId(docId) })
+        
+        if (!existingDoc) {
+          return res.status(404).json({ 
             success: false, 
-            message: '只有管理员可以编辑文档' 
+            message: '文档不存在' 
           })
         }
-
-        if (!docId) {
-          return res.status(400).json({ 
+        
+        // 权限检查：只有管理员或文档作者可以编辑
+        const isAuthor = existingDoc.authorId && existingDoc.authorId.toString() === decoded.userId
+        if (!isAdmin && !isAuthor) {
+          return res.status(403).json({ 
             success: false, 
-            message: '文档ID不能为空' 
+            message: '没有权限编辑此文档' 
           })
         }
 
@@ -924,7 +934,15 @@ module.exports = async function handler(req, res) {
         if (category) updateData.category = category
         if (categoryPath) updateData.categoryPath = categoryPath
         if (tags) updateData.tags = tags
-        if (typeof isPublic === 'boolean') updateData.isPublic = isPublic
+        
+        // 只有管理员可以更改可见性和状态
+        if (isAdmin) {
+          if (typeof isPublic === 'boolean') updateData.isPublic = isPublic
+          if (body.status) updateData.status = body.status
+        } else {
+          // 普通用户编辑将重置为待审核状态
+          updateData.status = 'pending'
+        }
 
         // 如果更新了标题或slug，重新生成路径
         if (title || slug) {
@@ -934,12 +952,12 @@ module.exports = async function handler(req, res) {
             .replace(/^-|-$/g, '')
           
           // 检查新slug是否与其他文档冲突
-          const existingDoc = await docs.findOne({ 
+          const existingDocWithSlug = await docs.findOne({ 
             slug: newSlug, 
             _id: { $ne: new ObjectId(docId) } 
           })
           
-          if (existingDoc) {
+          if (existingDocWithSlug) {
             return res.status(400).json({ 
               success: false, 
               message: '文档URL已存在，请使用不同的标题或自定义URL' 
@@ -966,25 +984,106 @@ module.exports = async function handler(req, res) {
 
         return res.status(200).json({
           success: true,
-          message: '文档更新成功',
+          message: isAdmin ? '文档更新成功' : '文档更新成功，等待审核',
           data: updatedDoc
+        })
+      }
+      
+      // 审核文档
+      if (action === 'review-doc') {
+        // 仅管理员可以审核文档
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '只有管理员可以审核文档' 
+          })
+        }
+
+        if (!docId || !body.status) {
+          return res.status(400).json({ 
+            success: false, 
+            message: 'docId和status不能为空' 
+          })
+        }
+
+        if (!['approved', 'rejected'].includes(body.status)) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '状态值无效，只能是approved或rejected' 
+          })
+        }
+
+        const result = await docs.updateOne(
+          { _id: new ObjectId(docId) },
+          { 
+            $set: { 
+              status: body.status,
+              reviewedBy: currentUser.username,
+              reviewedAt: new Date(),
+              updatedAt: new Date()
+            }
+          }
+        )
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '文档不存在' 
+          })
+        }
+
+        // 获取文档作者ID，发送系统通知
+        try {
+          const docInfo = await docs.findOne({ _id: new ObjectId(docId) })
+          if (docInfo && docInfo.authorId) {
+            const systemMessages = db.collection('system_messages')
+            
+            const notificationData = {
+              title: body.status === 'approved' ? '文档已批准' : '文档未通过审核',
+              content: body.status === 'approved' 
+                ? `您提交的文档 "${docInfo.title}" 已通过管理员审核，现已发布。` 
+                : `您提交的文档 "${docInfo.title}" 未通过管理员审核。请检查内容并重新提交，或联系管理员了解详情。`,
+              type: body.status === 'approved' ? 'success' : 'warning',
+              priority: 'normal',
+              autoRead: false,
+              targetUserId: docInfo.authorId, // 个人专属消息
+              authorId: new ObjectId(decoded.userId),
+              authorName: '系统通知',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+
+            await systemMessages.insertOne(notificationData)
+            console.log('文档审核通知已发送给用户:', docInfo.authorId.toString())
+          }
+        } catch (notificationError) {
+          console.error('发送文档审核通知失败:', notificationError)
+          // 不阻断主流程
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: body.status === 'approved' ? '文档已批准' : '文档已拒绝'
         })
       }
 
       // 删除文档
       if (action === 'delete-doc') {
-        // 检查管理员权限
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ 
+        // 检查权限：管理员或文档作者
+        const docToDelete = await docs.findOne({ _id: new ObjectId(docId) })
+        
+        if (!docToDelete) {
+          return res.status(404).json({ 
             success: false, 
-            message: '只有管理员可以删除文档' 
+            message: '文档不存在' 
           })
         }
-
-        if (!docId) {
-          return res.status(400).json({ 
+        
+        const isAuthor = docToDelete.authorId && docToDelete.authorId.toString() === decoded.userId
+        if (!isAdmin && !isAuthor) {
+          return res.status(403).json({ 
             success: false, 
-            message: '文档ID不能为空' 
+            message: '没有权限删除此文档' 
           })
         }
 
