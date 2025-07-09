@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield, Lock } from 'lucide-react'
+import { X, MessageCircle, UserPlus, UserMinus, Calendar, MapPin, Link2, Heart, Trash2, MoreHorizontal, Shield, Lock, Coins } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -28,6 +28,17 @@ interface User {
     name: string
     color: string
     description?: string
+  }[]
+  pointBalances?: {
+    pointTypeId: string
+    amount: number
+    updatedAt: string
+    pointType: {
+      _id: string
+      name: string
+      symbol: string
+      color: string
+    }
   }[]
 }
 
@@ -91,8 +102,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
   const [followersLoading, setFollowersLoading] = useState(false)
   const [followingLoading, setFollowingLoading] = useState(false)
   const [showMessaging, setShowMessaging] = useState(false)
-  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following' | 'points'>('posts')
   const [userPrivacySettings, setUserPrivacySettings] = useState<any>(null)
+  const [pointsData, setPointsData] = useState<{
+    balances: any[]
+    transactions: any[]
+  } | null>(null)
+  const [pointsLoading, setPointsLoading] = useState(false)
 
   // 获取用户隐私设置（仅查看自己时）
   const fetchUserPrivacySettings = async () => {
@@ -211,6 +227,42 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
       showError('获取关注列表失败')
     } finally {
       setFollowingLoading(false)
+    }
+  }
+
+  // 获取用户积分
+  const fetchUserPoints = async () => {
+    if (!userId) return
+    
+    // 只有查看自己的资料时才获取积分信息
+    if (!user?.isOwnProfile) return
+
+    try {
+      setPointsLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/content?action=user-points&userId=${userId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setPointsData(data.data)
+        
+        // 同时更新用户信息中的积分余额
+        if (user) {
+          setUser(prev => prev ? {
+            ...prev,
+            pointBalances: data.data.balances
+          } : null)
+        }
+      } else if (response.status === 403) {
+        // 权限不足，静默处理
+        console.log('无权限查看积分信息')
+      }
+    } catch (error) {
+      console.error('获取积分信息失败:', error)
+    } finally {
+      setPointsLoading(false)
     }
   }
 
@@ -358,6 +410,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
       fetchFollowers()
     } else if (user && activeTab === 'following') {
       fetchFollowing()
+    } else if (user && activeTab === 'points' && user.isOwnProfile) {
+      fetchUserPoints()
     }
   }, [activeTab, user])
 
@@ -462,6 +516,30 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                         <div className="text-sm text-gray-500 dark:text-gray-400">关注</div>
                       </div>
                     </div>
+
+                    {/* 积分余额显示（仅自己可见） */}
+                    {user.isOwnProfile && user.pointBalances && user.pointBalances.length > 0 && (
+                      <div className="mt-4">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">我的积分</div>
+                        <div className="flex flex-wrap gap-2">
+                          {user.pointBalances.map((balance) => (
+                            <div
+                              key={balance.pointTypeId}
+                              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border"
+                              style={{
+                                backgroundColor: `${balance.pointType.color}10`,
+                                borderColor: `${balance.pointType.color}30`,
+                                color: balance.pointType.color
+                              }}
+                            >
+                              <span className="mr-1">{balance.pointType.symbol}</span>
+                              <span className="mr-1">{balance.pointType.name}</span>
+                              <span className="font-bold">{balance.amount}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* 操作按钮 */}
@@ -550,6 +628,21 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                           <Lock className="w-3 h-3 text-orange-500" />
                         </span>
                       )}
+                    </button>
+                  )}
+
+                  {/* 积分标签 - 只有自己可以查看 */}
+                  {user.isOwnProfile && (
+                    <button
+                      onClick={() => setActiveTab('points')}
+                      className={`flex items-center space-x-1 py-3 border-b-2 transition-colors ${
+                        activeTab === 'points'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      <Coins className="w-4 h-4" />
+                      <span>我的积分</span>
                     </button>
                   )}
                 </div>
@@ -813,6 +906,135 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose, userId }) =>
                           </div>
                         </div>
                       ))
+                    )}
+                  </div>
+                )}
+
+                {/* 积分详情 */}
+                {activeTab === 'points' && user.isOwnProfile && (
+                  <div className="space-y-6">
+                    {pointsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">加载积分信息...</p>
+                      </div>
+                    ) : pointsData ? (
+                      <>
+                        {/* 积分余额卡片 */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                            <Coins className="w-5 h-5 mr-2 text-blue-600" />
+                            积分余额
+                          </h3>
+                          
+                          {pointsData.balances.length === 0 ? (
+                            <p className="text-gray-500 dark:text-gray-400">暂无积分记录</p>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {pointsData.balances.map((balance) => (
+                                <div
+                                  key={balance.pointTypeId}
+                                  className="bg-white dark:bg-gray-800 rounded-lg p-4 border shadow-sm"
+                                  style={{
+                                    borderColor: `${balance.pointType.color}30`
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2">
+                                      <span 
+                                        className="text-2xl"
+                                        style={{ color: balance.pointType.color }}
+                                      >
+                                        {balance.pointType.symbol}
+                                      </span>
+                                      <div>
+                                        <p className="font-medium text-gray-900 dark:text-white">
+                                          {balance.pointType.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                          {new Date(balance.updatedAt).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p 
+                                        className="text-2xl font-bold"
+                                        style={{ color: balance.pointType.color }}
+                                      >
+                                        {balance.amount}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 交易记录 */}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">交易记录</h3>
+                          
+                          {pointsData.transactions.length === 0 ? (
+                            <div className="text-center py-8">
+                              <p className="text-gray-500 dark:text-gray-400">暂无交易记录</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {pointsData.transactions.map((transaction) => (
+                                <div
+                                  key={transaction._id}
+                                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div
+                                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                                        style={{ backgroundColor: transaction.pointType?.color || '#6B7280' }}
+                                      >
+                                        {transaction.pointType?.symbol || '?'}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center space-x-2">
+                                          <p className="font-medium text-gray-900 dark:text-white">
+                                            {transaction.pointType?.name || '未知积分类型'}
+                                          </p>
+                                          <span
+                                            className={`text-lg font-bold ${
+                                              transaction.amount > 0
+                                                ? 'text-green-600 dark:text-green-400'
+                                                : 'text-red-600 dark:text-red-400'
+                                            }`}
+                                          >
+                                            {transaction.amount > 0 ? '+' : ''}{transaction.amount}
+                                          </span>
+                                        </div>
+                                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                                          {transaction.reason}
+                                        </p>
+                                        {transaction.reference && (
+                                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            参考：{transaction.reference}
+                                          </p>
+                                        )}
+                                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                          <span>操作人：{transaction.performer?.username || '系统'}</span>
+                                          <span>时间：{new Date(transaction.createdAt).toLocaleString()}</span>
+                                          <span>余额：{transaction.balanceAfter}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500 dark:text-gray-400">无法加载积分信息</p>
+                      </div>
                     )}
                   </div>
                 )}

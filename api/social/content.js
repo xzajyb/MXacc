@@ -342,17 +342,17 @@ module.exports = async function handler(req, res) {
       
       // 获取用户积分记录
       if (action === 'user-points' && req.query.userId) {
-        // 只有管理员可以查看用户积分
-        if (currentUser.role !== 'admin') {
-          return res.status(403).json({ 
-            success: false, 
-            message: '权限不足，需要管理员权限' 
-          })
-        }
-        
         const userId = req.query.userId
         if (!ObjectId.isValid(userId)) {
           return res.status(400).json({ success: false, message: '无效的用户ID' })
+        }
+        
+        // 检查权限：管理员可以查看任何用户的积分，普通用户只能查看自己的积分
+        if (currentUser.role !== 'admin' && userId !== decoded.userId) {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，只能查看自己的积分记录' 
+          })
         }
         
         const user = await users.findOne({ _id: new ObjectId(userId) })
