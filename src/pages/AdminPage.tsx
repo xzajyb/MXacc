@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
-import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon, Search } from 'lucide-react'
+import { Shield, Mail, Users, Send, AlertTriangle, CheckCircle, XCircle, Loader, Menu, X, MessageSquare, Bell, Info, AlertCircle, Trash2, User as UserIcon, Image as ImageIcon, Search, Coins, Plus, Edit, Eye, Award } from 'lucide-react'
 import axios from 'axios'
 import { motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
@@ -38,7 +38,7 @@ interface AdminPageProps {
 const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const { user, token } = useAuth()
   const { showToast } = useToast()
-  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos' | 'posts'>('email')
+  const [activeTab, setActiveTab] = useState<'email' | 'users' | 'messages' | 'bans' | 'titles' | 'partner-logos' | 'posts' | 'points'>('email')
   
   // 邮件相关状态
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -150,6 +150,32 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
 
+  // 积分管理相关状态
+  const [pointTypes, setPointTypes] = useState<any[]>([])
+  const [pointsLoading, setPointsLoading] = useState(false)
+  const [showCreatePointTypeDialog, setShowCreatePointTypeDialog] = useState(false)
+  const [showEditPointTypeDialog, setShowEditPointTypeDialog] = useState(false)
+  const [showAwardPointsDialog, setShowAwardPointsDialog] = useState(false)
+  const [showUserPointsDialog, setShowUserPointsDialog] = useState(false)
+  const [selectedPointType, setSelectedPointType] = useState<any>(null)
+  const [pointTypeName, setPointTypeName] = useState('')
+  const [pointTypeSymbol, setPointTypeSymbol] = useState('')
+  const [pointTypeDescription, setPointTypeDescription] = useState('')
+  const [pointTypeColor, setPointTypeColor] = useState('#3B82F6')
+  const [pointTypeIsDefault, setPointTypeIsDefault] = useState(false)
+  const [processingPointType, setProcessingPointType] = useState(false)
+  const [selectedUserForPoints, setSelectedUserForPoints] = useState('')
+  const [selectedPointTypeForAward, setSelectedPointTypeForAward] = useState('')
+  const [pointAmount, setPointAmount] = useState('')
+  const [pointReason, setPointReason] = useState('')
+  const [pointReference, setPointReference] = useState('')
+  const [awardingPoints, setAwardingPoints] = useState(false)
+  const [userPointsData, setUserPointsData] = useState<any>(null)
+  const [pointTransactions, setPointTransactions] = useState<any[]>([])
+  const [transactionsPage, setTransactionsPage] = useState(1)
+  const [transactionsTotalPages, setTransactionsTotalPages] = useState(1)
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
+
   // 预设颜色选项
   const presetColors = [
     { name: 'Blue', value: '#3B82F6' },
@@ -238,8 +264,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
       loadPartnerLogos()
     } else if (activeTab === 'posts' && token) {
       loadPosts()
+    } else if (activeTab === 'points' && token) {
+      loadPointTypes()
+      loadUsers() // 加载用户列表供积分发放使用
+      loadPointTransactions()
     }
-  }, [activeTab, currentPage, token, postsPage, postsSearchTerm])
+  }, [activeTab, currentPage, token, postsPage, postsSearchTerm, transactionsPage])
 
   // 监听封禁和申述过滤器变化
   useEffect(() => {
@@ -765,6 +795,208 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
     loadPosts()
   }
 
+  // ===== 积分管理相关函数 =====
+
+  // 加载积分类型列表
+  const loadPointTypes = async () => {
+    if (!token) return
+    
+    setPointsLoading(true)
+    try {
+      const response = await axios.get('/api/social/content?action=point-types', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setPointTypes(response.data.data)
+    } catch (error) {
+      console.error('加载积分类型失败:', error)
+      showToast('加载积分类型失败', 'error')
+    } finally {
+      setPointsLoading(false)
+    }
+  }
+
+  // 加载积分交易记录
+  const loadPointTransactions = async () => {
+    if (!token) return
+    
+    setTransactionsLoading(true)
+    try {
+      const response = await axios.get(`/api/social/content?action=point-transactions&page=${transactionsPage}&limit=20`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setPointTransactions(response.data.data.transactions)
+      setTransactionsTotalPages(response.data.data.pagination.total)
+    } catch (error) {
+      console.error('加载积分交易记录失败:', error)
+      showToast('加载积分交易记录失败', 'error')
+    } finally {
+      setTransactionsLoading(false)
+    }
+  }
+
+  // 创建积分类型
+  const handleCreatePointType = async () => {
+    if (!pointTypeName.trim() || !pointTypeSymbol.trim()) {
+      showToast('请填写积分名称和符号', 'error')
+      return
+    }
+
+    setProcessingPointType(true)
+    try {
+      await axios.post('/api/social/content', {
+        action: 'create-point-type',
+        name: pointTypeName.trim(),
+        symbol: pointTypeSymbol.trim(),
+        description: pointTypeDescription.trim(),
+        color: pointTypeColor,
+        isDefault: pointTypeIsDefault
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast('积分类型创建成功', 'success')
+      setShowCreatePointTypeDialog(false)
+      setPointTypeName('')
+      setPointTypeSymbol('')
+      setPointTypeDescription('')
+      setPointTypeColor('#3B82F6')
+      setPointTypeIsDefault(false)
+      loadPointTypes()
+    } catch (error: any) {
+      console.error('创建积分类型失败:', error)
+      showToast(error.response?.data?.message || '创建积分类型失败', 'error')
+    } finally {
+      setProcessingPointType(false)
+    }
+  }
+
+  // 更新积分类型
+  const handleUpdatePointType = async () => {
+    if (!selectedPointType || !pointTypeName.trim() || !pointTypeSymbol.trim()) {
+      showToast('请填写积分名称和符号', 'error')
+      return
+    }
+
+    setProcessingPointType(true)
+    try {
+      await axios.post('/api/social/content', {
+        action: 'update-point-type',
+        pointTypeId: selectedPointType._id,
+        name: pointTypeName.trim(),
+        symbol: pointTypeSymbol.trim(),
+        description: pointTypeDescription.trim(),
+        color: pointTypeColor,
+        isDefault: pointTypeIsDefault,
+        enabled: selectedPointType.enabled
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast('积分类型更新成功', 'success')
+      setShowEditPointTypeDialog(false)
+      setSelectedPointType(null)
+      setPointTypeName('')
+      setPointTypeSymbol('')
+      setPointTypeDescription('')
+      setPointTypeColor('#3B82F6')
+      setPointTypeIsDefault(false)
+      loadPointTypes()
+    } catch (error: any) {
+      console.error('更新积分类型失败:', error)
+      showToast(error.response?.data?.message || '更新积分类型失败', 'error')
+    } finally {
+      setProcessingPointType(false)
+    }
+  }
+
+  // 删除积分类型
+  const handleDeletePointType = async (pointTypeId: string) => {
+    if (!confirm('确定要删除此积分类型吗？此操作无法撤销。')) {
+      return
+    }
+
+    try {
+      await axios.delete(`/api/social/content?action=point-type&id=${pointTypeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast('积分类型删除成功', 'success')
+      loadPointTypes()
+    } catch (error: any) {
+      console.error('删除积分类型失败:', error)
+      showToast(error.response?.data?.message || '删除积分类型失败', 'error')
+    }
+  }
+
+  // 发放积分
+  const handleAwardPoints = async () => {
+    if (!selectedUserForPoints || !selectedPointTypeForAward || !pointAmount || !pointReason.trim()) {
+      showToast('请填写完整的发放信息', 'error')
+      return
+    }
+
+    const amount = parseInt(pointAmount)
+    if (isNaN(amount)) {
+      showToast('积分数量必须为数字', 'error')
+      return
+    }
+
+    setAwardingPoints(true)
+    try {
+      await axios.post('/api/social/content', {
+        action: 'award-points',
+        userId: selectedUserForPoints,
+        pointTypeId: selectedPointTypeForAward,
+        amount: amount,
+        reason: pointReason.trim(),
+        reference: pointReference.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      showToast(amount >= 0 ? '积分发放成功' : '积分扣除成功', 'success')
+      setShowAwardPointsDialog(false)
+      setSelectedUserForPoints('')
+      setSelectedPointTypeForAward('')
+      setPointAmount('')
+      setPointReason('')
+      setPointReference('')
+      loadPointTransactions()
+    } catch (error: any) {
+      console.error('积分操作失败:', error)
+      showToast(error.response?.data?.message || '积分操作失败', 'error')
+    } finally {
+      setAwardingPoints(false)
+    }
+  }
+
+  // 查看用户积分详情
+  const handleViewUserPoints = async (userId: string) => {
+    setSelectedUserForPoints(userId)
+    setShowUserPointsDialog(true)
+    
+    try {
+      const response = await axios.get(`/api/social/content?action=user-points&userId=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setUserPointsData(response.data.data)
+    } catch (error: any) {
+      console.error('加载用户积分失败:', error)
+      showToast(error.response?.data?.message || '加载用户积分失败', 'error')
+    }
+  }
+
+  // 打开编辑积分类型弹窗
+  const openEditPointTypeDialog = (pointType: any) => {
+    setSelectedPointType(pointType)
+    setPointTypeName(pointType.name)
+    setPointTypeSymbol(pointType.symbol)
+    setPointTypeDescription(pointType.description || '')
+    setPointTypeColor(pointType.color)
+    setPointTypeIsDefault(pointType.isDefault)
+    setShowEditPointTypeDialog(true)
+  }
+
   // 打开编辑头衔弹窗
   const openEditTitleDialog = (title: any) => {
     setSelectedTitle(title)
@@ -1276,6 +1508,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 >
                   <Trash2 className="h-5 w-5 inline mr-2" />
                   帖子管理
+                </button>
+                <button
+                  onClick={() => setActiveTab('points')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'points'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <Coins className="h-5 w-5 inline mr-2" />
+                  积分管理
                 </button>
               </nav>
             </div>
@@ -3354,6 +3597,221 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
                 </div>
               </div>
             )}
+
+            {/* 积分管理内容 */}
+            {activeTab === 'points' && (
+              <div className="max-w-7xl mx-auto space-y-6">
+                {/* 积分类型管理 */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                        <Coins className="w-5 h-5 mr-2" />
+                        积分类型管理
+                      </h2>
+                      <button
+                        onClick={() => setShowCreatePointTypeDialog(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        创建积分类型
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    {pointsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader className="h-8 w-8 animate-spin text-blue-600" />
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">加载积分类型...</span>
+                      </div>
+                    ) : pointTypes.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Coins className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">暂无积分类型</p>
+                        <button
+                          onClick={() => setShowCreatePointTypeDialog(true)}
+                          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          创建第一个积分类型
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pointTypes.map((pointType) => (
+                          <div
+                            key={pointType._id}
+                            className="p-4 border rounded-lg border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-4 h-4 rounded-full"
+                                  style={{ backgroundColor: pointType.color }}
+                                ></div>
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {pointType.name}
+                                </span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  ({pointType.symbol})
+                                </span>
+                                {pointType.isDefault && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    默认
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <button
+                                  onClick={() => openEditPointTypeDialog(pointType)}
+                                  className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                  title="编辑"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePointType(pointType._id)}
+                                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                  title="删除"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            {pointType.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                {pointType.description}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                              <span>状态: {pointType.enabled ? '启用' : '停用'}</span>
+                              <span>创建于 {new Date(pointType.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 积分发放 */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                        <Award className="w-5 h-5 mr-2" />
+                        积分发放
+                      </h2>
+                      <button
+                        onClick={() => setShowAwardPointsDialog(true)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center"
+                      >
+                        <Award className="w-4 h-4 mr-2" />
+                        发放积分
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* 用户列表 */}
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">用户列表</h3>
+                        <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                          {users.map((user) => (
+                            <div
+                              key={user._id}
+                              className="p-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-medium text-gray-900 dark:text-white">
+                                    {user.username}
+                                  </span>
+                                  {user.role === 'admin' && (
+                                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                      管理员
+                                    </span>
+                                  )}
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => handleViewUserPoints(user._id)}
+                                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                    title="查看积分"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedUserForPoints(user._id)
+                                      setShowAwardPointsDialog(true)
+                                    }}
+                                    className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                                    title="发放积分"
+                                  >
+                                    <Award className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 最近交易记录 */}
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">最近交易记录</h3>
+                        <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                          {transactionsLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Loader className="h-6 w-6 animate-spin text-blue-600" />
+                            </div>
+                          ) : pointTransactions.length === 0 ? (
+                            <div className="text-center py-8">
+                              <p className="text-gray-500 dark:text-gray-400">暂无交易记录</p>
+                            </div>
+                          ) : (
+                            pointTransactions.slice(0, 10).map((transaction) => (
+                              <div
+                                key={transaction._id}
+                                className="p-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <span className="font-medium text-gray-900 dark:text-white">
+                                      {transaction.user?.username}
+                                    </span>
+                                    <span className={`ml-2 ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {transaction.amount >= 0 ? '+' : ''}{transaction.amount}
+                                    </span>
+                                    <span className="ml-1 text-sm" style={{ color: transaction.pointType?.color }}>
+                                      {transaction.pointType?.symbol}
+                                    </span>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                      {transaction.reason}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                      {new Date(transaction.createdAt).toLocaleDateString()}
+                                    </p>
+                                    <p className="text-xs text-gray-400">
+                                      by {transaction.performer?.username}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -3672,6 +4130,510 @@ const AdminPage: React.FC<AdminPageProps> = ({ embedded = false }) => {
               </div>
             </div>
           </div>,
+          document.body
+        )}
+
+        {/* 创建积分类型对话框 */}
+        {showCreatePointTypeDialog && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => setShowCreatePointTypeDialog(false)}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                    <Coins className="w-5 h-5 mr-2" />
+                    创建积分类型
+                  </h3>
+                  <button
+                    onClick={() => setShowCreatePointTypeDialog(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      积分名称 *
+                    </label>
+                    <input
+                      type="text"
+                      value={pointTypeName}
+                      onChange={(e) => setPointTypeName(e.target.value)}
+                      placeholder="例如：金币、经验值、声望"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      积分符号 *
+                    </label>
+                    <input
+                      type="text"
+                      value={pointTypeSymbol}
+                      onChange={(e) => setPointTypeSymbol(e.target.value)}
+                      placeholder="例如：💰、⭐、🏆"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      描述
+                    </label>
+                    <textarea
+                      value={pointTypeDescription}
+                      onChange={(e) => setPointTypeDescription(e.target.value)}
+                      placeholder="积分的用途和说明"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      颜色
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={pointTypeColor}
+                        onChange={(e) => setPointTypeColor(e.target.value)}
+                        className="w-12 h-10 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer"
+                      />
+                      <div className="grid grid-cols-9 gap-2">
+                        {presetColors.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => setPointTypeColor(color.value)}
+                            className={`w-6 h-6 rounded-full border-2 ${
+                              pointTypeColor === color.value ? 'border-gray-400' : 'border-gray-200'
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={pointTypeIsDefault}
+                        onChange={(e) => setPointTypeIsDefault(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        设为默认积分类型
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowCreatePointTypeDialog(false)}
+                    disabled={processingPointType}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleCreatePointType}
+                    disabled={processingPointType || !pointTypeName.trim() || !pointTypeSymbol.trim()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {processingPointType && <Loader className="h-4 w-4 animate-spin" />}
+                    <span>{processingPointType ? '创建中...' : '创建积分类型'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>, 
+          document.body
+        )}
+
+        {/* 编辑积分类型对话框 */}
+        {showEditPointTypeDialog && selectedPointType && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => setShowEditPointTypeDialog(false)}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                    <Edit className="w-5 h-5 mr-2" />
+                    编辑积分类型
+                  </h3>
+                  <button
+                    onClick={() => setShowEditPointTypeDialog(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      积分名称 *
+                    </label>
+                    <input
+                      type="text"
+                      value={pointTypeName}
+                      onChange={(e) => setPointTypeName(e.target.value)}
+                      placeholder="例如：金币、经验值、声望"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      积分符号 *
+                    </label>
+                    <input
+                      type="text"
+                      value={pointTypeSymbol}
+                      onChange={(e) => setPointTypeSymbol(e.target.value)}
+                      placeholder="例如：💰、⭐、🏆"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      描述
+                    </label>
+                    <textarea
+                      value={pointTypeDescription}
+                      onChange={(e) => setPointTypeDescription(e.target.value)}
+                      placeholder="积分的用途和说明"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      颜色
+                    </label>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="color"
+                        value={pointTypeColor}
+                        onChange={(e) => setPointTypeColor(e.target.value)}
+                        className="w-12 h-10 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer"
+                      />
+                      <div className="grid grid-cols-9 gap-2">
+                        {presetColors.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => setPointTypeColor(color.value)}
+                            className={`w-6 h-6 rounded-full border-2 ${
+                              pointTypeColor === color.value ? 'border-gray-400' : 'border-gray-200'
+                            }`}
+                            style={{ backgroundColor: color.value }}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={pointTypeIsDefault}
+                        onChange={(e) => setPointTypeIsDefault(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        设为默认积分类型
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowEditPointTypeDialog(false)}
+                    disabled={processingPointType}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleUpdatePointType}
+                    disabled={processingPointType || !pointTypeName.trim() || !pointTypeSymbol.trim()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {processingPointType && <Loader className="h-4 w-4 animate-spin" />}
+                    <span>{processingPointType ? '更新中...' : '更新积分类型'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>, 
+          document.body
+        )}
+
+        {/* 发放积分对话框 */}
+        {showAwardPointsDialog && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => setShowAwardPointsDialog(false)}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                    <Award className="w-5 h-5 mr-2" />
+                    发放积分
+                  </h3>
+                  <button
+                    onClick={() => setShowAwardPointsDialog(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      选择用户 *
+                    </label>
+                    <select
+                      value={selectedUserForPoints}
+                      onChange={(e) => setSelectedUserForPoints(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">请选择用户</option>
+                      {users.map((user) => (
+                        <option key={user._id} value={user._id}>
+                          {user.username} ({user.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      积分类型 *
+                    </label>
+                    <select
+                      value={selectedPointTypeForAward}
+                      onChange={(e) => setSelectedPointTypeForAward(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">请选择积分类型</option>
+                      {pointTypes.filter(pt => pt.enabled).map((pointType) => (
+                        <option key={pointType._id} value={pointType._id}>
+                          {pointType.name} ({pointType.symbol})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      积分数量 *
+                    </label>
+                    <input
+                      type="number"
+                      value={pointAmount}
+                      onChange={(e) => setPointAmount(e.target.value)}
+                      placeholder="正数为发放，负数为扣除"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      发放原因 *
+                    </label>
+                    <textarea
+                      value={pointReason}
+                      onChange={(e) => setPointReason(e.target.value)}
+                      placeholder="例如：完成任务奖励、违规行为扣除等"
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      参考信息
+                    </label>
+                    <input
+                      type="text"
+                      value={pointReference}
+                      onChange={(e) => setPointReference(e.target.value)}
+                      placeholder="相关链接、订单号等（可选）"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowAwardPointsDialog(false)}
+                    disabled={awardingPoints}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleAwardPoints}
+                    disabled={awardingPoints || !selectedUserForPoints || !selectedPointTypeForAward || !pointAmount || !pointReason.trim()}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {awardingPoints && <Loader className="h-4 w-4 animate-spin" />}
+                    <span>{awardingPoints ? '处理中...' : '确认发放'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>, 
+          document.body
+        )}
+
+        {/* 用户积分详情对话框 */}
+        {showUserPointsDialog && userPointsData && createPortal(
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[99999] flex items-center justify-center p-4"
+            onClick={() => setShowUserPointsDialog(false)}
+          >
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-200 dark:border-gray-600">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                    <Eye className="w-5 h-5 mr-2" />
+                    用户积分详情
+                  </h3>
+                  <button
+                    onClick={() => setShowUserPointsDialog(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* 积分余额 */}
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">积分余额</h4>
+                    {userPointsData.balances.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Coins className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">该用户暂无积分</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {userPointsData.balances.map((balance: any) => (
+                          <div
+                            key={balance.pointType._id}
+                            className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-4 h-4 rounded-full"
+                                  style={{ backgroundColor: balance.pointType.color }}
+                                ></div>
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {balance.pointType.name}
+                                </span>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  ({balance.pointType.symbol})
+                                </span>
+                              </div>
+                              <span className="text-lg font-bold" style={{ color: balance.pointType.color }}>
+                                {balance.balance}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 交易记录 */}
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">交易记录</h4>
+                    <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                      {userPointsData.transactions.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-gray-500 dark:text-gray-400">暂无交易记录</p>
+                        </div>
+                      ) : (
+                        userPointsData.transactions.map((transaction: any) => (
+                          <div
+                            key={transaction._id}
+                            className="p-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className={`font-medium ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {transaction.amount >= 0 ? '+' : ''}{transaction.amount}
+                                  </span>
+                                  <span className="text-sm" style={{ color: transaction.pointType?.color }}>
+                                    {transaction.pointType?.symbol}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    余额: {transaction.balance}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  {transaction.reason}
+                                </p>
+                                {transaction.reference && (
+                                  <p className="text-xs text-gray-500">
+                                    参考: {transaction.reference}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {new Date(transaction.createdAt).toLocaleDateString()}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  by {transaction.performer?.username}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>, 
           document.body
         )}
       </div>

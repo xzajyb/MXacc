@@ -539,7 +539,7 @@ const DocsPage: React.FC = () => {
           <div className="px-4 pb-4 space-y-2">
             {/* 普通用户提交文档按钮 */}
             {user && (
-              <button
+            <button
                 onClick={isAdmin ? () => setShowEditor(true) : handleUserSubmitDoc}
                 className="w-full px-3 py-2 bg-blue-600/90 text-white rounded-xl hover:bg-blue-700/90 transition-colors flex items-center space-x-2 text-sm backdrop-blur-sm"
               >
@@ -701,7 +701,7 @@ const DocsPage: React.FC = () => {
                     <div 
                       key={doc._id} 
                       className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-amber-200/50 dark:border-amber-700/30"
-                    >
+            >
                       <div className="text-sm font-medium mb-1 line-clamp-1">{doc.title}</div>
                       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                         <span>由 {doc.submittedBy || '未知用户'} 提交</span>
@@ -868,24 +868,24 @@ const DocsPage: React.FC = () => {
                 className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X size={20} />
-              </button>
-            </div>
+            </button>
+          </div>
 
-            {/* 搜索框 */}
+          {/* 搜索框 */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input
-                  type="text"
-                  placeholder="搜索文档..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="搜索文档..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              />
             </div>
+          </div>
 
-            {/* 操作按钮 */}
+          {/* 操作按钮 */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
               {/* 文档创建/提交按钮 */}
               {user && (
@@ -1091,8 +1091,8 @@ const DocsPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                </>
-              )}
+              </>
+            )}
             
               {/* 当前文档目录 */}
               {currentDoc && toc.length > 0 && (
@@ -1103,7 +1103,7 @@ const DocsPage: React.FC = () => {
                   </h3>
                   <div className="space-y-1">
                     {toc.map((item) => (
-                      <button
+            <button
                         key={item.id}
                         onClick={() => {
                           scrollToHeading(item.id)
@@ -1115,11 +1115,11 @@ const DocsPage: React.FC = () => {
                           item.level === 3 ? 'ml-8 text-gray-600 dark:text-gray-400' :
                           'ml-12 text-gray-500 dark:text-gray-500'
                         }`}
-                      >
+            >
                         {item.text}
-                      </button>
+            </button>
                     ))}
-                  </div>
+          </div>
                 </div>
               )}
 
@@ -1154,56 +1154,56 @@ const DocsPage: React.FC = () => {
                       
                       {expandedCategories.has(category.categoryPath) && (
                         <div className="ml-4 mt-2 space-y-1">
-                        {category.docs.map((doc) => (
-                            <button
+                    {category.docs.map((doc) => (
+                        <button
                               key={doc._id}
                               onClick={() => {
                                 fetchDoc(doc._id)
                                 setShowMobileNav(false)
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
-                                currentDoc?._id === doc._id
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 text-sm ${
+                            currentDoc?._id === doc._id
                                   ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400'
                                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                              }`}
-                            >
-                              <FileText size={14} />
-                              <span className="truncate flex-1">{doc.title}</span>
-                              {isAdmin && editMode && (
+                          }`}
+                        >
+                          <FileText size={14} />
+                          <span className="truncate flex-1">{doc.title}</span>
+                          {isAdmin && editMode && (
                                 <div className="flex space-x-1" onClick={(e) => e.stopPropagation()}>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleEditDoc(doc)
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditDoc(doc)
                                       setShowMobileNav(false)
-                                    }}
-                                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
-                                    title="编辑文档"
-                                  >
+                                }}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                                title="编辑文档"
+                              >
                                     <Edit size={12} />
-                                  </button>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDeleteDoc(doc._id)
-                                    }}
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteDoc(doc._id)
+                                }}
                                     className="p-1 hover:bg-red-200 dark:hover:bg-red-900 rounded text-red-600 dark:text-red-400"
-                                    title="删除文档"
-                                  >
+                                title="删除文档"
+                              >
                                     <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              )}
-        </button>
-                        ))}
+                              </button>
+                            </div>
+                          )}
+                        </button>
+                    ))}
                         </div>
                       )}
-                    </div>
-                  ))}
                 </div>
-              </div>
+              ))}
             </div>
           </div>
+        </div>
+      </div>
         </div>,
         document.body
       )}
@@ -1214,12 +1214,12 @@ const DocsPage: React.FC = () => {
           {currentDoc ? (
             <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 lg:p-8 relative">
               {/* 移动端搜索按钮 - 位于文章内部右上角 */}
-              <button
+        <button
                 onClick={() => setShowMobileNav(true)}
                 className="lg:hidden absolute top-4 right-4 z-30 p-3 bg-blue-50/80 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-xl shadow-md hover:bg-blue-100/80 dark:hover:bg-blue-900/70 transition-all duration-200 backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50"
-              >
+        >
                 <Search size={18} />
-              </button>
+        </button>
 
               {/* 使用 VitePress 风格的 Markdown 渲染器 */}
               <div className="vitepress-markdown-content">

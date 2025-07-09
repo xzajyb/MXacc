@@ -537,33 +537,33 @@ const DocEditor: React.FC<DocEditorProps> = ({ isOpen, onClose, onSave, initialD
 
               {/* 可见性 - 仅管理员可设置 */}
               {isAdmin && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    可见性
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  可见性
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={isPublic}
+                      onChange={() => setIsPublic(true)}
+                      className="mr-2"
+                    />
+                    <Globe size={16} className="mr-2 text-green-600" />
+                    <span className="text-sm">公开 - 所有用户可见</span>
                   </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        checked={isPublic}
-                        onChange={() => setIsPublic(true)}
-                        className="mr-2"
-                      />
-                      <Globe size={16} className="mr-2 text-green-600" />
-                      <span className="text-sm">公开 - 所有用户可见</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        checked={!isPublic}
-                        onChange={() => setIsPublic(false)}
-                        className="mr-2"
-                      />
-                      <Lock size={16} className="mr-2 text-orange-600" />
-                      <span className="text-sm">私有 - 仅管理员可见</span>
-                    </label>
-                  </div>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      checked={!isPublic}
+                      onChange={() => setIsPublic(false)}
+                      className="mr-2"
+                    />
+                    <Lock size={16} className="mr-2 text-orange-600" />
+                    <span className="text-sm">私有 - 仅管理员可见</span>
+                  </label>
                 </div>
+              </div>
               )}
             </div>
           </div>

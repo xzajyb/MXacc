@@ -514,7 +514,7 @@
 
 .dark .slider::-moz-range-track {
   background: #374151;
-}
+} 
 
 /* 确保PC版导航在移动端完全隐藏 */
 @media (max-width: 1023px) {

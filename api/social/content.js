@@ -127,6 +127,8 @@ module.exports = async function handler(req, res) {
     const titles = db.collection('user_titles')
     const userTitles = db.collection('user_title_assignments')
     const docs = db.collection('docs') // 添加文档集合
+    const pointTypes = db.collection('pointtypes')
+    const pointTransactions = db.collection('pointtransactions')
 
     // 验证用户身份
     console.log('🔍 开始验证用户身份...')
@@ -316,6 +318,165 @@ module.exports = async function handler(req, res) {
             count: cat.count,
             docs: cat.docs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
           }))
+        })
+      }
+
+      // ===== 积分管理功能 =====
+      
+      // 获取积分类型列表
+      if (action === 'point-types') {
+        // 只有管理员可以获取积分类型
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，需要管理员权限' 
+          })
+        }
+        
+        const types = await pointTypes.find({}).sort({ isDefault: -1, name: 1 }).toArray()
+        return res.status(200).json({
+          success: true,
+          data: types
+        })
+      }
+      
+      // 获取用户积分记录
+      if (action === 'user-points' && req.query.userId) {
+        // 只有管理员可以查看用户积分
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，需要管理员权限' 
+          })
+        }
+        
+        const userId = req.query.userId
+        if (!ObjectId.isValid(userId)) {
+          return res.status(400).json({ success: false, message: '无效的用户ID' })
+        }
+        
+        const user = await users.findOne({ _id: new ObjectId(userId) })
+        if (!user) {
+          return res.status(404).json({ success: false, message: '用户不存在' })
+        }
+        
+        // 获取用户积分余额
+        const balances = user.pointBalances || []
+        
+        // 填充积分类型信息
+        const populatedBalances = []
+        for (const balance of balances) {
+          const pointType = await pointTypes.findOne({ _id: new ObjectId(balance.pointTypeId) })
+          if (pointType) {
+            populatedBalances.push({
+              ...balance,
+              pointType: {
+                _id: pointType._id,
+                name: pointType.name,
+                symbol: pointType.symbol,
+                color: pointType.color
+              }
+            })
+          }
+        }
+        
+        // 获取用户积分交易记录
+        const transactions = await pointTransactions
+          .find({ userId: new ObjectId(userId) })
+          .sort({ createdAt: -1 })
+          .limit(100)
+          .toArray()
+          
+        // 填充交易记录中的积分类型信息和操作人信息
+        const populatedTransactions = []
+        for (const tx of transactions) {
+          const pointType = await pointTypes.findOne({ _id: new ObjectId(tx.pointTypeId) })
+          const performer = await users.findOne({ _id: new ObjectId(tx.performedBy) }, { projection: { username: 1 } })
+          
+          populatedTransactions.push({
+            ...tx,
+            pointType: pointType ? {
+              _id: pointType._id,
+              name: pointType.name,
+              symbol: pointType.symbol,
+              color: pointType.color
+            } : null,
+            performer: performer ? { _id: performer._id, username: performer.username } : null
+          })
+        }
+        
+        return res.status(200).json({
+          success: true,
+          data: {
+            balances: populatedBalances,
+            transactions: populatedTransactions
+          }
+        })
+      }
+      
+      // 获取所有积分交易记录
+      if (action === 'point-transactions') {
+        // 只有管理员可以查看交易记录
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，需要管理员权限' 
+          })
+        }
+        
+        const { page = 1, limit = 20, userId = '', pointTypeId = '' } = req.query
+        const pageNum = parseInt(page)
+        const limitNum = Math.min(parseInt(limit), 100)
+        const skip = (pageNum - 1) * limitNum
+        
+        const query = {}
+        if (userId && ObjectId.isValid(userId)) {
+          query.userId = new ObjectId(userId)
+        }
+        if (pointTypeId && ObjectId.isValid(pointTypeId)) {
+          query.pointTypeId = new ObjectId(pointTypeId)
+        }
+        
+        const transactions = await pointTransactions
+          .find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limitNum)
+          .toArray()
+          
+        const total = await pointTransactions.countDocuments(query)
+        
+        // 填充交易记录中的用户、积分类型和操作人信息
+        const populatedTransactions = []
+        for (const tx of transactions) {
+          const user = await users.findOne({ _id: tx.userId }, { projection: { username: 1 } })
+          const pointType = await pointTypes.findOne({ _id: tx.pointTypeId })
+          const performer = await users.findOne({ _id: tx.performedBy }, { projection: { username: 1 } })
+          
+          populatedTransactions.push({
+            ...tx,
+            user: user ? { _id: user._id, username: user.username } : null,
+            pointType: pointType ? {
+              _id: pointType._id,
+              name: pointType.name,
+              symbol: pointType.symbol,
+              color: pointType.color
+            } : null,
+            performer: performer ? { _id: performer._id, username: performer.username } : null
+          })
+        }
+        
+        return res.status(200).json({
+          success: true,
+          data: {
+            transactions: populatedTransactions,
+            pagination: {
+              current: pageNum,
+              total: Math.ceil(total / limitNum),
+              pageSize: limitNum,
+              totalRecords: total
+            }
+          }
         })
       }
 
@@ -1205,6 +1366,271 @@ module.exports = async function handler(req, res) {
         })
       }
 
+      // ===== 积分管理功能 =====
+      
+      // 创建积分类型
+      if (action === 'create-point-type') {
+        // 只有管理员可以创建积分类型
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，需要管理员权限' 
+          })
+        }
+        
+        const { name, symbol, description, color, isDefault } = body
+        
+        // 验证必填字段
+        if (!name || !symbol) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '积分名称和符号为必填字段' 
+          })
+        }
+        
+        // 检查名称是否已存在
+        const existingType = await pointTypes.findOne({ name })
+        if (existingType) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '积分名称已存在' 
+          })
+        }
+        
+        // 如果设置为默认，先将其他积分类型的默认状态取消
+        if (isDefault) {
+          await pointTypes.updateMany(
+            {},
+            { $set: { isDefault: false } }
+          )
+        }
+        
+        const newPointType = {
+          name: name.trim(),
+          symbol: symbol.trim(),
+          description: description ? description.trim() : '',
+          color: color || '#3B82F6',
+          isDefault: !!isDefault,
+          enabled: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        
+        const result = await pointTypes.insertOne(newPointType)
+        
+        return res.status(201).json({
+          success: true,
+          message: '积分类型创建成功',
+          data: {
+            _id: result.insertedId,
+            ...newPointType
+          }
+        })
+      }
+      
+      // 更新积分类型
+      if (action === 'update-point-type') {
+        // 只有管理员可以更新积分类型
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，需要管理员权限' 
+          })
+        }
+        
+        const { pointTypeId, name, symbol, description, color, isDefault, enabled } = body
+        
+        if (!pointTypeId) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '积分类型ID不能为空' 
+          })
+        }
+        
+        if (!ObjectId.isValid(pointTypeId)) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '无效的积分类型ID' 
+          })
+        }
+        
+        // 检查积分类型是否存在
+        const existingType = await pointTypes.findOne({ _id: new ObjectId(pointTypeId) })
+        if (!existingType) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '积分类型不存在' 
+          })
+        }
+        
+        // 如果更新名称，检查是否与其他积分类型重名
+        if (name && name.trim() !== existingType.name) {
+          const nameConflict = await pointTypes.findOne({ 
+            name: name.trim(),
+            _id: { $ne: new ObjectId(pointTypeId) }
+          })
+          if (nameConflict) {
+            return res.status(400).json({ 
+              success: false, 
+              message: '积分名称已存在' 
+            })
+          }
+        }
+        
+        const updateData = {
+          updatedAt: new Date()
+        }
+        
+        if (name) updateData.name = name.trim()
+        if (symbol) updateData.symbol = symbol.trim()
+        if (description !== undefined) updateData.description = description.trim()
+        if (color) updateData.color = color
+        if (typeof enabled === 'boolean') updateData.enabled = enabled
+        
+        // 如果设置为默认，先将其他积分类型的默认状态取消
+        if (isDefault && !existingType.isDefault) {
+          await pointTypes.updateMany(
+            { _id: { $ne: new ObjectId(pointTypeId) } },
+            { $set: { isDefault: false } }
+          )
+          updateData.isDefault = true
+        } else if (isDefault === false) {
+          updateData.isDefault = false
+        }
+        
+        const result = await pointTypes.updateOne(
+          { _id: new ObjectId(pointTypeId) },
+          { $set: updateData }
+        )
+        
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '积分类型不存在' 
+          })
+        }
+        
+        const updatedType = await pointTypes.findOne({ _id: new ObjectId(pointTypeId) })
+        
+        return res.status(200).json({
+          success: true,
+          message: '积分类型更新成功',
+          data: updatedType
+        })
+      }
+      
+      // 发放/扣除积分
+      if (action === 'award-points') {
+        // 只有管理员可以发放积分
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，需要管理员权限' 
+          })
+        }
+        
+        const { userId, pointTypeId, amount, reason, reference } = body
+        
+        // 验证必填字段
+        if (!userId || !pointTypeId || amount === undefined || !reason) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '用户ID、积分类型ID、数量和原因为必填字段' 
+          })
+        }
+        
+        if (!ObjectId.isValid(userId) || !ObjectId.isValid(pointTypeId)) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '无效的用户ID或积分类型ID' 
+          })
+        }
+        
+        if (typeof amount !== 'number' || amount === 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '数量必须是非零数字' 
+          })
+        }
+        
+        // 检查用户是否存在
+        const targetUser = await users.findOne({ _id: new ObjectId(userId) })
+        if (!targetUser) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '用户不存在' 
+          })
+        }
+        
+        // 检查积分类型是否存在
+        const pointType = await pointTypes.findOne({ _id: new ObjectId(pointTypeId) })
+        if (!pointType) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '积分类型不存在' 
+          })
+        }
+        
+        // 获取用户当前积分余额
+        const currentBalances = targetUser.pointBalances || []
+        const existingBalance = currentBalances.find(b => b.pointTypeId.toString() === pointTypeId)
+        const currentAmount = existingBalance ? existingBalance.amount : 0
+        const newAmount = currentAmount + amount
+        
+        // 检查扣除积分时余额是否足够
+        if (amount < 0 && newAmount < 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: `积分余额不足，当前余额：${currentAmount}，扣除数量：${Math.abs(amount)}` 
+          })
+        }
+        
+        // 更新用户积分余额
+        const updatedBalances = currentBalances.filter(b => b.pointTypeId.toString() !== pointTypeId)
+        updatedBalances.push({
+          pointTypeId: new ObjectId(pointTypeId),
+          amount: newAmount
+        })
+        
+        await users.updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { pointBalances: updatedBalances } }
+        )
+        
+        // 记录积分交易
+        const transaction = {
+          userId: new ObjectId(userId),
+          pointTypeId: new ObjectId(pointTypeId),
+          amount: amount,
+          balance: newAmount,
+          type: amount > 0 ? 'award' : 'deduct',
+          reason: reason.trim(),
+          reference: reference ? reference.trim() : '',
+          performedBy: new ObjectId(decoded.userId),
+          createdAt: new Date()
+        }
+        
+        await pointTransactions.insertOne(transaction)
+        
+        return res.status(200).json({
+          success: true,
+          message: amount > 0 ? '积分发放成功' : '积分扣除成功',
+          data: {
+            userId,
+            pointType: {
+              _id: pointType._id,
+              name: pointType.name,
+              symbol: pointType.symbol,
+              color: pointType.color
+            },
+            amount,
+            newBalance: newAmount,
+            reason,
+            reference
+          }
+        })
+      }
+
       // 创建帖子
       if (action === 'create-post') {
         if (!content || content.trim().length === 0) {
@@ -2083,6 +2509,76 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           success: true,
           message: '头衔删除成功'
+        })
+      }
+
+      // 删除积分类型（管理员专用）
+      if (action === 'point-type') {
+        if (!id) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '积分类型ID不能为空' 
+          })
+        }
+
+        if (currentUser.role !== 'admin') {
+          return res.status(403).json({ 
+            success: false, 
+            message: '权限不足，需要管理员权限' 
+          })
+        }
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '无效的积分类型ID' 
+          })
+        }
+
+        const pointType = await pointTypes.findOne({ _id: new ObjectId(id) })
+        
+        if (!pointType) {
+          return res.status(404).json({ 
+            success: false, 
+            message: '积分类型不存在' 
+          })
+        }
+
+        // 检查是否有积分交易记录
+        const hasTransactions = await pointTransactions.findOne({ pointTypeId: new ObjectId(id) })
+        
+        if (hasTransactions) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '该积分类型已有交易记录，无法删除。建议禁用该积分类型。' 
+          })
+        }
+
+        // 检查是否有用户余额
+        const usersWithBalance = await users.findOne({ 
+          'pointBalances.pointTypeId': new ObjectId(id),
+          'pointBalances.amount': { $gt: 0 }
+        })
+        
+        if (usersWithBalance) {
+          return res.status(400).json({ 
+            success: false, 
+            message: '仍有用户持有该类型积分，无法删除。请先回收所有积分或禁用该积分类型。' 
+          })
+        }
+
+        // 删除积分类型和相关用户余额记录（即使余额为0）
+        await Promise.all([
+          pointTypes.deleteOne({ _id: new ObjectId(id) }),
+          users.updateMany(
+            { 'pointBalances.pointTypeId': new ObjectId(id) },
+            { $pull: { pointBalances: { pointTypeId: new ObjectId(id) } } }
+          )
+        ])
+
+        return res.status(200).json({
+          success: true,
+          message: '积分类型删除成功'
         })
       }
 

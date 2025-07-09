@@ -52,6 +52,21 @@ const userSchema = new mongoose.Schema({
       maxlength: [100, '网站链接不能超过100个字符']
     }
   },
+  pointBalances: [{
+    pointTypeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PointType',
+      required: true
+    },
+    amount: {
+      type: Number,
+      default: 0
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   settings: {
     theme: {
       type: String,
@@ -157,6 +172,7 @@ const userSchema = new mongoose.Schema({
 userSchema.index({ email: 1 });
 userSchema.index({ username: 1 });
 userSchema.index({ 'security.lockUntil': 1 });
+userSchema.index({ 'pointBalances.pointTypeId': 1 });
 
 // 虚拟字段：是否被锁定
 userSchema.virtual('isLocked').get(function() {
@@ -248,7 +264,10 @@ userSchema.methods.recordLogin = function(ip, userAgent, location) {
   }
   
   this.security.lastLogin = new Date();
-  return this.save();
+  
+  return this;
 };
 
-module.exports = mongoose.model('User', userSchema); 
+const User = mongoose.model('User', userSchema);
+
+module.exports = User; 
