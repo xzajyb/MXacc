@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { User, Save, X, Edit3 } from 'lucide-react'
+import { User, Save, X, Edit3, Coins } from 'lucide-react'
 import AvatarUploader from '../components/AvatarUploader'
 
 interface ProfilePageProps {
@@ -13,6 +13,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [avatarLoading, setAvatarLoading] = useState(false)
+  const [pointsData, setPointsData] = useState<{
+    balances: any[]
+    transactions: any[]
+  } | null>(null)
+  const [pointsLoading, setPointsLoading] = useState(false)
   
   // 调试日志
   console.log('ProfilePage - 用户数据:', user)
@@ -159,6 +164,31 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
     setIsEditing(false)
   }
 
+  // 获取积分信息
+  const fetchPointsData = async () => {
+    if (!user?.id) return
+    
+    try {
+      setPointsLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/social/content?action=user-points&userId=${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setPointsData(data.data)
+      } else if (response.status === 403) {
+        // 权限不足，静默处理
+        console.log('无权限查看积分信息')
+      }
+    } catch (error) {
+      console.error('获取积分信息失败:', error)
+    } finally {
+      setPointsLoading(false)
+    }
+  }
+
   const formatJoinDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('zh-CN', {
       year: 'numeric',
@@ -166,6 +196,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
       day: 'numeric'
     })
   }
+
+  // 在组件加载时获取积分信息
+  useEffect(() => {
+    if (user?.id) {
+      fetchPointsData()
+    }
+  }, [user?.id])
 
   return (
     <div className={embedded ? "space-y-6" : "min-h-screen bg-gray-50 dark:bg-gray-900"}>
@@ -362,6 +399,68 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ embedded = false }) => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 积分信息 */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <Coins className="w-5 h-5 mr-2 text-blue-600" />
+            我的积分
+          </h3>
+          
+          {pointsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">加载积分信息...</p>
+            </div>
+          ) : pointsData && pointsData.balances.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {pointsData.balances.map((balance) => (
+                <div
+                  key={balance.pointTypeId}
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border"
+                  style={{
+                    borderColor: `${balance.pointType.color}30`
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span 
+                        className="text-xl"
+                        style={{ color: balance.pointType.color }}
+                      >
+                        {balance.pointType.symbol}
+                      </span>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">
+                          {balance.pointType.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(balance.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p 
+                        className="text-xl font-bold"
+                        style={{ color: balance.pointType.color }}
+                      >
+                        {balance.amount}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Coins className="w-6 h-6 text-gray-400" />
+              </div>
+              <p className="text-gray-500 dark:text-gray-400">暂无积分记录</p>
+              <p className="text-sm text-gray-400 mt-1">完成任务或活动来获得积分奖励</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
